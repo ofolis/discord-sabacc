@@ -7,46 +7,30 @@ export const client = new Client({
   intents: ["Guilds", "GuildMessages", "DirectMessages"],
 });
 
-client.once("ready", () => {
-  if (config.DEV_GUILD_ID !== undefined) {
-    (async () => {
-      if (typeof config.DEV_GUILD_ID === "string") {
-        console.log("Deploying commands to dev guild.");
-        await deployCommands({
-          guildId: config.DEV_GUILD_ID,
-        });
-      }
-      console.log("Discord bot is ready! 🤖");
-    })().catch((e) => {
-      console.error(e);
+client.once("ready", async () => {
+  if (typeof config.DEV_GUILD_ID === "string") {
+    console.log("Deploying commands to dev guild.");
+    await deployCommands({
+      guildId: config.DEV_GUILD_ID,
     });
   }
+  console.log("Discord bot is ready! 🤖");
 });
 
-client.on("guildCreate", (guild) => {
-  (async () => {
-    await deployCommands({
-      guildId: guild.id,
-    });
-  })().catch((e) => {
-    console.error(e);
+client.on("guildCreate", async (guild) => {
+  await deployCommands({
+    guildId: guild.id,
   });
 });
 
-client.on("interactionCreate", (interaction) => {
+client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand()) {
     return;
   }
   const { commandName } = interaction;
   if (commands[commandName as keyof typeof commands]) {
-    commands[commandName as keyof typeof commands]
-      .execute(interaction)
-      .catch((e) => {
-        console.error(e);
-      });
+    commands[commandName as keyof typeof commands].execute(interaction);
   }
 });
 
-client.login(config.DISCORD_BOT_TOKEN).catch((e) => {
-  console.error(e);
-});
+client.login(config.DISCORD_BOT_TOKEN);
