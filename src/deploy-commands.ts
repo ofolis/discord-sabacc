@@ -1,11 +1,11 @@
-import { REST, Routes } from 'discord.js';
-import { config } from './config';
-import { commands } from './commands';
+import { REST, Routes } from "discord.js";
+import { config } from "./config";
+import { commands } from "./commands";
 
 const commandsData = Object.values(commands).map((command) => command.data);
 
 const rest = new REST({
-  version: '10',
+  version: "10",
 }).setToken(config.DISCORD_BOT_TOKEN);
 
 type DeployCommandsProps = {
@@ -14,13 +14,10 @@ type DeployCommandsProps = {
 
 export const deployCommands = async ({ guildId }: DeployCommandsProps) => {
   try {
-    console.log('Started refreshing application (/) commands.');
+    console.log("Started refreshing application (/) commands.");
 
     await rest.put(
-      Routes.applicationGuildCommands(
-        config.DISCORD_APPLICATION_ID,
-        guildId,
-      ),
+      Routes.applicationGuildCommands(config.DISCORD_APPLICATION_ID, guildId),
       {
         body: commandsData,
       },
@@ -33,7 +30,7 @@ export const deployCommands = async ({ guildId }: DeployCommandsProps) => {
     //   },
     // );
 
-    console.log('Successfully reloaded application (/) commands.');
+    console.log("Successfully reloaded application (/) commands.");
   } catch (error) {
     console.error(error);
   }

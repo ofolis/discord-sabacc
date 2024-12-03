@@ -1,39 +1,28 @@
 {
-  "name": "discord-sabacc",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "node .",
-    "build": "tsup src/index.ts --minify",
-    "format": "prettier --write \"**/*.{json,ts}\"",
-    "lint": "eslint . --fix"
-  },
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "author": "Josh Jones",
   "dependencies": {
     "discord.js": "^14.16.3",
     "dotenv": "^16.4.5"
   },
+  "description": "A Discord bot that allows users to play Kessel Sabacc.",
   "devDependencies": {
-    "@eslint/compat": "^1.2.3",
-    "@eslint/eslintrc": "^3.2.0",
-    "@eslint/js": "^9.16.0",
     "@types/node": "^22.10.1",
-    "@typescript-eslint/eslint-plugin": "^8.17.0",
-    "@typescript-eslint/parser": "^8.17.0",
     "eslint": "^9.16.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-jsdoc": "^50.6.0",
-    "eslint-plugin-modules-newline": "^0.0.6",
-    "eslint-plugin-n": "^17.14.0",
-    "eslint-plugin-prefer-arrow": "^1.2.3",
-    "globals": "^15.13.0",
+    "eslint-config-love": "^109.0.0",
     "prettier": "^3.4.1",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
-  }
+  },
+  "license": "ISC",
+  "main": "dist/index.js",
+  "name": "discord-sabacc",
+  "scripts": {
+    "build": "tsup src/index.ts --minify",
+    "dev": "tsx watch src/index.ts",
+    "format": "prettier --write \"**/*.{json,js,ts}\"",
+    "lint": "eslint . --fix",
+    "start": "node ."
+  },
+  "version": "1.0.0"
 }
