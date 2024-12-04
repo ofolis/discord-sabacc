@@ -1,36 +1,67 @@
-import { Client } from "discord.js";
-import { config } from "./config";
-import { commands } from "./commands";
-import { deployCommands } from "./deploy-commands";
+import {
+  Constants,
+} from "./constants";
+import {
+  Discord,
+} from "./handlers";
+import {
+  Ping,
+} from "./handlers/commands";
 
-export const client = new Client({
-  intents: ["Guilds", "GuildMessages", "DirectMessages"],
-});
-
-client.once("ready", async () => {
-  if (typeof config.DEV_GUILD_ID === "string") {
-    console.log("Deploying commands to dev guild.");
-    await deployCommands({
-      guildId: config.DEV_GUILD_ID,
-    });
-  }
-  console.log("Discord bot is ready! 🤖");
-});
-
-client.on("guildCreate", async (guild) => {
-  await deployCommands({
-    guildId: guild.id,
+function initializeApp(): void {
+  Discord.client.once(
+    "ready",
+    () => {
+      console.log("Initializing Discord bot...");
+      const guildIds: string[] = Array.from(Discord.client.guilds.cache.keys());
+      Discord.DeployCommands(guildIds).then(
+        () => {
+          console.log("Discord bot is ready! 🤖");
+        },
+        () => {
+          console.error("Failed to initialize Discord bot.");
+        },
+      );
+    },
+  );
+  Discord.client.on(
+    "guildCreate",
+    (guild) => {
+      Discord.DeployCommands([
+        guild.id,
+      ]).then(
+        () => {
+          console.log("Discord bot is ready! 🤖");
+        },
+        () => {
+          console.error("Failed to initialize Discord bot.");
+        },
+      );
+    },
+  );
+  Discord.client.on(
+    "interactionCreate",
+    (interaction) => {
+      if (!interaction.isCommand()) {
+        return;
+      }
+      console.log(interaction);
+      switch (interaction.commandName) {
+      case "ping":
+        Ping.execute(interaction).catch((reason: unknown) => {
+          console.error(`Failed to handle "${interaction.commandName}".`);
+          console.error(reason);
+        });
+        break;
+      default:
+        console.error(`Command "${interaction.commandName}" has no execution path.`);
+      }
+    },
+  );
+  Discord.client.login(Constants.environment.DISCORD_BOT_TOKEN).catch((reason: unknown) => {
+    console.error(`Failed to log in.`);
+    console.error(reason);
   });
-});
+}
 
-client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isCommand()) {
-    return;
-  }
-  const { commandName } = interaction;
-  if (commands[commandName as keyof typeof commands]) {
-    commands[commandName as keyof typeof commands].execute(interaction);
-  }
-});
-
-client.login(config.DISCORD_BOT_TOKEN);
+initializeApp();
