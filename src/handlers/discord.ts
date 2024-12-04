@@ -1,15 +1,15 @@
 import {
+  Constants,
+} from "../constants";
+import {
+  Ping,
+} from "./commands";
+import {
   Client,
   REST,
   Routes,
   type SlashCommandBuilder,
 } from "discord.js";
-import {
-  Ping,
-} from "./commands";
-import {
-  Constants,
-} from "../constants";
 
 export class Discord {
   private static readonly globalCommandBuilders: SlashCommandBuilder[] = [
