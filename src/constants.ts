@@ -1,9 +1,12 @@
 import dotenv from "dotenv";
+import type {
+  Environment,
+} from "./types";
 
 export class Constants {
-  private static _environment: Record<string, string> | null = null;
+  private static _environment: Environment | null = null;
 
-  public static get environment(): Record<string, string> {
+  public static get environment(): Environment {
     if (this._environment === null) {
       dotenv.config();
       if (typeof process.env.DISCORD_APPLICATION_ID !== 'string' || typeof process.env.DISCORD_BOT_TOKEN !== 'string') {
