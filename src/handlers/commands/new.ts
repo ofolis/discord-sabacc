@@ -1,20 +1,16 @@
-import {
+import type {
+  DiscordCommandInteraction,
+} from "../../discord";
+import type {
   Command,
-} from "../../enums/command";
-import {
-  type CommandInteraction,
-  SlashCommandBuilder,
-} from "discord.js";
+} from "../../types";
 
-export class New {
-  public static get builder(): SlashCommandBuilder {
-    const builder: SlashCommandBuilder = new SlashCommandBuilder()
-      .setName(Command.NEW)
-      .setDescription("Start a new game.");
-    return builder;
-  }
-
-  public static Execute = async(interaction: CommandInteraction): Promise<void> => {
+export const command: Command = {
+  "description": "Start a new game.",
+  "execute": async(interaction: DiscordCommandInteraction): Promise<void> => {
     await interaction.reply("New!");
-  };
-}
+  },
+  "isGlobal": false,
+  "isGuild": true,
+  "name": "new",
+};

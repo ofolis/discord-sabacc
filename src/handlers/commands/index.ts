@@ -1,9 +1,9 @@
 export {
-  Info,
+  command as Info,
 } from './info';
 export {
-  New,
+  command as New,
 } from './new';
 export {
-  Play,
+  command as Play,
 } from './play';

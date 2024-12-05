@@ -1,4 +1,4 @@
-export type Environment = {
+export type Config = {
   "discordApplicationId": string;
   "discordBotToken": string;
 };

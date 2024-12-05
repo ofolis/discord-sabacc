@@ -16,6 +16,13 @@ export default [
       ...love.rules,
       "@stylistic/array-bracket-newline": ["error", "always"],
       "@stylistic/array-bracket-spacing": ["error"],
+      "@stylistic/array-element-newline": [
+        "error",
+        {
+          multiline: true,
+          minItems: 1,
+        },
+      ],
       "@stylistic/arrow-spacing": ["error"],
       "@stylistic/block-spacing": ["error"],
       "@stylistic/comma-dangle": [
@@ -39,7 +46,9 @@ export default [
       "@stylistic/eol-last": ["error"],
       "@stylistic/function-call-argument-newline": ["error"],
       "@stylistic/function-call-spacing": ["error"],
+      "@stylistic/function-paren-newline": ["error", "multiline-arguments"],
       "@stylistic/generator-star-spacing": ["error"],
+      "@stylistic/indent": ["error", 2],
       "@stylistic/key-spacing": ["error"],
       "@stylistic/keyword-spacing": ["error"],
       "@stylistic/lines-between-class-members": ["error"],
@@ -53,7 +62,35 @@ export default [
       ],
       "@stylistic/no-trailing-spaces": ["error"],
       "@stylistic/no-whitespace-before-property": ["error"],
+      "@stylistic/object-curly-newline": [
+        "error",
+        {
+          ObjectExpression: {
+            multiline: true,
+            minProperties: 1,
+          },
+          ObjectPattern: {
+            multiline: true,
+            minProperties: 1,
+          },
+          ImportDeclaration: {
+            multiline: true,
+            minProperties: 1,
+          },
+          ExportDeclaration: {
+            multiline: true,
+            minProperties: 1,
+          },
+        },
+      ],
       "@stylistic/object-curly-spacing": ["error"],
+      "@stylistic/object-property-newline": [
+        "error",
+        {
+          allowAllPropertiesOnSameLine: false,
+          allowMultiplePropertiesPerLine: false,
+        },
+      ],
       "@stylistic/one-var-declaration-per-line": ["error"],
       "@stylistic/operator-linebreak": ["error"],
       "@stylistic/padded-blocks": ["error", "never"],
@@ -80,21 +117,13 @@ export default [
       "@typescript-eslint/naming-convention": [
         "error",
         {
-          selector: "classProperty",
+          selector: "default",
           format: ["camelCase"],
           leadingUnderscore: "allow",
         },
         {
-          selector: "default",
-          format: ["camelCase"],
-        },
-        {
           selector: "enumMember",
           format: ["UPPER_CASE"],
-        },
-        {
-          selector: "classMethod",
-          format: ["PascalCase"],
         },
         {
           selector: "typeLike",
@@ -109,58 +138,16 @@ export default [
           variableDeclarationIgnoreFunction: false,
         },
       ],
-      "array-element-newline": [
-        "error",
-        {
-          multiline: true,
-          minItems: 1,
-        },
-      ],
       complexity: ["error"],
-      "function-paren-newline": ["error", "multiline"],
       "import/newline-after-import": ["error"],
-      indent: ["error", 2],
+      "import/order": ["error"],
+      "import/no-named-default": ["error"],
+      "import/no-unassigned-import": ["error"],
+      "import/first": ["error"],
+      "import/no-duplicates": ["error"],
+      "import/group-exports": ["error"],
       "module-bindings-newline/export": ["error"],
       "module-bindings-newline/import": ["error"],
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "ExportNamedDeclaration > VariableDeclaration",
-          message: "Only classes may be exported.",
-        },
-        {
-          selector: "ExportNamedDeclaration > FunctionDeclaration",
-          message: "Only classes may be exported.",
-        },
-      ],
-      "object-curly-newline": [
-        "error",
-        {
-          ObjectExpression: {
-            multiline: true,
-            minProperties: 1,
-          },
-          ObjectPattern: {
-            multiline: true,
-            minProperties: 1,
-          },
-          ImportDeclaration: {
-            multiline: true,
-            minProperties: 1,
-          },
-          ExportDeclaration: {
-            multiline: true,
-            minProperties: 1,
-          },
-        },
-      ],
-      "object-property-newline": [
-        "error",
-        {
-          allowAllPropertiesOnSameLine: false,
-          allowMultiplePropertiesPerLine: false,
-        },
-      ],
     },
   },
 ];

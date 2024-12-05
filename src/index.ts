@@ -2,49 +2,41 @@ import {
   Constants,
 } from "./constants";
 import {
-  Command,
-} from "./enums";
-import {
   Discord,
-} from "./handlers";
+} from "./discord";
 import {
   Info,
   New,
   Play,
 } from "./handlers/commands";
 import type {
-  CommandMap,
+  Command,
 } from "./types";
+import {
+  Utils,
+} from "./utils";
 
-const commandMap: CommandMap = {
-  [Command.INFO]: {
-    "builder": Info.builder,
-    "executeFunction": Info.Execute,
-    "isGlobalCommand": false,
-    "isGuildCommand": true,
-  },
-  [Command.NEW]: {
-    "builder": New.builder,
-    "executeFunction": New.Execute,
-    "isGlobalCommand": false,
-    "isGuildCommand": true,
-  },
-  [Command.PLAY]: {
-    "builder": Play.builder,
-    "executeFunction": Play.Execute,
-    "isGlobalCommand": false,
-    "isGuildCommand": true,
-  },
-};
+const commands: Command[] = [
+  Info,
+  New,
+  Play,
+];
 
 function initializeApp(): void {
+  const commandMap: Record<string, Command> = commands.reduce<Record<string, Command>>(
+    (map, command) => {
+      map[command.name] = command;
+      return map;
+    },
+    {},
+  );
   Discord.client.once(
     "ready",
     () => {
       console.log("Initializing Discord bot...");
-      Discord.DeployCommands(commandMap).then(
+      Discord.deployCommands(commandMap).then(
         () => {
-          console.log("Discord bot is ready! 🤖");
+          console.log("Discord bot is ready.");
         },
         (reason: unknown) => {
           console.error("Failed to initialize Discord bot.");
@@ -57,7 +49,7 @@ function initializeApp(): void {
     "guildCreate",
     (guild) => {
       console.log(`Initializing guild ${guild.id}...`);
-      Discord.DeployCommands(
+      Discord.deployCommands(
         commandMap,
         [
           guild.id,
@@ -81,36 +73,22 @@ function initializeApp(): void {
       }
       console.log(interaction);
       try {
-        let parsedCommand: Command | undefined = undefined;
-        for (const value of Object.values(Command)) {
-          if ((value as string) === interaction.commandName) {
-            parsedCommand = value;
-            break;
-          }
-        }
-        if (parsedCommand === undefined) {
+        const interactionCommand: Command | undefined = commands.find(command => command.name === interaction.commandName);
+        if (interactionCommand === undefined) {
           throw new ReferenceError(`Unknown command "${interaction.commandName}".`);
         }
-        if (parsedCommand in commandMap) {
-          commandMap[parsedCommand].executeFunction(interaction).catch((reason: unknown) => {
-            if (reason instanceof Error) {
-              throw reason;
-            } else {
-              throw new Error(String(reason));
-            }
-          });
-        } else {
-          throw new ReferenceError(`Command "${interaction.commandName}" has no execution path.`);
-        }
+        interactionCommand.execute(interaction).catch((response: unknown) => {
+          Utils.catchToError(response);
+        });
       } catch (e) {
         console.error(`Failed to handle "${interaction.commandName}".`);
         console.error(e);
       }
     },
   );
-  Discord.client.login(Constants.environment.discordBotToken).catch((reason: unknown) => {
+  Discord.client.login(Constants.config.discordBotToken).catch((response: unknown) => {
     console.error(`Failed to log in.`);
-    console.error(reason);
+    console.error(response);
   });
 }
 
