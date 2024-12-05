@@ -14,6 +14,7 @@ export default [
     },
     rules: {
       ...love.rules,
+      "@stylistic/array-bracket-newline": ["error", "always"],
       "@stylistic/array-bracket-spacing": ["error"],
       "@stylistic/arrow-spacing": ["error"],
       "@stylistic/block-spacing": ["error"],
@@ -21,12 +22,15 @@ export default [
         "error",
         {
           arrays: "always-multiline",
-          objects: "always-multiline",
-          imports: "always-multiline",
+          dynamicImports: "always-multiline",
+          enums: "always-multiline",
           exports: "always-multiline",
           functions: "always-multiline",
+          generics: "always-multiline",
           importAttributes: "always-multiline",
-          dynamicImports: "always-multiline",
+          imports: "always-multiline",
+          objects: "always-multiline",
+          tuples: "always-multiline",
         },
       ],
       "@stylistic/comma-spacing": ["error"],
@@ -55,6 +59,7 @@ export default [
       "@stylistic/padded-blocks": ["error", "never"],
       "@stylistic/quote-props": ["error"],
       "@stylistic/rest-spread-spacing": ["error"],
+      "@stylistic/semi": ["error"],
       "@stylistic/semi-spacing": ["error"],
       "@stylistic/semi-style": ["error"],
       "@stylistic/space-before-blocks": ["error"],
@@ -72,6 +77,30 @@ export default [
       "@stylistic/wrap-regex": ["error"],
       "@typescript-eslint/consistent-type-definitions": ["error", "type"],
       "@typescript-eslint/explicit-function-return-type": ["error"],
+      "@typescript-eslint/naming-convention": [
+        "error",
+        {
+          selector: "classProperty",
+          format: ["camelCase"],
+          leadingUnderscore: "allow",
+        },
+        {
+          selector: "default",
+          format: ["camelCase"],
+        },
+        {
+          selector: "enumMember",
+          format: ["UPPER_CASE"],
+        },
+        {
+          selector: "classMethod",
+          format: ["PascalCase"],
+        },
+        {
+          selector: "typeLike",
+          format: ["PascalCase"],
+        },
+      ],
       "@typescript-eslint/no-extraneous-class": ["off"],
       "@typescript-eslint/typedef": [
         "error",
@@ -87,6 +116,7 @@ export default [
           minItems: 1,
         },
       ],
+      complexity: ["error"],
       "function-paren-newline": ["error", "multiline"],
       "import/newline-after-import": ["error"],
       indent: ["error", 2],
@@ -131,7 +161,6 @@ export default [
           allowMultiplePropertiesPerLine: false,
         },
       ],
-      semi: ["error", "always"],
     },
   },
 ];

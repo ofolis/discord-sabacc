@@ -1,3 +1,9 @@
 export {
-  Ping,
-} from './ping';
+  Info,
+} from './info';
+export {
+  New,
+} from './new';
+export {
+  Play,
+} from './play';
