@@ -9,12 +9,12 @@
     "@stylistic/eslint-plugin": "^2.11.0",
     "@types/node": "^22.10.1",
     "eslint": "^9.16.0",
-    "eslint-config-love": "^109.0.0",
     "eslint-plugin-module-bindings-newline": "^1.0.1",
     "prettier": "^3.4.1",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.17.0"
   },
   "license": "ISC",
   "main": "dist/index.js",
