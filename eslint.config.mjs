@@ -235,11 +235,14 @@ export default tseslint.config(
       "@typescript-eslint/no-extraneous-class": [
         "off",
       ],
-      "@typescript-eslint/no-unused-vars": ["error", {
-        "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_",
-        "caughtErrorsIgnorePattern": "^_"
-      }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          "argsIgnorePattern": "^_",
+          "varsIgnorePattern": "^_",
+          "caughtErrorsIgnorePattern": "^_",
+        },
+      ],
       "@typescript-eslint/typedef": [
         "error",
         {
