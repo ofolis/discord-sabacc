@@ -7,12 +7,15 @@ import {
 } from "./types";
 
 export class Utils {
-  public static loadData<DataType extends Saveable>(id: string): DataType {
+  public static loadData<DataType extends Saveable>(id: string): DataType | null {
     const emptyStringLength: number = 0;
     if (id.length === emptyStringLength) {
       throw new Error("JSON load file ID cannot be blank.");
     }
     const jsonFilePath: string = `${Constants.dataPath}/${id}.json`;
+    if (!fs.existsSync(jsonFilePath)) {
+      return null;
+    }
     const jsonString: string = fs.readFileSync(
       jsonFilePath,
       "utf8",
