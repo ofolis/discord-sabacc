@@ -84,7 +84,7 @@ function initializeApp(): void {
     },
   );
   Discord.client.login(Constants.config.discordBotToken).catch((response: unknown) => {
-    console.error(`Failed to log in.`);
+    console.error("Failed to log in.");
     console.error(response);
   });
 }

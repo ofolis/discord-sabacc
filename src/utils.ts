@@ -7,12 +7,11 @@ import {
 } from "./types";
 
 export class Utils {
-  public static loadData<DataType extends Saveable>(id: string): DataType | null {
-    const emptyStringLength: number = 0;
-    if (id.length === emptyStringLength) {
-      throw new Error("JSON load file ID cannot be blank.");
+  public static loadData<DataType extends Saveable>(guildId: string, channelId: string): DataType | null {
+    if (guildId.length === 0 || channelId.length === 0) {
+      throw new Error("Guild and channel IDs cannot be blank.");
     }
-    const jsonFilePath: string = `${Constants.dataPath}/${id}.json`;
+    const jsonFilePath: string = `${Constants.dataPath}/${guildId}${channelId}.json`;
     if (!fs.existsSync(jsonFilePath)) {
       return null;
     }
@@ -24,16 +23,15 @@ export class Utils {
     return data;
   }
 
-  public static saveData(id: string, data: Saveable): void {
-    const emptyStringLength: number = 0;
-    if (id.length === emptyStringLength) {
-      throw new Error("JSON save file ID cannot be blank.");
+  public static saveData(guildId: string, channelId: string, data: Saveable): void {
+    if (guildId.length === 0 || channelId.length === 0) {
+      throw new Error("Guild and channel IDs cannot be blank.");
     }
     if (!fs.existsSync(Constants.dataPath)) {
       fs.mkdirSync(Constants.dataPath);
     }
     const jsonString: string = JSON.stringify(data);
-    const jsonFilePath: string = `${Constants.dataPath}/${id}.json`;
+    const jsonFilePath: string = `${Constants.dataPath}/${guildId}${channelId}.json`;
     fs.writeFileSync(
       jsonFilePath,
       jsonString,
@@ -41,5 +39,22 @@ export class Utils {
         "encoding": "utf8",
       },
     );
+  }
+
+  public static shuffleArray<ItemType>(array: ItemType[]): ItemType[] {
+    const arrayCopy: ItemType[] = Array.from(array);
+    let currentIndex: number = arrayCopy.length;
+    while (currentIndex !== 0) {
+      const randomIndex: number = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+      [
+        arrayCopy[currentIndex],
+        arrayCopy[randomIndex],
+      ] = [
+        arrayCopy[randomIndex],
+        arrayCopy[currentIndex],
+      ];
+    }
+    return arrayCopy;
   }
 }
