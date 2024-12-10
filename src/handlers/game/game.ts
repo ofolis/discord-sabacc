@@ -111,7 +111,7 @@ export class Game {
         } else if (buttonInteraction.customId === "startGame") {
           // Lock the game
           await gameMessage.edit({
-            "content": `# New Game\nA new game was started by <@${startingPlayer.id}> (${startingPlayer.username}).\n## Players\n- ${session.players.map(p => `<@${p.id}> (${p.username})`).join("\n- ")}\n\n**The game has started!**`,
+            "content": `# New Game\nA new game was started by <@${startingPlayer.id}> (${startingPlayer.username}).\n## Players\n- ${session.players.map(p => `<@${p.id}> (${p.username})`).join("\n- ")}\n\n**The game has started!**\n-# Use the **/info** command to view your hand and see game info.`,
             "components": [
             ], // Remove buttons
           });
@@ -167,7 +167,7 @@ export class Game {
       throw new Error();
     }
     await channel.send({
-      "content": `# <@${session.players[session.currentPlayerIndex].id}>'s Turn\n**Round:** \`${session.currentRoundIndex + 1}\`  |  **Turn:** \`${session.currentTurnIndex + 1}\`\n## Table\n${session.players.map((p, i) => `- **${p.username}**` + (i === session.currentPlayerIndex ? " 👤" : "") + `\n  - Played Tokens: \`${p.totalPlayedTokens}\`\n  - Unplayed Tokens: \`${p.totalUnplayedTokens}\``).join("\n")}`,
+      "content": `# <@${session.players[session.currentPlayerIndex].id}>'s Turn\n**Round:** \`${session.currentRoundIndex + 1}\`  |  **Turn:** \`${session.currentTurnIndex + 1}\`\n## Table\n${session.players.map((p, i) => `- **${p.username}**` + (i === session.currentPlayerIndex ? " 👤" : "") + `\n  - Played Tokens: \`${p.totalPlayedTokens}\`\n  - Unplayed Tokens: \`${p.totalUnplayedTokens}\``).join("\n")}\n\n-# Use the **/play** command to play your turn.\n-# Use the **/info** command to view your hand and see game info.`,
     });
   }
 

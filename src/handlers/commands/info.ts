@@ -6,7 +6,7 @@ import type {
 } from "../../types";
 
 export const command: Command = {
-  "description": "Get the current game info.",
+  "description": "View your hand and see game info.",
   "execute": async(interaction: DiscordCommandInteraction): Promise<void> => {
     await interaction.reply("Info!");
   },
