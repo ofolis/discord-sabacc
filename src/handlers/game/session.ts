@@ -75,6 +75,7 @@ export class Session {
         session,
         [
           "**The game has started!**",
+          "",
           "-# Use the **/info** command to view your hand and see game info.",
         ],
       ),
