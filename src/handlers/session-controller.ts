@@ -20,12 +20,17 @@ import {
   IO,
 } from "../io";
 import {
+  Card,
   PlayerState,
   SessionState,
 } from "../types";
 import {
   Utils,
 } from "../utils";
+import {
+  createBloodDeck,
+  createSandDeck,
+} from "../constants/game/decks";
 
 export class SessionController {
   private static async handleJoinButtonPress(
@@ -38,8 +43,12 @@ export class SessionController {
     if (!session.players.some(player => player.id === buttonInteraction.user.id)) {
       // Add the new player
       const newPlayer: PlayerState = {
+        "currentBloodCards": [
+        ],
         "currentPlayedTokenTotal": 0,
-        "currentUnplayedTokenTotal": 0,
+        "currentSandCards": [
+        ],
+        "currentUnplayedTokenTotal": session.startingTokenTotal,
         "id": buttonInteraction.user.id,
         "username": buttonInteraction.user.username,
       };
@@ -83,11 +92,13 @@ export class SessionController {
       ], // Remove the buttons
     });
     // Prep and start the session
-    for (const player of session.players) {
-      player.currentPlayedTokenTotal = 0;
-      player.currentUnplayedTokenTotal = session.startingTokenTotal;
-    };
     session.players = Utils.shuffleArray(session.players);
+    for (const player of session.players) {
+      player.currentBloodCards.push(GameController.removeTopCard(session.bloodDeck));
+      player.currentSandCards.push(GameController.removeTopCard(session.sandDeck));
+    }
+    session.bloodDiscard.push(GameController.removeTopCard(session.bloodDeck));
+    session.sandDiscard.push(GameController.removeTopCard(session.sandDeck));
     session.startedAt = Date.now();
     session.status = SessionStatus.ACTIVE;
     this.saveSession(session);
@@ -105,12 +116,21 @@ export class SessionController {
   ): Promise<void> {
     // Initialize session
     const startingPlayer: PlayerState = {
+      "currentBloodCards": [
+      ],
       "currentPlayedTokenTotal": 0,
-      "currentUnplayedTokenTotal": 0,
+      "currentSandCards": [
+      ],
+      "currentUnplayedTokenTotal": startingTokenTotal,
       "id": startingUser.id,
       "username": startingUser.username,
     };
+    const bloodDeck: Card[] = Utils.shuffleArray<Card>(createBloodDeck());
+    const sandDeck: Card[] = Utils.shuffleArray<Card>(createSandDeck());
     const session: SessionState = {
+      "bloodDeck": bloodDeck,
+      "bloodDiscard": [
+      ],
       "channelId": channelId,
       "currentPlayerIndex": 0,
       "currentRoundIndex": 0,
@@ -118,6 +138,9 @@ export class SessionController {
       "guildId": guildId,
       "players": [
         startingPlayer,
+      ],
+      "sandDeck": sandDeck,
+      "sandDiscard": [
       ],
       "startingPlayer": startingPlayer,
       "startingTokenTotal": startingTokenTotal,
