@@ -1,19 +1,8 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   Client,
-  CommandInteraction,
-  Message,
   REST,
   Routes,
   SlashCommandBuilder,
-  ButtonInteraction,
-  CollectorFilter,
-  ComponentType,
-  MessageComponentInteraction,
-  InteractionResponse,
-  TextChannel,
 } from "discord.js";
 import {
   Constants,
@@ -41,62 +30,6 @@ export class Discord {
       });
     }
     return this._client;
-  }
-
-  public static async sendMessage(channelId: string, content: string): Promise<Message> {
-    const channel: TextChannel | undefined = this.client.channels.cache.get(channelId) as TextChannel;
-    if (channel === undefined) {
-      throw new Error();
-    }
-    const message: Message = await channel.send(content);
-    return message;
-  }
-
-  public static async confirm(
-    interaction: CommandInteraction,
-    prompt: string,
-    confirmLabel: string,
-    cancelLabel: string,
-    confirmIsDestructive: boolean,
-  ): Promise<boolean> {
-    if (interaction.replied) {
-      throw new Error("Cannot confirm on a replied interaction.");
-    }
-    const confirm: ButtonBuilder = new ButtonBuilder()
-      .setCustomId("confirm")
-      .setLabel(confirmLabel)
-      .setStyle(confirmIsDestructive ? ButtonStyle.Danger : ButtonStyle.Primary);
-    const cancel: ButtonBuilder = new ButtonBuilder()
-      .setCustomId("cancel")
-      .setLabel(cancelLabel)
-      .setStyle(ButtonStyle.Secondary);
-    const row: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>()
-      .addComponents(
-        confirm,
-        cancel,
-      );
-    const interactionResponse: InteractionResponse = await interaction.reply({
-      "content": prompt,
-      "components": [
-        row,
-      ],
-      "ephemeral": true,
-    });
-    const collectorFilter: CollectorFilter<[MessageComponentInteraction]> = (i) =>
-      i.user.id === interaction.user.id && i.componentType === ComponentType.Button;
-    try {
-      const buttonInteraction: ButtonInteraction = await interactionResponse.awaitMessageComponent({
-        "filter": collectorFilter,
-        "time": 60_000,
-      }) as ButtonInteraction;
-      await interaction.deleteReply();
-      if (buttonInteraction.customId === "confirm") {
-        return true;
-      }
-    } catch (_: unknown) {
-      await interaction.deleteReply();
-    }
-    return false;
   }
 
   private static async deployGlobalCommands(

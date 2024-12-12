@@ -6,11 +6,11 @@ import type {
 } from "../../types";
 
 export const command: Command = {
+  "name": "info",
   "description": "View your hand and see game info.",
+  "isGlobal": false,
+  "isGuild": true,
   "execute": async(interaction: DiscordCommandInteraction): Promise<void> => {
     await interaction.reply("Info!");
   },
-  "isGlobal": false,
-  "isGuild": true,
-  "name": "info",
 };

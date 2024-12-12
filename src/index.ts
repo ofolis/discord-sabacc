@@ -77,15 +77,15 @@ function initializeApp(): void {
         interactionCommand.execute(interaction).catch((reason: unknown) => {
           throw reason;
         });
-      } catch (e) {
+      } catch (reason: unknown) {
         console.error(`Failed to handle "${interaction.commandName}".`);
-        console.error(e);
+        console.error(reason);
       }
     },
   );
-  Discord.client.login(Constants.config.discordBotToken).catch((response: unknown) => {
+  Discord.client.login(Constants.config.discordBotToken).catch((reason: unknown) => {
     console.error("Failed to log in.");
-    console.error(response);
+    console.error(reason);
   });
 }
 

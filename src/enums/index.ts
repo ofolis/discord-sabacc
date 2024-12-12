@@ -1,1 +1,3 @@
-export * from "./game";
+export {
+  GameSessionStatus,
+} from "./game-session-status";
