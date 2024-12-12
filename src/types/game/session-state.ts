@@ -1,19 +1,19 @@
 import {
-  GameSessionPlayer,
-} from ".";
+  PlayerState,
+} from "..";
 import {
-  GameSessionStatus,
-} from "../enums";
+  SessionStatus,
+} from "../../enums";
 
-export type GameSession = {
+export type SessionState = {
   "channelId": string;
   "currentPlayerIndex": number;
   "currentRoundIndex": number;
   "currentTurnIndex": number;
   "guildId": string;
-  "players": GameSessionPlayer[];
+  "players": PlayerState[];
   "startedAt"?: number;
-  "startingPlayer": GameSessionPlayer;
+  "startingPlayer": PlayerState;
   "startingTokenTotal": number;
-  "status": GameSessionStatus;
+  "status": SessionStatus;
 };

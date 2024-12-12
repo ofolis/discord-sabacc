@@ -10,26 +10,26 @@ import {
   User,
 } from "discord.js";
 import {
-  Messaging,
-  Play,
+  GameController,
+  InteractionController,
 } from ".";
 import {
-  GameSessionStatus,
-} from "../../enums";
+  SessionStatus,
+} from "../enums";
 import {
   IO,
-} from "../../io";
+} from "../io";
 import {
-  GameSession,
-  GameSessionPlayer,
-} from "../../types";
+  PlayerState,
+  SessionState,
+} from "../types";
 import {
   Utils,
-} from "../../utils";
+} from "../utils";
 
-export class Session {
+export class SessionController {
   private static async handleJoinButtonPress(
-    session: GameSession,
+    session: SessionState,
     buttonInteraction: ButtonInteraction,
     gameMessage: Message,
     joinButton: ButtonBuilder,
@@ -37,17 +37,17 @@ export class Session {
   ): Promise<void> {
     if (!session.players.some(player => player.id === buttonInteraction.user.id)) {
       // Add the new player
-      const newPlayer: GameSessionPlayer = {
+      const newPlayer: PlayerState = {
         "currentPlayedTokenTotal": 0,
         "currentUnplayedTokenTotal": 0,
         "id": buttonInteraction.user.id,
         "username": buttonInteraction.user.username,
       };
       session.players.push(newPlayer);
-      this.save(session);
+      this.saveSession(session);
       // Update the message
       await gameMessage.edit({
-        "content": Messaging.getNewGameMessageContent(
+        "content": InteractionController.getNewGameMessageContent(
           session,
           [
             "**Click the button below to join!**",
@@ -65,13 +65,13 @@ export class Session {
   }
 
   private static async handleStartButtonPress(
-    session: GameSession,
+    session: SessionState,
     gameMessage: Message,
     collector: InteractionCollector<ButtonInteraction>,
   ): Promise<void> {
     // Lock the new game message
     await gameMessage.edit({
-      "content": Messaging.getNewGameMessageContent(
+      "content": InteractionController.getNewGameMessageContent(
         session,
         [
           "**The game has started!**",
@@ -82,38 +82,35 @@ export class Session {
       "components": [
       ], // Remove the buttons
     });
-    // Start the session
+    // Prep and start the session
     for (const player of session.players) {
       player.currentPlayedTokenTotal = 0;
       player.currentUnplayedTokenTotal = session.startingTokenTotal;
     };
     session.players = Utils.shuffleArray(session.players);
     session.startedAt = Date.now();
-    session.status = GameSessionStatus.ACTIVE;
-    this.save(session);
+    session.status = SessionStatus.ACTIVE;
+    this.saveSession(session);
     // End the collector
     collector.stop();
     // Begin first turn
-    await Play.startTurn(
-      session.guildId,
-      session.channelId,
-    );
+    await GameController.startTurn(session);
   }
 
-  public static async createNew(
+  public static async createSession(
     guildId: string,
     channelId: string,
     startingUser: User,
     startingTokenTotal: number,
   ): Promise<void> {
     // Initialize session
-    const startingPlayer: GameSessionPlayer = {
+    const startingPlayer: PlayerState = {
       "currentPlayedTokenTotal": 0,
       "currentUnplayedTokenTotal": 0,
       "id": startingUser.id,
       "username": startingUser.username,
     };
-    const session: GameSession = {
+    const session: SessionState = {
       "channelId": channelId,
       "currentPlayerIndex": 0,
       "currentRoundIndex": 0,
@@ -124,9 +121,9 @@ export class Session {
       ],
       "startingPlayer": startingPlayer,
       "startingTokenTotal": startingTokenTotal,
-      "status": GameSessionStatus.PENDING,
+      "status": SessionStatus.PENDING,
     };
-    this.save(session);
+    this.saveSession(session);
     // Prompt channel users to join
     const joinButton: ButtonBuilder = new ButtonBuilder()
       .setCustomId("joinGame")
@@ -137,9 +134,9 @@ export class Session {
       .setLabel("Start Game")
       .setStyle(ButtonStyle.Success)
       .setDisabled(true);
-    const gameMessage: Message = await Messaging.sendMessage(
+    const gameMessage: Message = await InteractionController.sendMessage(
       channelId,
-      Messaging.getNewGameMessageContent(
+      InteractionController.getNewGameMessageContent(
         session,
         [
           "**Click the button below to join!**",
@@ -186,9 +183,9 @@ export class Session {
       "end",
       async() => {
         // On timeout
-        if (session.status === GameSessionStatus.PENDING && gameMessage.editable) {
+        if (session.status === SessionStatus.PENDING && gameMessage.editable) {
           await gameMessage.edit({
-            "content": Messaging.getNewGameMessageContent(
+            "content": InteractionController.getNewGameMessageContent(
               session,
               [
                 "**Game setup timed out!**",
@@ -202,27 +199,14 @@ export class Session {
     );
   }
 
-  public static isInProgress(guildId: string, channelId: string): boolean {
-    const loadResult: GameSession | null = IO.loadData<GameSession>(
+  public static loadSession(guildId: string, channelId: string): SessionState | null {
+    const loadResult: SessionState | null = IO.loadData<SessionState>(
       `${guildId}${channelId}`,
     );
-    if (loadResult === null) {
-      return false;
-    }
-    return loadResult.status !== GameSessionStatus.COMPLETED;
-  }
-
-  public static load(guildId: string, channelId: string): GameSession {
-    const loadResult: GameSession | null = IO.loadData<GameSession>(
-      `${guildId}${channelId}`,
-    );
-    if (loadResult === null) {
-      throw new Error(`No session exists for guild ${guildId} channel ${channelId}.`);
-    }
     return loadResult;
   }
 
-  public static save(session: GameSession): void {
+  public static saveSession(session: SessionState): void {
     IO.saveData(
       `${session.guildId}${session.channelId}`,
       session,

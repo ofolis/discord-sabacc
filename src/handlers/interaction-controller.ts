@@ -9,13 +9,13 @@ import {
 } from "discord.js";
 import {
   Discord,
-} from "../../discord";
+} from "../discord";
 import {
-  GameSession,
-  GameSessionPlayer,
-} from "../../types";
+  PlayerState,
+  SessionState,
+} from "../types";
 
-export class Messaging {
+export class InteractionController {
   private static getDiscordChannel(channelId: string): TextChannel {
     const channel: Channel | undefined = Discord.client.channels.cache.get(channelId);
     if (channel === undefined) {
@@ -31,7 +31,7 @@ export class Messaging {
     return messageContentLines.join("\n");
   }
 
-  public static getNewGameMessageContent(session: GameSession, additionalLines?: string[]): string {
+  public static getNewGameMessageContent(session: SessionState, additionalLines?: string[]): string {
     let messageContentLines: string[] = [
       "# New Game",
       `A new game was started by <@${session.startingPlayer.id}> (${session.startingPlayer.username}).`,
@@ -48,7 +48,7 @@ export class Messaging {
     return this.messageContentLinesToString(messageContentLines);
   }
 
-  public static getPlayerDetailMessageContent(players: GameSessionPlayer[], currentPlayerIndex?: number): string {
+  public static getPlayerDetailMessageContent(players: PlayerState[], currentPlayerIndex?: number): string {
     const messageLineGroups: string[][] = [
     ];
     for (const [
@@ -65,11 +65,13 @@ export class Messaging {
     return messageLineGroups.flat(1).join("\n");
   }
 
-  public static getTurnMessageContent(session: GameSession): string {
+  public static getTurnMessageContent(session: SessionState): string {
     const messageContentLines: string[] = [
       `# <@${session.players[session.currentPlayerIndex].id}>'s Turn`,
       `**Round:** \`${session.currentRoundIndex + 1}\`  |  **Turn:** \`${session.currentTurnIndex + 1}\``,
       "## Table",
+      "TBD",
+      "## Players",
       this.getPlayerDetailMessageContent(
         session.players,
         session.currentPlayerIndex,

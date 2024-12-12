@@ -9,12 +9,16 @@ import {
   InteractionResponse,
   MessageComponentInteraction,
 } from "discord.js";
+import {
+  SessionController,
+} from "..";
+import {
+  SessionStatus,
+} from "../../enums";
 import type {
   Command,
+  SessionState,
 } from "../../types";
-import {
-  Session,
-} from "../game";
 
 export const command: Command = {
   "name": "new",
@@ -25,10 +29,18 @@ export const command: Command = {
     if (interaction.guildId === null) {
       return;
     }
-    if (Session.isInProgress(
+    const session: SessionState | null = SessionController.loadSession(
       interaction.guildId,
       interaction.channelId,
-    )) {
+    );
+    if (session === null || session.status === SessionStatus.COMPLETED) {
+      SessionController.createSession(
+        interaction.guildId,
+        interaction.channelId,
+        interaction.user,
+        6,
+      );
+    } else {
       const confirmButton: ButtonBuilder = new ButtonBuilder()
         .setCustomId("endGame")
         .setLabel("End Game")
@@ -58,7 +70,7 @@ export const command: Command = {
         }) as ButtonInteraction;
         await interaction.deleteReply();
         if (buttonInteraction.customId === "endGame") {
-          Session.createNew(
+          SessionController.createSession(
             interaction.guildId,
             interaction.channelId,
             interaction.user,
@@ -69,13 +81,6 @@ export const command: Command = {
         // On timeout
         await interaction.deleteReply();
       }
-    } else {
-      Session.createNew(
-        interaction.guildId,
-        interaction.channelId,
-        interaction.user,
-        6,
-      );
     }
   },
 };

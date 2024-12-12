@@ -1,4 +1,4 @@
-export type GameSessionPlayer = {
+export type PlayerState = {
   "currentPlayedTokenTotal": number;
   "currentUnplayedTokenTotal": number;
   "id": string;
