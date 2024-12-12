@@ -1,7 +1,5 @@
+export * from "./commands";
 export * from "./game";
-export type {
-  Command,
-} from "./command";
 export type {
   Config,
 } from "./config";
