@@ -11,11 +11,44 @@ import {
   Discord,
 } from "../discord";
 import {
-  PlayerState,
+  Card,
   SessionState,
 } from "../types";
+import {
+  CardSuit,
+  CardType,
+} from "../enums";
 
 export class InteractionController {
+  private static getCardString(card: Card): string {
+    switch (card.suit) {
+      case CardSuit.BLOOD:
+        switch (card.type) {
+          case CardType.IMPOSTER:
+            return "🟥 `Imposter`";
+          case CardType.NUMBER:
+            return `🟥 \`${card.value}\``;
+          case CardType.SYLOP:
+            return "🟥 `Sylop`";
+          default:
+            throw new Error("Blood card had unknown type.");
+        }
+      case CardSuit.SAND:
+        switch (card.type) {
+          case CardType.IMPOSTER:
+            return "🟨 `Imposter`";
+          case CardType.NUMBER:
+            return `🟨 \`${card.value}\``;
+          case CardType.SYLOP:
+            return "🟨 `Sylop`";
+          default:
+            throw new Error("Sand card had unknown type.");
+        }
+      default:
+        throw new Error("Card had unknown suit.");
+    }
+  }
+
   private static getDiscordChannel(channelId: string): TextChannel {
     const channel: Channel | undefined = Discord.client.channels.cache.get(channelId);
     if (channel === undefined) {
@@ -48,15 +81,15 @@ export class InteractionController {
     return this.messageContentLinesToString(messageContentLines);
   }
 
-  public static getPlayerDetailMessageContent(players: PlayerState[], currentPlayerIndex?: number): string {
+  public static getPlayersDetailMessageContent(session: SessionState): string {
     const messageLineGroups: string[][] = [
     ];
     for (const [
       playerIndex,
       player,
-    ] of players.entries()) {
+    ] of session.players.entries()) {
       const messageLines: string[] = [
-        `- **${player.username}**${playerIndex === currentPlayerIndex ? " 👤" : ""}`,
+        `- **${player.username}**${playerIndex === session.currentPlayerIndex ? " 👤" : ""}`,
         `  - Played Tokens: \`${player.currentPlayedTokenTotal}\``,
         `  - Unplayed Tokens: \`${player.currentUnplayedTokenTotal}\``,
       ];
@@ -65,17 +98,24 @@ export class InteractionController {
     return messageLineGroups.flat(1).join("\n");
   }
 
+  public static getTableDetailMessageContent(session: SessionState): string {
+    const bloodDiscardString: string = session.bloodDiscard.length > 0 ? this.getCardString(session.bloodDiscard[0]) : "_No Cards_";
+    const sandDiscardString: string = session.sandDiscard.length > 0 ? this.getCardString(session.sandDiscard[0]) : "_No Cards_";
+    const messageContentLines: string[] = [
+      `Sand Discard: ${sandDiscardString}`,
+      `Blood Discard: ${bloodDiscardString}`,
+    ];
+    return this.messageContentLinesToString(messageContentLines);
+  }
+
   public static getTurnMessageContent(session: SessionState): string {
     const messageContentLines: string[] = [
       `# <@${session.players[session.currentPlayerIndex].id}>'s Turn`,
       `**Round:** \`${session.currentRoundIndex + 1}\`  |  **Turn:** \`${session.currentTurnIndex + 1}\``,
       "## Table",
-      "TBD",
+      this.getTableDetailMessageContent(session),
       "## Players",
-      this.getPlayerDetailMessageContent(
-        session.players,
-        session.currentPlayerIndex,
-      ),
+      this.getPlayersDetailMessageContent(session),
       "",
       "-# Use the **/play** command to play your turn.",
       "-# Use the **/info** command to view your hand and see game info.",
