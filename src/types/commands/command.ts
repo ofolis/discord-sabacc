@@ -1,6 +1,6 @@
 import type {
   DiscordCommandInteraction,
-} from "../discord";
+} from "../../discord";
 
 export type Command = {
   "description": string;

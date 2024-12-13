@@ -184,30 +184,36 @@ export class SessionController {
     });
     collector.on(
       "collect",
-      async(buttonInteraction: ButtonInteraction) => {
+      (buttonInteraction: ButtonInteraction) => {
         if (buttonInteraction.customId === "joinGame") {
-          await this.handleJoinButtonPress(
+          this.handleJoinButtonPress(
             session,
             buttonInteraction,
             gameMessage,
             joinButton,
             startButton,
-          );
+          ).catch((reason: unknown) => {
+            console.error("Failed to handle join button press.");
+            console.error(reason);
+          });
         } else if (buttonInteraction.customId === "startGame") {
-          await this.handleStartButtonPress(
+          this.handleStartButtonPress(
             session,
             gameMessage,
             collector,
-          );
+          ).catch((reason: unknown) => {
+            console.error("Failed to handle start button press.");
+            console.error(reason);
+          });
         }
       },
     );
     collector.on(
       "end",
-      async() => {
+      () => {
         // On timeout
         if (session.status === SessionStatus.PENDING && gameMessage.editable) {
-          await gameMessage.edit({
+          gameMessage.edit({
             "content": InteractionController.getNewGameMessageContent(
               session,
               [
@@ -216,6 +222,9 @@ export class SessionController {
             ),
             "components": [
             ], // Remove the buttons
+          }).catch((reason: unknown) => {
+            console.error("Failed to modify new game message on timeout.");
+            console.error(reason);
           });
         }
       },
@@ -223,9 +232,9 @@ export class SessionController {
   }
 
   public static loadSession(guildId: string, channelId: string): SessionState | null {
-    const loadResult: SessionState | null = IO.loadData<SessionState>(
+    const loadResult: SessionState | null = IO.loadData(
       `${guildId}${channelId}`,
-    );
+    ) as SessionState;
     return loadResult;
   }
 

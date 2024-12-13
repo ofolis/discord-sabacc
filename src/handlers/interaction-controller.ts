@@ -27,7 +27,7 @@ export class InteractionController {
           case CardType.IMPOSTER:
             return "🟥 `Imposter`";
           case CardType.NUMBER:
-            return `🟥 \`${card.value}\``;
+            return `🟥 \`${card.value.toString()}\``;
           case CardType.SYLOP:
             return "🟥 `Sylop`";
           default:
@@ -38,7 +38,7 @@ export class InteractionController {
           case CardType.IMPOSTER:
             return "🟨 `Imposter`";
           case CardType.NUMBER:
-            return `🟨 \`${card.value}\``;
+            return `🟨 \`${card.value.toString()}\``;
           case CardType.SYLOP:
             return "🟨 `Sylop`";
           default:
@@ -69,7 +69,7 @@ export class InteractionController {
       "# New Game",
       `A new game was started by <@${session.startingPlayer.id}> (${session.startingPlayer.username}).`,
       "## Players",
-      `${session.players.map(p => `- <@${p.id}> (${p.username})`).join("\n")}`,
+      session.players.map(p => `- <@${p.id}> (${p.username})`).join("\n"),
     ];
     if (additionalLines !== undefined) {
       messageContentLines = [
@@ -90,8 +90,8 @@ export class InteractionController {
     ] of session.players.entries()) {
       const messageLines: string[] = [
         `- **${player.username}**${playerIndex === session.currentPlayerIndex ? " 👤" : ""}`,
-        `  - Played Tokens: \`${player.currentPlayedTokenTotal}\``,
-        `  - Unplayed Tokens: \`${player.currentUnplayedTokenTotal}\``,
+        `  - Played Tokens: \`${player.currentPlayedTokenTotal.toString()}\``,
+        `  - Unplayed Tokens: \`${player.currentUnplayedTokenTotal.toString()}\``,
       ];
       messageLineGroups.push(messageLines);
     }
@@ -111,7 +111,7 @@ export class InteractionController {
   public static getTurnMessageContent(session: SessionState): string {
     const messageContentLines: string[] = [
       `# <@${session.players[session.currentPlayerIndex].id}>'s Turn`,
-      `**Round:** \`${session.currentRoundIndex + 1}\`  |  **Turn:** \`${session.currentTurnIndex + 1}\``,
+      `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
       "## Table",
       this.getTableDetailMessageContent(session),
       "## Players",
@@ -130,11 +130,11 @@ export class InteractionController {
     };
     if (messageButtons !== undefined) {
       if (messageButtons.length === 0) {
-        messageCreateOptions["components"] = [
+        messageCreateOptions.components = [
         ];
       } else {
         const row: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>().addComponents(messageButtons);
-        messageCreateOptions["components"] = [
+        messageCreateOptions.components = [
           row,
         ];
       }

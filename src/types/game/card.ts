@@ -4,7 +4,7 @@ import {
 } from "../../enums";
 
 export type Card = {
-  "suit": CardSuit,
-  "type": CardType,
-  "value": number,
+  "suit": CardSuit;
+  "type": CardType;
+  "value": number;
 };

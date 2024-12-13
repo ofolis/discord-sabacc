@@ -34,7 +34,7 @@ export const command: Command = {
       interaction.channelId,
     );
     if (session === null || session.status === SessionStatus.COMPLETED) {
-      SessionController.createSession(
+      await SessionController.createSession(
         interaction.guildId,
         interaction.channelId,
         interaction.user,
@@ -70,7 +70,7 @@ export const command: Command = {
         }) as ButtonInteraction;
         await interaction.deleteReply();
         if (buttonInteraction.customId === "endGame") {
-          SessionController.createSession(
+          await SessionController.createSession(
             interaction.guildId,
             interaction.channelId,
             interaction.user,
