@@ -11,42 +11,82 @@ import {
   Discord,
 } from "../discord";
 import {
-  Card,
-  SessionState,
-} from "../types";
-import {
   CardSuit,
   CardType,
 } from "../enums";
+import {
+  SessionController,
+} from "./session-controller";
+import {
+  Card,
+  PlayerState,
+  SessionState,
+} from "../types";
 
 export class InteractionController {
-  private static getCardString(card: Card): string {
-    switch (card.suit) {
-      case CardSuit.BLOOD:
-        switch (card.type) {
-          case CardType.IMPOSTER:
-            return "🟥 `Imposter`";
-          case CardType.NUMBER:
-            return `🟥 \`${card.value.toString()}\``;
-          case CardType.SYLOP:
-            return "🟥 `Sylop`";
-          default:
-            throw new Error("Blood card had unknown type.");
-        }
-      case CardSuit.SAND:
-        switch (card.type) {
-          case CardType.IMPOSTER:
-            return "🟨 `Imposter`";
-          case CardType.NUMBER:
-            return `🟨 \`${card.value.toString()}\``;
-          case CardType.SYLOP:
-            return "🟨 `Sylop`";
-          default:
-            throw new Error("Sand card had unknown type.");
-        }
-      default:
-        throw new Error("Card had unknown suit.");
+  private static formatCardString(card: Card): string {
+    const suitSymbols: Record<CardSuit, string> = {
+      [CardSuit.BLOOD]: "🟥",
+      [CardSuit.SAND]: "🟨",
+    };
+    const typeLabels: Record<CardType, string> = {
+      [CardType.IMPOSTER]: "Imposter",
+      [CardType.NUMBER]: card.value.toString(),
+      [CardType.SYLOP]: "Sylop",
+    };
+    const suitSymbol: string = suitSymbols[card.suit];
+    const typeLabel: string = typeLabels[card.type];
+    if (!suitSymbol || !typeLabel) {
+      throw new Error(`Card had unknown suit (${card.suit.toString()}) or type (${card.type.toString()}).`);
     }
+    return `\`${suitSymbol}${typeLabel}\``;
+  }
+
+  private static formatPlayerHandMessage(player: PlayerState): string {
+    const bloodCardsString: string = player.currentBloodCards
+      .map(card => this.formatCardString(card))
+      .join(" ") || "`None`";
+    const sandCardsString: string = player.currentSandCards
+      .map(card => this.formatCardString(card))
+      .join(" ") || "`None`";
+    const messageContentLines: string[] = [
+      `Sand Cards: ${sandCardsString}`,
+      `Blood Cards: ${bloodCardsString}`,
+      `Played Tokens: \`${this.formatTokenString(player.currentPlayedTokenTotal)}\``,
+      `Unplayed Tokens: \`${this.formatTokenString(player.currentUnplayedTokenTotal)}\``,
+    ];
+    return this.messageLinesToString(messageContentLines);
+  }
+
+  private static formatPlayersDetailMessage(session: SessionState): string {
+    const messageLineGroups: string[][] = [
+    ];
+    for (const [
+      playerIndex,
+      player,
+    ] of session.players.entries()) {
+      const messageLines: string[] = [
+        `- **${player.username}**${playerIndex === session.currentPlayerIndex ? " 👤" : ""}`,
+        `  - Played Tokens: \`${this.formatTokenString(player.currentPlayedTokenTotal)}\``,
+        `  - Unplayed Tokens: \`${this.formatTokenString(player.currentUnplayedTokenTotal)}\``,
+      ];
+      messageLineGroups.push(messageLines);
+    }
+    return messageLineGroups.flat(1).join("\n");
+  }
+
+  private static formatTableDetailMessage(session: SessionState): string {
+    const bloodDiscardString: string = session.bloodDiscard.length > 0 ? this.formatCardString(session.bloodDiscard[0]) : "`None`";
+    const sandDiscardString: string = session.sandDiscard.length > 0 ? this.formatCardString(session.sandDiscard[0]) : "`None`";
+    const messageContentLines: string[] = [
+      `Sand Discard: ${sandDiscardString}`,
+      `Blood Discard: ${bloodDiscardString}`,
+    ];
+    return this.messageLinesToString(messageContentLines);
+  }
+
+  private static formatTokenString(tokenTotal: number): string {
+    return tokenTotal > 0 ? "🪙".repeat(tokenTotal) : "None";
   }
 
   private static getDiscordChannel(channelId: string): TextChannel {
@@ -60,11 +100,33 @@ export class InteractionController {
     return channel;
   }
 
-  private static messageContentLinesToString(messageContentLines: string[]): string {
+  private static messageLinesToString(messageContentLines: string[]): string {
     return messageContentLines.join("\n");
   }
 
-  public static getNewGameMessageContent(session: SessionState, additionalLines?: string[]): string {
+  public static getInfoMessage(session: SessionState, playerId: string): string {
+    const player: PlayerState = SessionController.getSessionPlayer(
+      session,
+      playerId,
+    );
+    const messageContentLines: string[] = [
+      session.players[session.currentPlayerIndex].id === playerId ? "# Your Turn" : `# ${session.players[session.currentPlayerIndex].username}'s Turn`,
+      `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
+      "## Table",
+      this.formatTableDetailMessage(session),
+      "## Players",
+      this.formatPlayersDetailMessage(session),
+      "## Your Hand",
+      this.formatPlayerHandMessage(player),
+    ];
+    if (session.players[session.currentPlayerIndex].id === playerId) {
+      messageContentLines.push("");
+      messageContentLines.push("-# **It's your turn.** Use the **/play** command to play.");
+    }
+    return this.messageLinesToString(messageContentLines);
+  }
+
+  public static getNewGameMessage(session: SessionState, additionalLines?: string[]): string {
     let messageContentLines: string[] = [
       "# New Game",
       `A new game was started by <@${session.startingPlayer.id}> (${session.startingPlayer.username}).`,
@@ -78,49 +140,22 @@ export class InteractionController {
         ...additionalLines,
       ];
     }
-    return this.messageContentLinesToString(messageContentLines);
+    return this.messageLinesToString(messageContentLines);
   }
 
-  public static getPlayersDetailMessageContent(session: SessionState): string {
-    const messageLineGroups: string[][] = [
-    ];
-    for (const [
-      playerIndex,
-      player,
-    ] of session.players.entries()) {
-      const messageLines: string[] = [
-        `- **${player.username}**${playerIndex === session.currentPlayerIndex ? " 👤" : ""}`,
-        `  - Played Tokens: \`${player.currentPlayedTokenTotal.toString()}\``,
-        `  - Unplayed Tokens: \`${player.currentUnplayedTokenTotal.toString()}\``,
-      ];
-      messageLineGroups.push(messageLines);
-    }
-    return messageLineGroups.flat(1).join("\n");
-  }
-
-  public static getTableDetailMessageContent(session: SessionState): string {
-    const bloodDiscardString: string = session.bloodDiscard.length > 0 ? this.getCardString(session.bloodDiscard[0]) : "_No Cards_";
-    const sandDiscardString: string = session.sandDiscard.length > 0 ? this.getCardString(session.sandDiscard[0]) : "_No Cards_";
-    const messageContentLines: string[] = [
-      `Sand Discard: ${sandDiscardString}`,
-      `Blood Discard: ${bloodDiscardString}`,
-    ];
-    return this.messageContentLinesToString(messageContentLines);
-  }
-
-  public static getTurnMessageContent(session: SessionState): string {
+  public static getTurnMessage(session: SessionState): string {
     const messageContentLines: string[] = [
       `# <@${session.players[session.currentPlayerIndex].id}>'s Turn`,
       `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
       "## Table",
-      this.getTableDetailMessageContent(session),
+      this.formatTableDetailMessage(session),
       "## Players",
-      this.getPlayersDetailMessageContent(session),
+      this.formatPlayersDetailMessage(session),
       "",
       "-# Use the **/play** command to play your turn.",
       "-# Use the **/info** command to view your hand and see game info.",
     ];
-    return this.messageContentLinesToString(messageContentLines);
+    return this.messageLinesToString(messageContentLines);
   }
 
   public static async sendMessage(channelId: string, messageContent: string, messageButtons?: ButtonBuilder[]): Promise<Message> {

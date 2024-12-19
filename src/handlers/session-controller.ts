@@ -56,7 +56,7 @@ export class SessionController {
       this.saveSession(session);
       // Update the message
       await gameMessage.edit({
-        "content": InteractionController.getNewGameMessageContent(
+        "content": InteractionController.getNewGameMessage(
           session,
           [
             "**Click the button below to join!**",
@@ -80,7 +80,7 @@ export class SessionController {
   ): Promise<void> {
     // Lock the new game message
     await gameMessage.edit({
-      "content": InteractionController.getNewGameMessageContent(
+      "content": InteractionController.getNewGameMessage(
         session,
         [
           "**The game has started!**",
@@ -94,11 +94,11 @@ export class SessionController {
     // Prep and start the session
     session.players = Utils.shuffleArray(session.players);
     for (const player of session.players) {
-      player.currentBloodCards.push(GameController.removeTopCard(session.bloodDeck));
-      player.currentSandCards.push(GameController.removeTopCard(session.sandDeck));
+      player.currentBloodCards.push(GameController.drawTopCard(session.bloodDeck));
+      player.currentSandCards.push(GameController.drawTopCard(session.sandDeck));
     }
-    session.bloodDiscard.push(GameController.removeTopCard(session.bloodDeck));
-    session.sandDiscard.push(GameController.removeTopCard(session.sandDeck));
+    session.bloodDiscard.push(GameController.drawTopCard(session.bloodDeck));
+    session.sandDiscard.push(GameController.drawTopCard(session.sandDeck));
     session.startedAt = Date.now();
     session.status = SessionStatus.ACTIVE;
     this.saveSession(session);
@@ -159,7 +159,7 @@ export class SessionController {
       .setDisabled(true);
     const gameMessage: Message = await InteractionController.sendMessage(
       channelId,
-      InteractionController.getNewGameMessageContent(
+      InteractionController.getNewGameMessage(
         session,
         [
           "**Click the button below to join!**",
@@ -214,7 +214,7 @@ export class SessionController {
         // On timeout
         if (session.status === SessionStatus.PENDING && gameMessage.editable) {
           gameMessage.edit({
-            "content": InteractionController.getNewGameMessageContent(
+            "content": InteractionController.getNewGameMessage(
               session,
               [
                 "**Game setup timed out!**",
@@ -229,6 +229,14 @@ export class SessionController {
         }
       },
     );
+  }
+
+  public static getSessionPlayer(session: SessionState, playerId: string): PlayerState {
+    const player: PlayerState | undefined = session.players.find(player => player.id === playerId);
+    if (player === undefined) {
+      throw new Error("Player does not exist in the session.");
+    }
+    return player;
   }
 
   public static loadSession(guildId: string, channelId: string): SessionState | null {

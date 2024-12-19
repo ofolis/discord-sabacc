@@ -10,12 +10,12 @@ import {
 } from "../types";
 
 export class GameController {
-  public static removeTopCard(deck: Card[]): Card {
-    const removedCard: Card | undefined = deck.shift();
-    if (removedCard === undefined) {
+  public static drawTopCard(deck: Card[]): Card {
+    const drawnCard: Card | undefined = deck.shift();
+    if (drawnCard === undefined) {
       throw new Error("Cannot draw a card from an empty deck.");
     }
-    return removedCard;
+    return drawnCard;
   }
 
   public static async startTurn(session: SessionState): Promise<void> {
@@ -25,7 +25,7 @@ export class GameController {
     // Send new turn message
     await InteractionController.sendMessage(
       session.channelId,
-      InteractionController.getTurnMessageContent(session),
+      InteractionController.getTurnMessage(session),
     );
   }
 }
