@@ -121,7 +121,7 @@ export class InteractionController {
     ];
     if (session.players[session.currentPlayerIndex].id === playerId) {
       messageContentLines.push("");
-      messageContentLines.push("-# **It's your turn.** Use the **/play** command to play.");
+      messageContentLines.push("-# Use the **/play** command to take your turn.");
     }
     return this.messageLinesToString(messageContentLines);
   }
