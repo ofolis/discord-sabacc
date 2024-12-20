@@ -1,8 +1,15 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  Channel,
+  ChannelType,
   Client,
+  Message,
+  MessageCreateOptions,
   REST,
   Routes,
   SlashCommandBuilder,
+  TextChannel,
 } from "discord.js";
 import {
   Constants,
@@ -83,6 +90,17 @@ export class Discord {
     console.log("Successfully deployed guild commands.");
   }
 
+  private static getChannel(channelId: string): TextChannel {
+    const channel: Channel | undefined = Discord.client.channels.cache.get(channelId);
+    if (channel === undefined) {
+      throw new Error(`Channel ${channelId} was not found in the channel cache.`);
+    }
+    if (channel.type !== ChannelType.GuildText) {
+      throw new Error(`Channel ${channelId} was not a guild text channel.`);
+    }
+    return channel;
+  }
+
   public static async deployCommands(
     commandMap: Record<string, Command>,
     guildIds: string[] | undefined = undefined,
@@ -111,5 +129,25 @@ export class Discord {
       builderMap,
       guildIds,
     );
+  }
+
+  public static async sendPublicMessage(channelId: string, messageContent: string, messageButtons?: ButtonBuilder[]): Promise<Message> {
+    const channel: TextChannel = this.getChannel(channelId);
+    const messageCreateOptions: MessageCreateOptions = {
+      "content": messageContent,
+    };
+    if (messageButtons !== undefined) {
+      if (messageButtons.length === 0) {
+        messageCreateOptions.components = [
+        ];
+      } else {
+        const row: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>().addComponents(messageButtons);
+        messageCreateOptions.components = [
+          row,
+        ];
+      }
+    }
+    const message: Message = await channel.send(messageCreateOptions);
+    return message;
   }
 }

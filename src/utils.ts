@@ -1,4 +1,12 @@
 export class Utils {
+  public static removeTopArrayItem<T>(array: T[]): T {
+    const topItem: T | undefined = array.shift();
+    if (topItem === undefined) {
+      throw new Error("Cannot remove item from empty array.");
+    }
+    return topItem;
+  }
+
   public static shuffleArray<ItemType>(array: ItemType[]): ItemType[] {
     const arrayCopy: ItemType[] = Array.from(array);
     let currentIndex: number = arrayCopy.length;

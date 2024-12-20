@@ -10,7 +10,7 @@ import {
   MessageComponentInteraction,
 } from "discord.js";
 import {
-  InteractionController,
+  MessageController,
   SessionController,
 } from "..";
 import {
@@ -60,7 +60,7 @@ export const command: Command = {
         "Do you want to end it and start a new game?",
       ];
       const interactionResponse: InteractionResponse = await interaction.reply({
-        "content": InteractionController.messageLinesToString(messageLines),
+        "content": MessageController.linesToString(messageLines),
         "components": [
           row,
         ],

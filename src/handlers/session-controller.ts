@@ -11,8 +11,11 @@ import {
 } from "discord.js";
 import {
   GameController,
-  InteractionController,
+  MessageController,
 } from ".";
+import {
+  Discord,
+} from "../discord";
 import {
   SessionStatus,
 } from "../enums";
@@ -33,6 +36,23 @@ import {
 } from "../constants/game/decks";
 
 export class SessionController {
+  private static formatNewGameMessage(session: SessionState, additionalLines?: string[]): string {
+    let messageLines: string[] = [
+      "# New Game",
+      `A new game was started by <@${session.startingPlayer.id}> (${session.startingPlayer.username}).`,
+      "## Players",
+      session.players.map(p => `- <@${p.id}> (${p.username})`).join("\n"),
+    ];
+    if (additionalLines !== undefined) {
+      messageLines = [
+        ...messageLines,
+        "",
+        ...additionalLines,
+      ];
+    }
+    return MessageController.linesToString(messageLines);
+  }
+
   private static async handleJoinButtonPress(
     session: SessionState,
     buttonInteraction: ButtonInteraction,
@@ -56,7 +76,7 @@ export class SessionController {
       this.saveSession(session);
       // Update the message
       await gameMessage.edit({
-        "content": InteractionController.getNewGameMessage(
+        "content": this.formatNewGameMessage(
           session,
           [
             "**Click the button below to join!**",
@@ -80,7 +100,7 @@ export class SessionController {
   ): Promise<void> {
     // Lock the new game message
     await gameMessage.edit({
-      "content": InteractionController.getNewGameMessage(
+      "content": this.formatNewGameMessage(
         session,
         [
           "**The game has started!**",
@@ -94,18 +114,18 @@ export class SessionController {
     // Prep and start the session
     session.players = Utils.shuffleArray(session.players);
     for (const player of session.players) {
-      player.currentBloodCards.push(GameController.drawTopCard(session.bloodDeck));
-      player.currentSandCards.push(GameController.drawTopCard(session.sandDeck));
+      player.currentBloodCards.push(Utils.removeTopArrayItem(session.bloodDeck));
+      player.currentSandCards.push(Utils.removeTopArrayItem(session.sandDeck));
     }
-    session.bloodDiscard.push(GameController.drawTopCard(session.bloodDeck));
-    session.sandDiscard.push(GameController.drawTopCard(session.sandDeck));
+    session.bloodDiscard.push(Utils.removeTopArrayItem(session.bloodDeck));
+    session.sandDiscard.push(Utils.removeTopArrayItem(session.sandDeck));
     session.startedAt = Date.now();
     session.status = SessionStatus.ACTIVE;
     this.saveSession(session);
     // End the collector
     collector.stop();
     // Begin first turn
-    await GameController.startTurn(session);
+    await GameController.tableStartTurn(session);
   }
 
   public static async createSession(
@@ -157,9 +177,9 @@ export class SessionController {
       .setLabel("Start Game")
       .setStyle(ButtonStyle.Success)
       .setDisabled(true);
-    const gameMessage: Message = await InteractionController.sendPublicMessage(
+    const gameMessage: Message = await Discord.sendPublicMessage(
       channelId,
-      InteractionController.getNewGameMessage(
+      this.formatNewGameMessage(
         session,
         [
           "**Click the button below to join!**",
@@ -214,7 +234,7 @@ export class SessionController {
         // On timeout
         if (session.status === SessionStatus.PENDING && gameMessage.editable) {
           gameMessage.edit({
-            "content": InteractionController.getNewGameMessage(
+            "content": this.formatNewGameMessage(
               session,
               [
                 "**Game setup timed out!**",

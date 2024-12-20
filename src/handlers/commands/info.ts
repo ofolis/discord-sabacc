@@ -1,5 +1,5 @@
 import {
-  InteractionController,
+  MessageController,
   SessionController,
 } from "..";
 import type {
@@ -10,6 +10,7 @@ import {
 } from "../../enums";
 import type {
   Command,
+  PlayerState,
   SessionState,
 } from "../../types";
 
@@ -32,11 +33,27 @@ export const command: Command = {
         "ephemeral": true,
       });
     } else {
+      const player: PlayerState = SessionController.getSessionPlayer(
+        session,
+        interaction.user.id,
+      );
+      const isUserTurn: boolean = session.players[session.currentPlayerIndex].id === interaction.user.id;
+      const messageLines: string[] = [
+        isUserTurn ? "# Your Turn" : `# ${session.players[session.currentPlayerIndex].username}'s Turn`,
+        `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
+        "## Table",
+        MessageController.formatTableDetailMessage(session),
+        "## Players",
+        MessageController.formatPlayersDetailMessage(session),
+        "## Your Hand",
+        MessageController.formatPlayerHandMessage(player),
+      ];
+      if (isUserTurn) {
+        messageLines.push("");
+        messageLines.push("-# Use the **/play** command to take your turn.");
+      }
       await interaction.reply({
-        "content": InteractionController.getInfoMessage(
-          session,
-          interaction.user.id,
-        ),
+        "content": MessageController.linesToString(messageLines),
         "ephemeral": true,
       });
     }
