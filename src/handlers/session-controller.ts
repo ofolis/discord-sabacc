@@ -157,7 +157,7 @@ export class SessionController {
       .setLabel("Start Game")
       .setStyle(ButtonStyle.Success)
       .setDisabled(true);
-    const gameMessage: Message = await InteractionController.sendMessage(
+    const gameMessage: Message = await InteractionController.sendPublicMessage(
       channelId,
       InteractionController.getNewGameMessage(
         session,

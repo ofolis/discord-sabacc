@@ -10,6 +10,7 @@ import {
   MessageComponentInteraction,
 } from "discord.js";
 import {
+  InteractionController,
   SessionController,
 } from "..";
 import {
@@ -54,8 +55,12 @@ export const command: Command = {
           confirmButton,
           cancelButton,
         );
+      const messageLines: string[] = [
+        "**A game is currently active in this channel.**",
+        "Do you want to end it and start a new game?",
+      ];
       const interactionResponse: InteractionResponse = await interaction.reply({
-        "content": "A game is currently active in this channel. Do you want to end it and start a new game?",
+        "content": InteractionController.messageLinesToString(messageLines),
         "components": [
           row,
         ],

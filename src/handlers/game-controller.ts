@@ -23,7 +23,7 @@ export class GameController {
       throw new Error("Game turns may only begin on active sessions.");
     }
     // Send new turn message
-    await InteractionController.sendMessage(
+    await InteractionController.sendPublicMessage(
       session.channelId,
       InteractionController.getTurnMessage(session),
     );
