@@ -8,5 +8,6 @@ export type PlayerState = {
   "currentSandCards": Card[];
   "currentUnplayedTokenTotal": number;
   "id": string;
+  "globalName": string | null;
   "username": string;
 };

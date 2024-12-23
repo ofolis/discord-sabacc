@@ -4,6 +4,7 @@ import {
   ButtonInteraction,
   ButtonStyle,
   CollectorFilter,
+  CommandInteraction,
   ComponentType,
   InteractionResponse,
   MessageComponentInteraction,
@@ -23,6 +24,236 @@ import type {
   PlayerState,
   SessionState,
 } from "../../types";
+
+async function sendPlayerPromptResponse(message: string, buttonMap: Record<string, ButtonBuilder>, latestInteraction: CommandInteraction | ButtonInteraction, latestResponse: InteractionResponse | null = null): Promise<InteractionResponse> {
+  const buttonRow: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>();
+  for (const customId in buttonMap) {
+    const button: ButtonBuilder = buttonMap[customId];
+    button.setCustomId(customId);
+    buttonRow.addComponents(button);
+  }
+  if (latestInteraction instanceof CommandInteraction) {
+    latestResponse = await latestInteraction.reply({
+      "components": [
+        buttonRow,
+      ],
+      "content": message,
+      "ephemeral": true,
+    });
+  } else if (latestInteraction instanceof ButtonInteraction) {
+    await latestInteraction.update({
+      "components": [
+        buttonRow,
+      ],
+      "content": message,
+    });
+  } else {
+    throw new Error("Interaction type is invalid.");
+  }
+  if (latestResponse === null) {
+    throw new Error("There is no active response.");
+  }
+  return latestResponse;
+}
+
+async function getPlayerButtonInteraction(latestInteraction: CommandInteraction | ButtonInteraction, latestResponse: InteractionResponse): Promise<ButtonInteraction | null> {
+  const collectorFilter: CollectorFilter<[MessageComponentInteraction]> = (i) => i.user.id === latestInteraction.user.id;
+  try {
+    // Await the button interaction
+    const buttonInteraction: ButtonInteraction = await latestResponse.awaitMessageComponent<ComponentType.Button>({
+      "componentType": ComponentType.Button,
+      "filter": collectorFilter,
+      "time": 60000,
+    });
+    return buttonInteraction;
+  } catch (result: unknown) {
+    // TODO: handle actual errors as well instead of only replying with timeout
+    if (result instanceof Error) {
+      console.error("OMG");
+    } else {
+      console.log(result);
+    }
+    return null;
+  }
+}
+
+async function promptDraw(session: SessionState, latestInteraction: CommandInteraction | ButtonInteraction, latestResponse: InteractionResponse | null = null): Promise<void> {
+  const player: PlayerState = SessionController.getSessionPlayer(
+    session,
+    latestInteraction.user.id,
+  );
+  const buttonMap: Record<string, ButtonBuilder> = {};
+  const drawMessageLines: string[] = [
+    `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
+    "## Table",
+    MessageController.formatTableDetailMessage(session),
+    "## Your Hand",
+    MessageController.formatPlayerHandMessage(player),
+    "",
+    "**Choose a draw option.**",
+  ];
+  if (session.sandDiscard.length > 0) {
+    buttonMap.sandDiscardDraw = new ButtonBuilder()
+      .setLabel(MessageController.formatCardString(session.sandDiscard[0]))
+      .setStyle(ButtonStyle.Primary);
+  } else {
+    drawMessageLines.push("-# There is currently no sand discard to draw.");
+  }
+  if (session.bloodDiscard.length > 0) {
+    buttonMap.bloodDiscardDraw = new ButtonBuilder()
+      .setLabel(MessageController.formatCardString(session.bloodDiscard[0]))
+      .setStyle(ButtonStyle.Primary);
+  } else {
+    drawMessageLines.push("-# There is currently no blood discard to draw.");
+  }
+  if (session.sandDeck.length > 0) {
+    buttonMap.sandDeckDraw = new ButtonBuilder()
+      .setLabel("🟨?")
+      .setStyle(ButtonStyle.Primary);
+  } else {
+    drawMessageLines.push("-# There is currently no sand deck to draw.");
+  }
+  if (session.bloodDeck.length > 0) {
+    buttonMap.bloodDeckDraw = new ButtonBuilder()
+      .setLabel("🟥?")
+      .setStyle(ButtonStyle.Primary);
+  } else {
+    drawMessageLines.push("-# There is currently no blood deck to draw.");
+  }
+  buttonMap.cancel = new ButtonBuilder()
+    .setLabel("Cancel")
+    .setStyle(ButtonStyle.Secondary);
+  latestResponse = await sendPlayerPromptResponse(
+    MessageController.linesToString(drawMessageLines),
+    buttonMap,
+    latestInteraction,
+    latestResponse,
+  );
+  const buttonInteraction: ButtonInteraction | null = await getPlayerButtonInteraction(
+    latestInteraction,
+    latestResponse,
+  );
+  if (buttonInteraction === null) {
+    // Timeout
+  } else {
+    switch (buttonInteraction.customId) {
+      case "sandDiscardDraw":
+        await buttonInteraction.update({
+          "components": [
+          ],
+          "content": `You selected ${buttonInteraction.customId}. Thanks for playing!`,
+        });
+        break;
+      case "bloodDiscardDraw":
+        await buttonInteraction.update({
+          "components": [
+          ],
+          "content": `You selected ${buttonInteraction.customId}. Thanks for playing!`,
+        });
+        break;
+      case "sandDeckDraw":
+        await buttonInteraction.update({
+          "components": [
+          ],
+          "content": `You selected ${buttonInteraction.customId}. Thanks for playing!`,
+        });
+        break;
+      case "bloodDeckDraw":
+        await buttonInteraction.update({
+          "components": [
+          ],
+          "content": `You selected ${buttonInteraction.customId}. Thanks for playing!`,
+        });
+        break;
+      case "cancel":
+        await promptTurn(
+          session,
+          buttonInteraction,
+          latestResponse,
+        );
+        break;
+      default:
+        throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+    }
+  }
+}
+
+async function promptTurn(session: SessionState, latestInteraction: CommandInteraction | ButtonInteraction, latestResponse: InteractionResponse | null = null): Promise<void> {
+  const player: PlayerState = SessionController.getSessionPlayer(
+    session,
+    latestInteraction.user.id,
+  );
+  const buttonMap: Record<string, ButtonBuilder> = {};
+  const drawDisabled: boolean =
+    player.currentUnplayedTokenTotal === 0 ||
+    (
+      session.bloodDeck.length === 0 &&
+      session.bloodDiscard.length === 0 &&
+      session.sandDeck.length === 0 &&
+      session.sandDiscard.length === 0
+    ) ? true : false;
+  const actionMessageLines: string[] = [
+    `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
+    "## Table",
+    MessageController.formatTableDetailMessage(session),
+    "## Your Hand",
+    MessageController.formatPlayerHandMessage(player),
+    "",
+    "**Choose your turn action.**",
+  ];
+  if (drawDisabled) {
+    actionMessageLines.push("-# **Draw** is disabled because you have no remaining tokens.");
+  }
+  buttonMap.draw = new ButtonBuilder()
+    .setLabel("Draw")
+    .setStyle(ButtonStyle.Success)
+    .setDisabled(drawDisabled);
+  buttonMap.stand = new ButtonBuilder()
+    .setLabel("Stand")
+    .setStyle(ButtonStyle.Primary);
+  buttonMap.cancel = new ButtonBuilder()
+    .setLabel("Cancel")
+    .setStyle(ButtonStyle.Secondary);
+  latestResponse = await sendPlayerPromptResponse(
+    MessageController.linesToString(actionMessageLines),
+    buttonMap,
+    latestInteraction,
+    latestResponse,
+  );
+  const buttonInteraction: ButtonInteraction | null = await getPlayerButtonInteraction(
+    latestInteraction,
+    latestResponse,
+  );
+  if (buttonInteraction === null) {
+    // Timeout
+  } else {
+    switch (buttonInteraction.customId) {
+      case "draw":
+        await promptDraw(
+          session,
+          buttonInteraction,
+          latestResponse,
+        );
+        break;
+      case "stand":
+        await promptStand(buttonInteraction);
+        break;
+      case "cancel":
+        await latestInteraction.deleteReply();
+        break;
+      default:
+        throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+    }
+  }
+}
+
+async function promptStand(actionInteraction: ButtonInteraction): Promise<void> {
+  await actionInteraction.update({
+    "components": [
+    ],
+    "content": "STAND",
+  });
+}
 
 export const command: Command = {
   "name": "play",
@@ -48,8 +279,9 @@ export const command: Command = {
       });
     } else {
       if (session.players[session.currentPlayerIndex].id !== interaction.user.id) {
+        const currentPlayer: PlayerState = session.players[session.currentPlayerIndex];
         const messageLines: string[] = [
-          `**It is currently ${session.players[session.currentPlayerIndex].username}'s turn.**`,
+          `**It is currently ${currentPlayer.globalName ?? currentPlayer.username}'s turn.**`,
           "-# Use the **/info** command to view your hand and see game info.",
         ];
         await interaction.reply({
@@ -57,145 +289,10 @@ export const command: Command = {
           "ephemeral": true,
         });
       } else {
-        const player: PlayerState = SessionController.getSessionPlayer(
+        await promptTurn(
           session,
-          interaction.user.id,
+          interaction,
         );
-        const drawDisabled: boolean = player.currentUnplayedTokenTotal === 0 || (session.bloodDeck.length === 0 && session.bloodDiscard.length === 0 && session.sandDeck.length === 0 && session.sandDiscard.length === 0) ? true : false;
-        const drawButton: ButtonBuilder = new ButtonBuilder()
-          .setCustomId("draw")
-          .setLabel("Draw")
-          .setStyle(ButtonStyle.Success)
-          .setDisabled(drawDisabled);
-        const standButton: ButtonBuilder = new ButtonBuilder()
-          .setCustomId("stand")
-          .setLabel("Stand")
-          .setStyle(ButtonStyle.Primary);
-        const cancelButton: ButtonBuilder = new ButtonBuilder()
-          .setCustomId("cancel")
-          .setLabel("Cancel")
-          .setStyle(ButtonStyle.Secondary);
-        const actionRow: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>()
-          .addComponents(
-            drawButton,
-            standButton,
-            cancelButton,
-          );
-        const actionMessageLines: string[] = [
-          `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
-          "## Table",
-          MessageController.formatTableDetailMessage(session),
-          "## Your Hand",
-          MessageController.formatPlayerHandMessage(player),
-          "",
-          "**Choose your turn action.**",
-        ];
-        if (drawDisabled) {
-          actionMessageLines.push("-# **Draw** is disabled because you have no remaining tokens.");
-        }
-        const message: InteractionResponse = await interaction.reply({
-          "components": [
-            actionRow,
-          ],
-          "content": MessageController.linesToString(actionMessageLines),
-          "ephemeral": true,
-        });
-        const collectorFilter: CollectorFilter<[MessageComponentInteraction]> = (i) => i.user.id === interaction.user.id;
-        try {
-          // Await the first button interaction
-          const actionInteraction: ButtonInteraction = await message.awaitMessageComponent<ComponentType.Button>({
-            "componentType": ComponentType.Button,
-            "filter": collectorFilter,
-            "time": 60000,
-          });
-          if (actionInteraction.customId === "draw") {
-            const drawRow: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>();
-            const drawMessageLines: string[] = [
-              `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
-              "## Table",
-              MessageController.formatTableDetailMessage(session),
-              "## Your Hand",
-              MessageController.formatPlayerHandMessage(player),
-              "",
-              "**Choose a draw option.**",
-            ];
-            if (session.sandDiscard.length > 0) {
-              const sandDiscardDraw: ButtonBuilder = new ButtonBuilder()
-                .setCustomId("sandDiscardDraw")
-                .setLabel(MessageController.formatCardString(session.sandDiscard[0]))
-                .setStyle(ButtonStyle.Primary);
-              drawRow.addComponents(sandDiscardDraw);
-            } else {
-              drawMessageLines.push("-# There is currently no sand discard to draw.");
-            }
-            if (session.bloodDiscard.length > 0) {
-              const bloodDiscardDraw: ButtonBuilder = new ButtonBuilder()
-                .setCustomId("bloodDiscardDraw")
-                .setLabel(MessageController.formatCardString(session.bloodDiscard[0]))
-                .setStyle(ButtonStyle.Primary);
-              drawRow.addComponents(bloodDiscardDraw);
-            } else {
-              drawMessageLines.push("-# There is currently no blood discard to draw.");
-            }
-            if (session.sandDeck.length > 0) {
-              const sandDeckDraw: ButtonBuilder = new ButtonBuilder()
-                .setCustomId("sandDeckDraw")
-                .setLabel("🟨?")
-                .setStyle(ButtonStyle.Primary);
-              drawRow.addComponents(sandDeckDraw);
-            } else {
-              drawMessageLines.push("-# There is currently no sand deck to draw.");
-            }
-            if (session.bloodDeck.length > 0) {
-              const bloodDeckDraw: ButtonBuilder = new ButtonBuilder()
-                .setCustomId("bloodDeckDraw")
-                .setLabel("🟥?")
-                .setStyle(ButtonStyle.Primary);
-              drawRow.addComponents(bloodDeckDraw);
-            } else {
-              drawMessageLines.push("-# There is currently no blood deck to draw.");
-            }
-            await actionInteraction.update({
-              "components": [
-                drawRow,
-              ],
-              "content": MessageController.linesToString(drawMessageLines),
-            });
-            try {
-              // Await the second button interaction
-              const drawInteraction: ButtonInteraction = await message.awaitMessageComponent<ComponentType.Button>({
-                "componentType": ComponentType.Button,
-                "filter": collectorFilter,
-                "time": 60000,
-              });
-              await drawInteraction.update({
-                "components": [
-                ],
-                "content": `You selected ${drawInteraction.customId}. Thanks for playing!`,
-              });
-            } catch {
-              await actionInteraction.editReply({
-                "components": [
-                ],
-                "content": "You did not choose in time for the second step.",
-              });
-            }
-          } else if (actionInteraction.customId === "stand") {
-            await actionInteraction.update({
-              "components": [
-              ],
-              "content": "STAND",
-            });
-          } else {
-            await interaction.deleteReply();
-          }
-        } catch {
-          await interaction.editReply({
-            "components": [
-            ],
-            "content": "You did not choose in time for the first step.",
-          });
-        }
       }
     }
   },

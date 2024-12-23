@@ -39,9 +39,9 @@ export class SessionController {
   private static formatNewGameMessage(session: SessionState, additionalLines?: string[]): string {
     let messageLines: string[] = [
       "# New Game",
-      `A new game was started by <@${session.startingPlayer.id}> (${session.startingPlayer.username}).`,
+      `A new game was started by <@${session.startingPlayer.id}> (${session.startingPlayer.globalName ?? session.startingPlayer.username}).`,
       "## Players",
-      session.players.map(p => `- <@${p.id}> (${p.username})`).join("\n"),
+      session.players.map(p => `- <@${p.id}> (${p.globalName ?? p.username})`).join("\n"),
     ];
     if (additionalLines !== undefined) {
       messageLines = [
@@ -70,6 +70,7 @@ export class SessionController {
         ],
         "currentUnplayedTokenTotal": session.startingTokenTotal,
         "id": buttonInteraction.user.id,
+        "globalName": buttonInteraction.user.globalName,
         "username": buttonInteraction.user.username,
       };
       session.players.push(newPlayer);
@@ -143,6 +144,7 @@ export class SessionController {
       ],
       "currentUnplayedTokenTotal": startingTokenTotal,
       "id": startingUser.id,
+      "globalName": startingUser.globalName,
       "username": startingUser.username,
     };
     const bloodDeck: Card[] = Utils.shuffleArray<Card>(createBloodDeck());

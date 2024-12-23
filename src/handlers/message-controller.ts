@@ -55,7 +55,7 @@ export class MessageController {
       player,
     ] of session.players.entries()) {
       const messageLines: string[] = [
-        `- **${player.username}**${playerIndex === session.currentPlayerIndex ? " 👤" : ""}`,
+        `- **${player.globalName ?? player.username}**${playerIndex === session.currentPlayerIndex ? " 👤" : ""}`,
         `  - Played Tokens: \`${this.formatTokenString(player.currentPlayedTokenTotal)}\``,
         `  - Unplayed Tokens: \`${this.formatTokenString(player.currentUnplayedTokenTotal)}\``,
       ];
