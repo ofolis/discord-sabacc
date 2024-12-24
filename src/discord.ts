@@ -1,11 +1,22 @@
 import {
   ActionRowBuilder,
+  ActionRowData,
+  APIActionRowComponent,
+  APIMessageActionRowComponent,
   ButtonBuilder,
+  ButtonInteraction,
   Channel,
   ChannelType,
   Client,
+  CollectorFilter,
+  CommandInteraction,
+  ComponentType,
+  InteractionResponse,
+  JSONEncodable,
   Message,
-  MessageCreateOptions,
+  MessageActionRowComponentBuilder,
+  MessageActionRowComponentData,
+  MessageComponentInteraction,
   REST,
   Routes,
   SlashCommandBuilder,
@@ -19,8 +30,13 @@ import type {
 } from "./types";
 
 export {
+  ButtonBuilder as DiscordButtonBuilder,
+  ButtonInteraction as DiscordButtonInteraction,
+  ButtonStyle as DiscordButtonStyle,
   CommandInteraction as DiscordCommandInteraction,
+  InteractionResponse as DiscordInteractionResponse,
   Message as DiscordMessage,
+  User as DiscordUser,
 } from "discord.js";
 
 export class Discord {
@@ -37,6 +53,41 @@ export class Discord {
       });
     }
     return this._client;
+  }
+
+  private static buttonMapToActionRow(
+    buttonMap: Record<string, ButtonBuilder>,
+  ): ActionRowBuilder<ButtonBuilder> {
+    if (Object.keys(buttonMap).length === 0) {
+      throw new Error("Button map contained no entries.");
+    }
+    const buttonRow: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>();
+    for (const customId in buttonMap) {
+      const button: ButtonBuilder = buttonMap[customId];
+      button.setCustomId(customId);
+      buttonRow.addComponents(button);
+    }
+    return buttonRow;
+  }
+
+  private static createComponentsValue(
+    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
+  ): (
+    | JSONEncodable<APIActionRowComponent<APIMessageActionRowComponent>>
+    | ActionRowData<MessageActionRowComponentData | MessageActionRowComponentBuilder>
+    | APIActionRowComponent<APIMessageActionRowComponent>
+  )[] | undefined {
+    if (buttonMap !== undefined) {
+      if (Object.keys(buttonMap).length > 0) {
+        return [
+          this.buttonMapToActionRow(buttonMap),
+        ];
+      } else {
+        return [
+        ];
+      }
+    }
+    return undefined;
   }
 
   private static async deployGlobalCommands(
@@ -90,7 +141,9 @@ export class Discord {
     console.log("Successfully deployed guild commands.");
   }
 
-  private static getChannel(channelId: string): TextChannel {
+  private static getChannel(
+    channelId: string,
+  ): TextChannel {
     const channel: Channel | undefined = Discord.client.channels.cache.get(channelId);
     if (channel === undefined) {
       throw new Error(`Channel ${channelId} was not found in the channel cache.`);
@@ -131,23 +184,73 @@ export class Discord {
     );
   }
 
-  public static async sendPublicMessage(channelId: string, messageContent: string, messageButtons?: ButtonBuilder[]): Promise<Message> {
-    const channel: TextChannel = this.getChannel(channelId);
-    const messageCreateOptions: MessageCreateOptions = {
-      "content": messageContent,
-    };
-    if (messageButtons !== undefined) {
-      if (messageButtons.length === 0) {
-        messageCreateOptions.components = [
-        ];
-      } else {
-        const row: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>().addComponents(messageButtons);
-        messageCreateOptions.components = [
-          row,
-        ];
+  public static async getButtonInteraction(
+    context: InteractionResponse | Message,
+    filter: CollectorFilter<[MessageComponentInteraction]> | null = null,
+    timeout: number = 60000,
+  ): Promise<ButtonInteraction | null> {
+    try {
+      const buttonInteraction: ButtonInteraction = await context.awaitMessageComponent<ComponentType.Button>({
+        "componentType": ComponentType.Button,
+        "filter": filter ?? undefined,
+        "time": timeout,
+      });
+      return buttonInteraction;
+    } catch (result: unknown) {
+      // There is no better way I could find to determine which errors are timeouts
+      if (result instanceof Error && result.message.endsWith("reason: time")) {
+        return null;
       }
+      throw result;
     }
-    const message: Message = await channel.send(messageCreateOptions);
+  }
+
+  public static async sendMessage(
+    channelId: string,
+    content: string,
+    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
+  ): Promise<Message> {
+    const channel: TextChannel = this.getChannel(channelId);
+    const message: Message = await channel.send({
+      "components": this.createComponentsValue(buttonMap),
+      "content": content,
+    });
     return message;
+  }
+
+  public static async sendResponse(
+    interaction: CommandInteraction | MessageComponentInteraction,
+    content: string,
+    isPrivate: boolean = false,
+    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
+  ): Promise<InteractionResponse> {
+    const interactionResponse: InteractionResponse = await interaction.reply({
+      "components": this.createComponentsValue(buttonMap),
+      "content": content,
+      "ephemeral": isPrivate,
+    });
+    return interactionResponse;
+  }
+
+  public static async updateMessage(
+    message: Message  | InteractionResponse,
+    content: string,
+    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
+  ): Promise<void> {
+    await message.edit({
+      "components": this.createComponentsValue(buttonMap),
+      "content": content,
+    });
+  }
+
+  public static async updateResponse(
+    interaction: MessageComponentInteraction,
+    content: string,
+    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
+  ): Promise<InteractionResponse> {
+    return await interaction.update({
+      "components": this.createComponentsValue(buttonMap),
+      "content": content,
+    });
   }
 }

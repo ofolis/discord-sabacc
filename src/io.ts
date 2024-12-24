@@ -7,7 +7,9 @@ import {
 } from "./types";
 
 export class IO {
-  public static loadData(id: string): Saveable | null {
+  public static loadData(
+    id: string,
+  ): Saveable | null {
     const jsonFilePath: string = `${Constants.dataPath}/${id}.json`;
     if (!fs.existsSync(jsonFilePath)) {
       return null;
@@ -20,7 +22,10 @@ export class IO {
     return data;
   }
 
-  public static saveData(id: string, data: Saveable): void {
+  public static saveData(
+    id: string,
+    data: Saveable,
+  ): void {
     if (!fs.existsSync(Constants.dataPath)) {
       fs.mkdirSync(Constants.dataPath);
     }

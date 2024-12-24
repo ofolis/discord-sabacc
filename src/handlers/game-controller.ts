@@ -10,13 +10,18 @@ import {
 import {
   SessionState,
 } from "../types";
+import {
+  Utils,
+} from "../utils";
 
 export class GameController {
-  public static async tableStartTurn(session: SessionState): Promise<void> {
+  public static async tableStartTurn(
+    session: SessionState,
+  ): Promise<void> {
     if (session.status !== SessionStatus.ACTIVE) {
       throw new Error("Game turns may only begin on active sessions.");
     }
-    const messageLines: string[] = [
+    const contentLines: string[] = [
       `# <@${session.players[session.currentPlayerIndex].id}>'s Turn`,
       `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
       "## Table",
@@ -28,9 +33,9 @@ export class GameController {
       "-# Use the **/info** command to view your hand and see game info.",
     ];
     // Send new turn message
-    await Discord.sendPublicMessage(
+    await Discord.sendMessage(
       session.channelId,
-      MessageController.linesToString(messageLines),
+      Utils.linesToString(contentLines),
     );
   }
 }

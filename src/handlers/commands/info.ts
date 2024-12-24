@@ -2,8 +2,9 @@ import {
   MessageController,
   SessionController,
 } from "..";
-import type {
-  DiscordCommandInteraction,
+import {
+  Discord,
+  type DiscordCommandInteraction,
 } from "../../discord";
 import {
   SessionStatus,
@@ -13,6 +14,9 @@ import type {
   PlayerState,
   SessionState,
 } from "../../types";
+import {
+  Utils,
+} from "../../utils";
 
 export const command: Command = {
   "name": "info",
@@ -33,12 +37,15 @@ export const command: Command = {
         "ephemeral": true,
       });
     } else {
-      const player: PlayerState = SessionController.getSessionPlayer(
+      const player: PlayerState | null = SessionController.getSessionPlayerFromDiscordUserId(
         session,
         interaction.user.id,
       );
+      if (player === null) {
+        throw new Error("Player does not exist in session.");
+      }
       const isUserTurn: boolean = session.players[session.currentPlayerIndex].id === interaction.user.id;
-      const messageLines: string[] = [
+      const contentLines: string[] = [
         isUserTurn ? "# Your Turn" : `# ${session.players[session.currentPlayerIndex].username}'s Turn`,
         `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
         "## Table",
@@ -49,13 +56,14 @@ export const command: Command = {
         MessageController.formatPlayerHandMessage(player),
       ];
       if (isUserTurn) {
-        messageLines.push("");
-        messageLines.push("-# Use the **/play** command to take your turn.");
+        contentLines.push("");
+        contentLines.push("-# Use the **/play** command to take your turn.");
       }
-      await interaction.reply({
-        "content": MessageController.linesToString(messageLines),
-        "ephemeral": true,
-      });
+      await Discord.sendResponse(
+        interaction,
+        Utils.linesToString(contentLines),
+        true,
+      );
     }
   },
 };

@@ -1,20 +1,5 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonInteraction,
-  ButtonStyle,
-  CollectorFilter,
-  ComponentType,
-  InteractionCollector,
-  Message,
-  User,
-} from "discord.js";
-import {
-  GameController,
-  MessageController,
-} from ".";
-import {
-  Discord,
+  DiscordUser,
 } from "../discord";
 import {
   SessionStatus,
@@ -36,105 +21,35 @@ import {
 } from "../constants/game/decks";
 
 export class SessionController {
-  private static formatNewGameMessage(session: SessionState, additionalLines?: string[]): string {
-    let messageLines: string[] = [
-      "# New Game",
-      `A new game was started by <@${session.startingPlayer.id}> (${session.startingPlayer.globalName ?? session.startingPlayer.username}).`,
-      "## Players",
-      session.players.map(p => `- <@${p.id}> (${p.globalName ?? p.username})`).join("\n"),
-    ];
-    if (additionalLines !== undefined) {
-      messageLines = [
-        ...messageLines,
-        "",
-        ...additionalLines,
-      ];
-    }
-    return MessageController.linesToString(messageLines);
-  }
-
-  private static async handleJoinButtonPress(
+  public static addSessionPlayerFromDiscordUser(
     session: SessionState,
-    buttonInteraction: ButtonInteraction,
-    gameMessage: Message,
-    joinButton: ButtonBuilder,
-    startButton: ButtonBuilder,
-  ): Promise<void> {
-    if (!session.players.some(player => player.id === buttonInteraction.user.id)) {
-      // Add the new player
-      const newPlayer: PlayerState = {
-        "currentBloodCards": [
-        ],
-        "currentPlayedTokenTotal": 0,
-        "currentSandCards": [
-        ],
-        "currentUnplayedTokenTotal": session.startingTokenTotal,
-        "id": buttonInteraction.user.id,
-        "globalName": buttonInteraction.user.globalName,
-        "username": buttonInteraction.user.username,
-      };
-      session.players.push(newPlayer);
-      this.saveSession(session);
-      // Update the message
-      await gameMessage.edit({
-        "content": this.formatNewGameMessage(
-          session,
-          [
-            "**Click the button below to join!**",
-          ],
-        ),
-        "components": [
-          new ActionRowBuilder<ButtonBuilder>().addComponents(
-            joinButton,
-            startButton.setDisabled(session.players.length < 2), // Enable when there are 2+ players
-          ),
-        ],
-      });
+    discordUser: DiscordUser,
+  ): PlayerState {
+    if (session.status !== SessionStatus.PENDING) {
+      throw new Error("Attempted to add player to a non-pending session.");
     }
-    await buttonInteraction.deferUpdate(); // Acknowledge the interaction
-  }
-
-  private static async handleStartButtonPress(
-    session: SessionState,
-    gameMessage: Message,
-    collector: InteractionCollector<ButtonInteraction>,
-  ): Promise<void> {
-    // Lock the new game message
-    await gameMessage.edit({
-      "content": this.formatNewGameMessage(
-        session,
-        [
-          "**The game has started!**",
-          "",
-          "-# Use the **/info** command to view your hand and see game info.",
-        ],
-      ),
-      "components": [
-      ], // Remove the buttons
-    });
-    // Prep and start the session
-    session.players = Utils.shuffleArray(session.players);
-    for (const player of session.players) {
-      player.currentBloodCards.push(Utils.removeTopArrayItem(session.bloodDeck));
-      player.currentSandCards.push(Utils.removeTopArrayItem(session.sandDeck));
-    }
-    session.bloodDiscard.push(Utils.removeTopArrayItem(session.bloodDeck));
-    session.sandDiscard.push(Utils.removeTopArrayItem(session.sandDeck));
-    session.startedAt = Date.now();
-    session.status = SessionStatus.ACTIVE;
+    const player: PlayerState = {
+      "currentBloodCards": [
+      ],
+      "currentPlayedTokenTotal": 0,
+      "currentSandCards": [
+      ],
+      "currentUnplayedTokenTotal": session.startingTokenTotal,
+      "id": discordUser.id,
+      "globalName": discordUser.globalName,
+      "username": discordUser.username,
+    };
+    session.players.push(player);
     this.saveSession(session);
-    // End the collector
-    collector.stop();
-    // Begin first turn
-    await GameController.tableStartTurn(session);
+    return player;
   }
 
-  public static async createSession(
+  public static createSession(
     guildId: string,
     channelId: string,
-    startingUser: User,
+    startingDiscordUser: DiscordUser,
     startingTokenTotal: number,
-  ): Promise<void> {
+  ): SessionState {
     // Initialize session
     const startingPlayer: PlayerState = {
       "currentBloodCards": [
@@ -143,9 +58,9 @@ export class SessionController {
       "currentSandCards": [
       ],
       "currentUnplayedTokenTotal": startingTokenTotal,
-      "id": startingUser.id,
-      "globalName": startingUser.globalName,
-      "username": startingUser.username,
+      "id": startingDiscordUser.id,
+      "globalName": startingDiscordUser.globalName,
+      "username": startingDiscordUser.username,
     };
     const bloodDeck: Card[] = Utils.shuffleArray<Card>(createBloodDeck());
     const sandDeck: Card[] = Utils.shuffleArray<Card>(createSandDeck());
@@ -169,109 +84,51 @@ export class SessionController {
       "status": SessionStatus.PENDING,
     };
     this.saveSession(session);
-    // Prompt channel users to join
-    const joinButton: ButtonBuilder = new ButtonBuilder()
-      .setCustomId("joinGame")
-      .setLabel("Join Game")
-      .setStyle(ButtonStyle.Primary);
-    const startButton: ButtonBuilder = new ButtonBuilder()
-      .setCustomId("startGame")
-      .setLabel("Start Game")
-      .setStyle(ButtonStyle.Success)
-      .setDisabled(true);
-    const gameMessage: Message = await Discord.sendPublicMessage(
-      channelId,
-      this.formatNewGameMessage(
-        session,
-        [
-          "**Click the button below to join!**",
-        ],
-      ),
-      [
-        joinButton,
-        startButton,
-      ],
-    );
-    // Listen for user join requests
-    const collectorFilter: CollectorFilter<[ButtonInteraction]> = (buttonInteraction: ButtonInteraction) =>
-      buttonInteraction.message.id === gameMessage.id && [
-        "joinGame",
-        "startGame",
-      ].includes(buttonInteraction.customId);
-    const tenMinuteMilliseconds: number = 600000;
-    const collector: InteractionCollector<ButtonInteraction> = gameMessage.createMessageComponentCollector({
-      "filter": collectorFilter,
-      "componentType": ComponentType.Button,
-      "time": tenMinuteMilliseconds,
-    });
-    collector.on(
-      "collect",
-      (buttonInteraction: ButtonInteraction) => {
-        if (buttonInteraction.customId === "joinGame") {
-          this.handleJoinButtonPress(
-            session,
-            buttonInteraction,
-            gameMessage,
-            joinButton,
-            startButton,
-          ).catch((reason: unknown) => {
-            console.error("Failed to handle join button press.");
-            console.error(reason);
-          });
-        } else if (buttonInteraction.customId === "startGame") {
-          this.handleStartButtonPress(
-            session,
-            gameMessage,
-            collector,
-          ).catch((reason: unknown) => {
-            console.error("Failed to handle start button press.");
-            console.error(reason);
-          });
-        }
-      },
-    );
-    collector.on(
-      "end",
-      () => {
-        // On timeout
-        if (session.status === SessionStatus.PENDING && gameMessage.editable) {
-          gameMessage.edit({
-            "content": this.formatNewGameMessage(
-              session,
-              [
-                "**Game setup timed out!**",
-              ],
-            ),
-            "components": [
-            ], // Remove the buttons
-          }).catch((reason: unknown) => {
-            console.error("Failed to modify new game message on timeout.");
-            console.error(reason);
-          });
-        }
-      },
-    );
+    return session;
   }
 
-  public static getSessionPlayer(session: SessionState, playerId: string): PlayerState {
-    const player: PlayerState | undefined = session.players.find(player => player.id === playerId);
-    if (player === undefined) {
-      throw new Error("Player does not exist in the session.");
-    }
-    return player;
+  public static getSessionPlayerFromDiscordUserId(
+    session: SessionState,
+    discordUserId: string,
+  ): PlayerState | null {
+    const player: PlayerState | undefined = session.players.find(player => player.id === discordUserId);
+    return player ?? null;
   }
 
-  public static loadSession(guildId: string, channelId: string): SessionState | null {
+  public static loadSession(
+    guildId: string,
+    channelId: string,
+  ): SessionState | null {
     const loadResult: SessionState | null = IO.loadData(
       `${guildId}${channelId}`,
     ) as SessionState;
     return loadResult;
   }
 
-  public static saveSession(session: SessionState): void {
+  public static saveSession(
+    session: SessionState,
+  ): void {
     IO.saveData(
       `${session.guildId}${session.channelId}`,
       session,
     );
+  }
+
+  public static startSession(
+    session: SessionState,
+  ): void {
+    if (session.players.length <= 1) {
+      throw new Error("Session did not have enough players to start.");
+    }
+    session.players = Utils.shuffleArray(session.players);
+    for (const player of session.players) {
+      player.currentBloodCards.push(Utils.removeTopArrayItem(session.bloodDeck));
+      player.currentSandCards.push(Utils.removeTopArrayItem(session.sandDeck));
+    }
+    session.bloodDiscard.push(Utils.removeTopArrayItem(session.bloodDeck));
+    session.sandDiscard.push(Utils.removeTopArrayItem(session.sandDeck));
+    session.startedAt = Date.now();
+    session.status = SessionStatus.ACTIVE;
+    this.saveSession(session);
   }
 }

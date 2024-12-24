@@ -1,5 +1,13 @@
 export class Utils {
-  public static removeTopArrayItem<T>(array: T[]): T {
+  public static linesToString(
+    lines: string[],
+  ): string {
+    return lines.join("\n");
+  }
+
+  public static removeTopArrayItem<T>(
+    array: T[],
+  ): T {
     const topItem: T | undefined = array.shift();
     if (topItem === undefined) {
       throw new Error("Cannot remove item from empty array.");
@@ -7,7 +15,9 @@ export class Utils {
     return topItem;
   }
 
-  public static shuffleArray<ItemType>(array: ItemType[]): ItemType[] {
+  public static shuffleArray<ItemType>(
+    array: ItemType[],
+  ): ItemType[] {
     const arrayCopy: ItemType[] = Array.from(array);
     let currentIndex: number = arrayCopy.length;
     while (currentIndex !== 0) {

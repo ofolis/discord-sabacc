@@ -1,20 +1,14 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonInteraction,
-  ButtonStyle,
-  CollectorFilter,
-  CommandInteraction,
-  ComponentType,
-  InteractionResponse,
-  MessageComponentInteraction,
-} from "discord.js";
-import {
   MessageController,
   SessionController,
 } from "..";
-import type {
+import {
+  Discord,
+  DiscordButtonBuilder,
+  DiscordButtonInteraction,
+  DiscordButtonStyle,
   DiscordCommandInteraction,
+  DiscordInteractionResponse,
 } from "../../discord";
 import {
   SessionStatus,
@@ -24,67 +18,54 @@ import type {
   PlayerState,
   SessionState,
 } from "../../types";
+import {
+  Utils,
+} from "../../utils";
 
-async function sendPlayerPromptResponse(message: string, buttonMap: Record<string, ButtonBuilder>, latestInteraction: CommandInteraction | ButtonInteraction, latestResponse: InteractionResponse | null = null): Promise<InteractionResponse> {
-  const buttonRow: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>();
-  for (const customId in buttonMap) {
-    const button: ButtonBuilder = buttonMap[customId];
-    button.setCustomId(customId);
-    buttonRow.addComponents(button);
-  }
-  if (latestInteraction instanceof CommandInteraction) {
-    latestResponse = await latestInteraction.reply({
-      "components": [
-        buttonRow,
-      ],
-      "content": message,
-      "ephemeral": true,
-    });
-  } else if (latestInteraction instanceof ButtonInteraction) {
-    await latestInteraction.update({
-      "components": [
-        buttonRow,
-      ],
-      "content": message,
-    });
-  } else {
-    throw new Error("Interaction type is invalid.");
-  }
+async function handleMessage(
+  latestInteraction: DiscordCommandInteraction | DiscordButtonInteraction,
+  latestResponse: DiscordInteractionResponse | null = null,
+  messageContent: string,
+  buttonMap: Record<string, DiscordButtonBuilder>,
+): Promise<DiscordInteractionResponse> {
   if (latestResponse === null) {
-    throw new Error("There is no active response.");
+    if (!(latestInteraction instanceof DiscordCommandInteraction)) {
+      throw new Error("Interactions without a response should be a command interaction.");
+    }
+    latestResponse = await Discord.sendResponse(
+      latestInteraction,
+      messageContent,
+      true,
+      buttonMap,
+    );
+  } else {
+    if (!(latestInteraction instanceof DiscordButtonInteraction)) {
+      throw new Error("Interactions with a response should be a button interaction.");
+    }
+    await Discord.updateResponse(
+      latestInteraction,
+      messageContent,
+      buttonMap,
+    );
   }
   return latestResponse;
 }
 
-async function getPlayerButtonInteraction(latestInteraction: CommandInteraction | ButtonInteraction, latestResponse: InteractionResponse): Promise<ButtonInteraction | null> {
-  const collectorFilter: CollectorFilter<[MessageComponentInteraction]> = (i) => i.user.id === latestInteraction.user.id;
-  try {
-    // Await the button interaction
-    const buttonInteraction: ButtonInteraction = await latestResponse.awaitMessageComponent<ComponentType.Button>({
-      "componentType": ComponentType.Button,
-      "filter": collectorFilter,
-      "time": 60000,
-    });
-    return buttonInteraction;
-  } catch (result: unknown) {
-    // TODO: handle actual errors as well instead of only replying with timeout
-    if (result instanceof Error) {
-      console.error("OMG");
-    } else {
-      console.log(result);
-    }
-    return null;
-  }
-}
-
-async function promptDraw(session: SessionState, latestInteraction: CommandInteraction | ButtonInteraction, latestResponse: InteractionResponse | null = null): Promise<void> {
-  const player: PlayerState = SessionController.getSessionPlayer(
+async function promptDraw(
+  session: SessionState,
+  latestInteraction: DiscordCommandInteraction | DiscordButtonInteraction,
+  latestResponse: DiscordInteractionResponse | null = null,
+): Promise<void> {
+  const player: PlayerState | null = SessionController.getSessionPlayerFromDiscordUserId(
     session,
     latestInteraction.user.id,
   );
-  const buttonMap: Record<string, ButtonBuilder> = {};
-  const drawMessageLines: string[] = [
-    `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
+  if (player === null) {
+    throw new Error("Player does not exist in session.");
+  }
+  const buttonMap: Record<string, DiscordButtonBuilder> = {};
+  const contentLines: string[] = [
+    MessageController.formatRoundTurnMessage(session),
     "## Table",
     MessageController.formatTableDetailMessage(session),
     "## Your Hand",
@@ -93,45 +74,45 @@ async function promptDraw(session: SessionState, latestInteraction: CommandInter
     "**Choose a draw option.**",
   ];
   if (session.sandDiscard.length > 0) {
-    buttonMap.sandDiscardDraw = new ButtonBuilder()
+    buttonMap.sandDiscardDraw = new DiscordButtonBuilder()
       .setLabel(MessageController.formatCardString(session.sandDiscard[0]))
-      .setStyle(ButtonStyle.Primary);
+      .setStyle(DiscordButtonStyle.Primary);
   } else {
-    drawMessageLines.push("-# There is currently no sand discard to draw.");
+    contentLines.push("-# There is currently no sand discard to draw.");
   }
   if (session.bloodDiscard.length > 0) {
-    buttonMap.bloodDiscardDraw = new ButtonBuilder()
+    buttonMap.bloodDiscardDraw = new DiscordButtonBuilder()
       .setLabel(MessageController.formatCardString(session.bloodDiscard[0]))
-      .setStyle(ButtonStyle.Primary);
+      .setStyle(DiscordButtonStyle.Primary);
   } else {
-    drawMessageLines.push("-# There is currently no blood discard to draw.");
+    contentLines.push("-# There is currently no blood discard to draw.");
   }
   if (session.sandDeck.length > 0) {
-    buttonMap.sandDeckDraw = new ButtonBuilder()
+    buttonMap.sandDeckDraw = new DiscordButtonBuilder()
       .setLabel("🟨?")
-      .setStyle(ButtonStyle.Primary);
+      .setStyle(DiscordButtonStyle.Primary);
   } else {
-    drawMessageLines.push("-# There is currently no sand deck to draw.");
+    contentLines.push("-# There is currently no sand deck to draw.");
   }
   if (session.bloodDeck.length > 0) {
-    buttonMap.bloodDeckDraw = new ButtonBuilder()
+    buttonMap.bloodDeckDraw = new DiscordButtonBuilder()
       .setLabel("🟥?")
-      .setStyle(ButtonStyle.Primary);
+      .setStyle(DiscordButtonStyle.Primary);
   } else {
-    drawMessageLines.push("-# There is currently no blood deck to draw.");
+    contentLines.push("-# There is currently no blood deck to draw.");
   }
-  buttonMap.cancel = new ButtonBuilder()
+  buttonMap.cancel = new DiscordButtonBuilder()
     .setLabel("Cancel")
-    .setStyle(ButtonStyle.Secondary);
-  latestResponse = await sendPlayerPromptResponse(
-    MessageController.linesToString(drawMessageLines),
+    .setStyle(DiscordButtonStyle.Secondary);
+  latestResponse = await handleMessage(
+    latestInteraction,
+    latestResponse,
+    Utils.linesToString(contentLines),
     buttonMap,
-    latestInteraction,
-    latestResponse,
   );
-  const buttonInteraction: ButtonInteraction | null = await getPlayerButtonInteraction(
-    latestInteraction,
+  const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
     latestResponse,
+    (i) => i.user.id === latestInteraction.user.id,
   );
   if (buttonInteraction === null) {
     // Timeout
@@ -178,12 +159,19 @@ async function promptDraw(session: SessionState, latestInteraction: CommandInter
   }
 }
 
-async function promptTurn(session: SessionState, latestInteraction: CommandInteraction | ButtonInteraction, latestResponse: InteractionResponse | null = null): Promise<void> {
-  const player: PlayerState = SessionController.getSessionPlayer(
+async function promptTurn(
+  session: SessionState,
+  latestInteraction: DiscordCommandInteraction | DiscordButtonInteraction,
+  latestResponse: DiscordInteractionResponse | null = null,
+): Promise<void> {
+  const player: PlayerState | null = SessionController.getSessionPlayerFromDiscordUserId(
     session,
     latestInteraction.user.id,
   );
-  const buttonMap: Record<string, ButtonBuilder> = {};
+  if (player === null) {
+    throw new Error("Player does not exist in session.");
+  }
+  const buttonMap: Record<string, DiscordButtonBuilder> = {};
   const drawDisabled: boolean =
     player.currentUnplayedTokenTotal === 0 ||
     (
@@ -192,8 +180,8 @@ async function promptTurn(session: SessionState, latestInteraction: CommandInter
       session.sandDeck.length === 0 &&
       session.sandDiscard.length === 0
     ) ? true : false;
-  const actionMessageLines: string[] = [
-    `**Round:** \`${(session.currentRoundIndex + 1).toString()}\`  |  **Turn:** \`${(session.currentTurnIndex + 1).toString()}\``,
+  const contentLines: string[] = [
+    MessageController.formatRoundTurnMessage(session),
     "## Table",
     MessageController.formatTableDetailMessage(session),
     "## Your Hand",
@@ -202,27 +190,27 @@ async function promptTurn(session: SessionState, latestInteraction: CommandInter
     "**Choose your turn action.**",
   ];
   if (drawDisabled) {
-    actionMessageLines.push("-# **Draw** is disabled because you have no remaining tokens.");
+    contentLines.push("-# **Draw** is disabled because you have no remaining tokens.");
   }
-  buttonMap.draw = new ButtonBuilder()
+  buttonMap.draw = new DiscordButtonBuilder()
     .setLabel("Draw")
-    .setStyle(ButtonStyle.Success)
+    .setStyle(DiscordButtonStyle.Success)
     .setDisabled(drawDisabled);
-  buttonMap.stand = new ButtonBuilder()
+  buttonMap.stand = new DiscordButtonBuilder()
     .setLabel("Stand")
-    .setStyle(ButtonStyle.Primary);
-  buttonMap.cancel = new ButtonBuilder()
+    .setStyle(DiscordButtonStyle.Primary);
+  buttonMap.cancel = new DiscordButtonBuilder()
     .setLabel("Cancel")
-    .setStyle(ButtonStyle.Secondary);
-  latestResponse = await sendPlayerPromptResponse(
-    MessageController.linesToString(actionMessageLines),
+    .setStyle(DiscordButtonStyle.Secondary);
+  latestResponse = await handleMessage(
+    latestInteraction,
+    latestResponse,
+    Utils.linesToString(contentLines),
     buttonMap,
-    latestInteraction,
-    latestResponse,
   );
-  const buttonInteraction: ButtonInteraction | null = await getPlayerButtonInteraction(
-    latestInteraction,
+  const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
     latestResponse,
+    (i) => i.user.id === latestInteraction.user.id,
   );
   if (buttonInteraction === null) {
     // Timeout
@@ -247,7 +235,9 @@ async function promptTurn(session: SessionState, latestInteraction: CommandInter
   }
 }
 
-async function promptStand(actionInteraction: ButtonInteraction): Promise<void> {
+async function promptStand(
+  actionInteraction: DiscordButtonInteraction,
+): Promise<void> {
   await actionInteraction.update({
     "components": [
     ],
@@ -269,23 +259,23 @@ export const command: Command = {
       interaction.channelId,
     );
     if (session === null || session.status !== SessionStatus.ACTIVE) {
-      const messageLines: string[] = [
+      const contentLines: string[] = [
         "**There is no game currently active in this channel.**",
         "-# Use the **/new** command to start a new game.",
       ];
       await interaction.reply({
-        "content": MessageController.linesToString(messageLines),
+        "content": Utils.linesToString(contentLines),
         "ephemeral": true,
       });
     } else {
       if (session.players[session.currentPlayerIndex].id !== interaction.user.id) {
         const currentPlayer: PlayerState = session.players[session.currentPlayerIndex];
-        const messageLines: string[] = [
+        const contentLines: string[] = [
           `**It is currently ${currentPlayer.globalName ?? currentPlayer.username}'s turn.**`,
           "-# Use the **/info** command to view your hand and see game info.",
         ];
         await interaction.reply({
-          "content": MessageController.linesToString(messageLines),
+          "content": Utils.linesToString(contentLines),
           "ephemeral": true,
         });
       } else {
