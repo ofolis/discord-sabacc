@@ -64,7 +64,6 @@ async function promptJoin(
   const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
     outbound,
     null,
-    60000,
   );
   if (buttonInteraction === null) {
     const startedContentLines: string[] = [
@@ -155,7 +154,6 @@ export const command: Command = {
       const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
         interactionResponse,
         (i) => i.user.id === interaction.user.id,
-        60000,
       );
       if (buttonInteraction === null || buttonInteraction.customId !== "endGame") {
         createSession = false;
