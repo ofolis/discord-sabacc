@@ -15,7 +15,7 @@ export class MessageController {
   private static formatTokenString(
     tokenTotal: number,
   ): string {
-    return tokenTotal > 0 ? "🪙".repeat(tokenTotal) : "None";
+    return tokenTotal > 0 ? "⚪".repeat(tokenTotal) : "None";
   }
 
   public static formatCardString(
