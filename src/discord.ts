@@ -205,20 +205,7 @@ export class Discord {
     }
   }
 
-  public static async sendMessage(
-    channelId: string,
-    content: string,
-    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
-  ): Promise<Message> {
-    const channel: TextChannel = this.getChannel(channelId);
-    const message: Message = await channel.send({
-      "components": this.createComponentsValue(buttonMap),
-      "content": content,
-    });
-    return message;
-  }
-
-  public static async sendResponse(
+  public static async sendInteractionResponse(
     interaction: CommandInteraction | MessageComponentInteraction,
     content: string,
     isPrivate: boolean = false,
@@ -232,23 +219,36 @@ export class Discord {
     return interactionResponse;
   }
 
+  public static async sendMessage(
+    channelId: string,
+    content: string,
+    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
+  ): Promise<Message> {
+    const channel: TextChannel = this.getChannel(channelId);
+    const message: Message = await channel.send({
+      "components": this.createComponentsValue(buttonMap),
+      "content": content,
+    });
+    return message;
+  }
+
+  public static async updateInteractionResponse(
+    interaction: MessageComponentInteraction,
+    content: string,
+    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
+  ): Promise<InteractionResponse> {
+    return await interaction.update({
+      "components": this.createComponentsValue(buttonMap),
+      "content": content,
+    });
+  }
+
   public static async updateMessage(
     message: Message  | InteractionResponse,
     content: string,
     buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
   ): Promise<void> {
     await message.edit({
-      "components": this.createComponentsValue(buttonMap),
-      "content": content,
-    });
-  }
-
-  public static async updateResponse(
-    interaction: MessageComponentInteraction,
-    content: string,
-    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
-  ): Promise<InteractionResponse> {
-    return await interaction.update({
       "components": this.createComponentsValue(buttonMap),
       "content": content,
     });

@@ -59,7 +59,7 @@ export const command: Command = {
         contentLines.push("");
         contentLines.push("-# Use the **/play** command to take your turn.");
       }
-      await Discord.sendResponse(
+      await Discord.sendInteractionResponse(
         interaction,
         Utils.linesToString(contentLines),
         true,

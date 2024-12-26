@@ -32,7 +32,7 @@ async function handleMessage(
     if (!(latestInteraction instanceof DiscordCommandInteraction)) {
       throw new Error("Interactions without a response should be a command interaction.");
     }
-    latestResponse = await Discord.sendResponse(
+    latestResponse = await Discord.sendInteractionResponse(
       latestInteraction,
       messageContent,
       true,
@@ -42,7 +42,7 @@ async function handleMessage(
     if (!(latestInteraction instanceof DiscordButtonInteraction)) {
       throw new Error("Interactions with a response should be a button interaction.");
     }
-    await Discord.updateResponse(
+    await Discord.updateInteractionResponse(
       latestInteraction,
       messageContent,
       buttonMap,

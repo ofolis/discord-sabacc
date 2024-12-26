@@ -55,7 +55,7 @@ async function promptJoin(
       buttonMap,
     );
   } else {
-    outbound = await Discord.updateResponse(
+    outbound = await Discord.updateInteractionResponse(
       interaction,
       Utils.linesToString(outboundContentLines),
       buttonMap,
@@ -105,7 +105,7 @@ async function promptJoin(
           "",
           "**The game has started!**",
         ];
-        await Discord.updateResponse(
+        await Discord.updateInteractionResponse(
           buttonInteraction,
           Utils.linesToString(startedContentLines),
           {},
@@ -146,7 +146,7 @@ export const command: Command = {
         "**A game is currently active in this channel.**",
         "Do you want to end it and start a new game?",
       ];
-      const interactionResponse: DiscordInteractionResponse = await Discord.sendResponse(
+      const interactionResponse: DiscordInteractionResponse = await Discord.sendInteractionResponse(
         interaction,
         Utils.linesToString(contentLines),
         true,
