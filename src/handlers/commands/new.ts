@@ -55,7 +55,7 @@ async function promptJoin(
       buttonMap,
     );
   } else {
-    outbound = await Discord.updateInteractionResponse(
+    outbound = await Discord.updateInteractionSourceItem(
       interaction,
       Utils.linesToString(outboundContentLines),
       buttonMap,
@@ -71,7 +71,7 @@ async function promptJoin(
       "",
       "**Game creation timed out.**",
     ];
-    await Discord.updateMessage(
+    await Discord.updateSentItem(
       outbound,
       Utils.linesToString(startedContentLines),
       {},
@@ -104,7 +104,7 @@ async function promptJoin(
           "",
           "**The game has started!**",
         ];
-        await Discord.updateInteractionResponse(
+        await Discord.updateInteractionSourceItem(
           buttonInteraction,
           Utils.linesToString(startedContentLines),
           {},
@@ -158,7 +158,7 @@ export const command: Command = {
       if (buttonInteraction === null || buttonInteraction.customId !== "endGame") {
         createSession = false;
       }
-      await interactionResponse.delete();
+      await Discord.deleteSentItem(interactionResponse);
     }
     if (createSession) {
       const session: SessionState = SessionController.createSession(

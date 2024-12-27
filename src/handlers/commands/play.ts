@@ -42,7 +42,7 @@ async function handleMessage(
     if (!(latestInteraction instanceof DiscordButtonInteraction)) {
       throw new Error("Interactions with a response should be a button interaction.");
     }
-    await Discord.updateInteractionResponse(
+    await Discord.updateInteractionSourceItem(
       latestInteraction,
       messageContent,
       buttonMap,
@@ -227,7 +227,7 @@ async function promptTurn(
         await promptStand(buttonInteraction);
         break;
       case "cancel":
-        await latestInteraction.deleteReply();
+        await Discord.deleteSentItem(latestResponse);
         break;
       default:
         throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);

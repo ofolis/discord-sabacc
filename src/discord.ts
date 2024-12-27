@@ -154,6 +154,12 @@ export class Discord {
     return channel;
   }
 
+  public static async deleteSentItem(
+    sentItem: Message  | InteractionResponse,
+  ): Promise<void> {
+    await sentItem.delete();
+  }
+
   public static async deployCommands(
     commandMap: Record<string, Command>,
     guildIds: string[] | undefined = undefined,
@@ -232,7 +238,7 @@ export class Discord {
     return message;
   }
 
-  public static async updateInteractionResponse(
+  public static async updateInteractionSourceItem(
     interaction: MessageComponentInteraction,
     content: string,
     buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
@@ -243,12 +249,12 @@ export class Discord {
     });
   }
 
-  public static async updateMessage(
-    message: Message  | InteractionResponse,
+  public static async updateSentItem(
+    sentItem: Message  | InteractionResponse,
     content: string,
     buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
   ): Promise<void> {
-    await message.edit({
+    await sentItem.edit({
       "components": this.createComponentsValue(buttonMap),
       "content": content,
     });
