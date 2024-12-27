@@ -115,36 +115,40 @@ async function promptDraw(
     (i) => i.user.id === latestInteraction.user.id,
   );
   if (buttonInteraction === null) {
-    // Timeout
+    await Discord.updateSentItem(
+      latestResponse,
+      "**Card draw action timed out.**",
+      {},
+    );
   } else {
     switch (buttonInteraction.customId) {
       case "sandDiscardDraw":
-        await buttonInteraction.update({
-          "components": [
-          ],
-          "content": `You selected ${buttonInteraction.customId}. Thanks for playing!`,
-        });
+        await Discord.updateInteractionSourceItem(
+          buttonInteraction,
+          "Draw from sand discard.",
+          {},
+        );
         break;
       case "bloodDiscardDraw":
-        await buttonInteraction.update({
-          "components": [
-          ],
-          "content": `You selected ${buttonInteraction.customId}. Thanks for playing!`,
-        });
+        await Discord.updateInteractionSourceItem(
+          buttonInteraction,
+          "Draw from blood discard.",
+          {},
+        );
         break;
       case "sandDeckDraw":
-        await buttonInteraction.update({
-          "components": [
-          ],
-          "content": `You selected ${buttonInteraction.customId}. Thanks for playing!`,
-        });
+        await Discord.updateInteractionSourceItem(
+          buttonInteraction,
+          "Draw from sand deck.",
+          {},
+        );
         break;
       case "bloodDeckDraw":
-        await buttonInteraction.update({
-          "components": [
-          ],
-          "content": `You selected ${buttonInteraction.customId}. Thanks for playing!`,
-        });
+        await Discord.updateInteractionSourceItem(
+          buttonInteraction,
+          "Draw from blood deck.",
+          {},
+        );
         break;
       case "cancel":
         await promptTurn(
@@ -213,7 +217,11 @@ async function promptTurn(
     (i) => i.user.id === latestInteraction.user.id,
   );
   if (buttonInteraction === null) {
-    // Timeout
+    await Discord.updateSentItem(
+      latestResponse,
+      "**Turn play timed out.**",
+      {},
+    );
   } else {
     switch (buttonInteraction.customId) {
       case "draw":

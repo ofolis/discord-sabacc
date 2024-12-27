@@ -50,8 +50,8 @@ export class MessageController {
     const contentLines: string[] = [
       `Sand Cards: ${sandCardsString}`,
       `Blood Cards: ${bloodCardsString}`,
-      `Played Tokens: \`${this.formatTokenString(player.currentPlayedTokenTotal)}\``,
       `Unplayed Tokens: \`${this.formatTokenString(player.currentUnplayedTokenTotal)}\``,
+      `Played Tokens: \`${this.formatTokenString(player.currentPlayedTokenTotal)}\``,
     ];
     return Utils.linesToString(contentLines);
   }
@@ -67,8 +67,8 @@ export class MessageController {
     ] of session.players.entries()) {
       const contentLines: string[] = [
         `- **${player.globalName ?? player.username}**${playerIndex === session.currentPlayerIndex ? " 👤" : ""}`,
-        `  - Played Tokens: \`${this.formatTokenString(player.currentPlayedTokenTotal)}\``,
         `  - Unplayed Tokens: \`${this.formatTokenString(player.currentUnplayedTokenTotal)}\``,
+        `  - Played Tokens: \`${this.formatTokenString(player.currentPlayedTokenTotal)}\``,
       ];
       messageLineGroups.push(contentLines);
     }
