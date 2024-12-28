@@ -10,10 +10,9 @@ export type SessionState = {
   "bloodDeck": Card[];
   "bloodDiscard": Card[];
   "channelId": string;
+  "currentHandIndex": number;
   "currentPlayerIndex": number;
   "currentRoundIndex": number;
-  "currentTurnIndex": number;
-  "guildId": string;
   "players": PlayerState[];
   "sandDeck": Card[];
   "sandDiscard": Card[];

@@ -80,12 +80,12 @@ async function promptJoin(
     switch (buttonInteraction.customId) {
       case "joinGame":
       {
-        const existingPlayer: PlayerState | null = SessionController.getSessionPlayerFromDiscordUserId(
+        const existingPlayer: PlayerState | null = SessionController.getSessionPlayerById(
           session,
           buttonInteraction.user.id,
         );
         if (existingPlayer === null) {
-          SessionController.addSessionPlayerFromDiscordUser(
+          SessionController.addSessionPlayer(
             session,
             buttonInteraction.user,
           );
@@ -98,7 +98,7 @@ async function promptJoin(
       }
       case "startGame":
       {
-        SessionController.startSession(session);
+        await GameController.startGame(session);
         const startedContentLines: string[] = [
           ...baseContentLines,
           "",
@@ -109,7 +109,6 @@ async function promptJoin(
           Utils.linesToString(startedContentLines),
           {},
         );
-        await GameController.tableStartTurn(session);
         break;
       }
       default:
@@ -124,13 +123,7 @@ export const command: Command = {
   "isGlobal": false,
   "isGuild": true,
   "execute": async(interaction: DiscordCommandInteraction): Promise<void> => {
-    if (interaction.guildId === null) {
-      return;
-    }
-    const session: SessionState | null = SessionController.loadSession(
-      interaction.guildId,
-      interaction.channelId,
-    );
+    const session: SessionState | null = SessionController.loadSession(interaction.channelId);
     let createSession: boolean = true;
     if (session !== null && session.status !== SessionStatus.COMPLETED) {
       const buttonMap: Record<string, DiscordButtonBuilder> = {
@@ -159,15 +152,19 @@ export const command: Command = {
         createSession = false;
       }
       await Discord.deleteSentItem(interactionResponse);
+    } else {
+      const interactionResponse: DiscordInteractionResponse = await interaction.deferReply();
+      await Discord.deleteSentItem(interactionResponse);
     }
     if (createSession) {
       const session: SessionState = SessionController.createSession(
-        interaction.guildId,
         interaction.channelId,
         interaction.user,
         6,
       );
-      await promptJoin(session);
+      await promptJoin(
+        session,
+      );
     }
   },
 };

@@ -21,7 +21,7 @@ import {
 } from "../constants/game/decks";
 
 export class SessionController {
-  public static addSessionPlayerFromDiscordUser(
+  public static addSessionPlayer(
     session: SessionState,
     discordUser: DiscordUser,
   ): PlayerState {
@@ -31,10 +31,10 @@ export class SessionController {
     const player: PlayerState = {
       "currentBloodCards": [
       ],
-      "currentPlayedTokenTotal": 0,
       "currentSandCards": [
       ],
-      "currentUnplayedTokenTotal": session.startingTokenTotal,
+      "currentSpentTokenTotal": 0,
+      "currentUnspentTokenTotal": session.startingTokenTotal,
       "id": discordUser.id,
       "globalName": discordUser.globalName,
       "username": discordUser.username,
@@ -45,7 +45,6 @@ export class SessionController {
   }
 
   public static createSession(
-    guildId: string,
     channelId: string,
     startingDiscordUser: DiscordUser,
     startingTokenTotal: number,
@@ -54,10 +53,10 @@ export class SessionController {
     const startingPlayer: PlayerState = {
       "currentBloodCards": [
       ],
-      "currentPlayedTokenTotal": 0,
       "currentSandCards": [
       ],
-      "currentUnplayedTokenTotal": startingTokenTotal,
+      "currentSpentTokenTotal": 0,
+      "currentUnspentTokenTotal": startingTokenTotal,
       "id": startingDiscordUser.id,
       "globalName": startingDiscordUser.globalName,
       "username": startingDiscordUser.username,
@@ -69,10 +68,9 @@ export class SessionController {
       "bloodDiscard": [
       ],
       "channelId": channelId,
+      "currentHandIndex": 0,
       "currentPlayerIndex": 0,
       "currentRoundIndex": 0,
-      "currentTurnIndex": 0,
-      "guildId": guildId,
       "players": [
         startingPlayer,
       ],
@@ -87,21 +85,18 @@ export class SessionController {
     return session;
   }
 
-  public static getSessionPlayerFromDiscordUserId(
+  public static getSessionPlayerById(
     session: SessionState,
-    discordUserId: string,
+    playerId: string,
   ): PlayerState | null {
-    const player: PlayerState | undefined = session.players.find(player => player.id === discordUserId);
+    const player: PlayerState | undefined = session.players.find(player => player.id === playerId);
     return player ?? null;
   }
 
   public static loadSession(
-    guildId: string,
     channelId: string,
   ): SessionState | null {
-    const loadResult: SessionState | null = IO.loadData(
-      `${guildId}${channelId}`,
-    ) as SessionState;
+    const loadResult: SessionState | null = IO.loadData(channelId) as SessionState;
     return loadResult;
   }
 
@@ -109,26 +104,8 @@ export class SessionController {
     session: SessionState,
   ): void {
     IO.saveData(
-      `${session.guildId}${session.channelId}`,
+      session.channelId,
       session,
     );
-  }
-
-  public static startSession(
-    session: SessionState,
-  ): void {
-    if (session.players.length <= 1) {
-      throw new Error("Session did not have enough players to start.");
-    }
-    session.players = Utils.shuffleArray(session.players);
-    for (const player of session.players) {
-      player.currentBloodCards.push(Utils.removeTopArrayItem(session.bloodDeck));
-      player.currentSandCards.push(Utils.removeTopArrayItem(session.sandDeck));
-    }
-    session.bloodDiscard.push(Utils.removeTopArrayItem(session.bloodDeck));
-    session.sandDiscard.push(Utils.removeTopArrayItem(session.sandDeck));
-    session.startedAt = Date.now();
-    session.status = SessionStatus.ACTIVE;
-    this.saveSession(session);
   }
 }

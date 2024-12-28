@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import {
-  Constants,
-} from "./constants";
+  Environment,
+} from "./environment";
 import {
   Saveable,
 } from "./types";
@@ -10,7 +10,7 @@ export class IO {
   public static loadData(
     id: string,
   ): Saveable | null {
-    const jsonFilePath: string = `${Constants.dataPath}/${id}.json`;
+    const jsonFilePath: string = `${Environment.dataPath}/${id}.json`;
     if (!fs.existsSync(jsonFilePath)) {
       return null;
     }
@@ -26,11 +26,11 @@ export class IO {
     id: string,
     data: Saveable,
   ): void {
-    if (!fs.existsSync(Constants.dataPath)) {
-      fs.mkdirSync(Constants.dataPath);
+    if (!fs.existsSync(Environment.dataPath)) {
+      fs.mkdirSync(Environment.dataPath);
     }
     const jsonString: string = JSON.stringify(data);
-    const jsonFilePath: string = `${Constants.dataPath}/${id}.json`;
+    const jsonFilePath: string = `${Environment.dataPath}/${id}.json`;
     fs.writeFileSync(
       jsonFilePath,
       jsonString,

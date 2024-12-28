@@ -1,6 +1,6 @@
 import {
-  Constants,
-} from "./constants";
+  Environment,
+} from "./environment";
 import {
   Discord,
 } from "./discord";
@@ -68,7 +68,23 @@ function initializeApp(): void {
       if (!interaction.isCommand()) {
         return;
       }
-      console.log(interaction);
+      const interactionLog: Record<string, unknown> = {
+        "channelId": interaction.channelId,
+        "command": interaction.commandName,
+        "createdAt": interaction.createdAt.toUTCString(),
+        "guild": interaction.guild ? {
+          "id": interaction.guild.id,
+          "name": interaction.guild.name,
+        } : null,
+        "id": interaction.id,
+        "user": {
+          "displayName": interaction.user.displayName,
+          "globalName": interaction.user.globalName,
+          "id": interaction.user.id,
+          "username": interaction.user.username,
+        },
+      };
+      console.log(interactionLog);
       try {
         const interactionCommand: Command | undefined = commands.find(command => command.name === interaction.commandName);
         if (interactionCommand === undefined) {
@@ -77,13 +93,14 @@ function initializeApp(): void {
         interactionCommand.execute(interaction).catch((reason: unknown) => {
           throw reason;
         });
+        console.log(`Completed interaction ${interaction.id}.`);
       } catch (reason: unknown) {
-        console.error(`Failed to handle "${interaction.commandName}".`);
+        console.error(`Failed to handle interaction ${interaction.id}.`);
         console.error(reason);
       }
     },
   );
-  Discord.client.login(Constants.config.discordBotToken).catch((reason: unknown) => {
+  Discord.client.login(Environment.config.discordBotToken).catch((reason: unknown) => {
     console.error("Failed to log in.");
     console.error(reason);
   });

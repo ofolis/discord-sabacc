@@ -2,8 +2,8 @@ export {
   GameController,
 } from "./game-controller";
 export {
-  MessageController,
-} from "./message-controller";
+  InteractionController,
+} from "./interaction-controller";
 export {
   SessionController,
 } from "./session-controller";

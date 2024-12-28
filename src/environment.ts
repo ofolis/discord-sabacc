@@ -3,7 +3,7 @@ import type {
   Config,
 } from "./types";
 
-export class Constants {
+export class Environment {
   private static _config: Config | null = null;
 
   private static envLoaded = false;

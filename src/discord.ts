@@ -23,8 +23,8 @@ import {
   TextChannel,
 } from "discord.js";
 import {
-  Constants,
-} from "./constants";
+  Environment,
+} from "./environment";
 import type {
   Command,
 } from "./types";
@@ -36,6 +36,7 @@ export {
   CommandInteraction as DiscordCommandInteraction,
   InteractionResponse as DiscordInteractionResponse,
   Message as DiscordMessage,
+  MessageComponentInteraction as DiscordMessageComponentInteraction,
   User as DiscordUser,
 } from "discord.js";
 
@@ -105,7 +106,7 @@ export class Discord {
         key,
       ]) => builderMap[key]);
     await rest.put(
-      Routes.applicationCommands(Constants.config.discordApplicationId),
+      Routes.applicationCommands(Environment.config.discordApplicationId),
       {
         "body": commandBuilders,
       },
@@ -130,7 +131,7 @@ export class Discord {
       ]) => builderMap[key]);
     const promises: Promise<unknown>[] = guildIds.map(async(guildId: string) => await rest.put(
       Routes.applicationGuildCommands(
-        Constants.config.discordApplicationId,
+        Environment.config.discordApplicationId,
         guildId,
       ),
       {
@@ -166,7 +167,7 @@ export class Discord {
   ): Promise<void> {
     const rest: REST = new REST({
       "version": "10",
-    }).setToken(Constants.config.discordBotToken);
+    }).setToken(Environment.config.discordBotToken);
     if (guildIds === undefined) {
       guildIds = Array.from(this.client.guilds.cache.keys());
     }
@@ -236,6 +237,28 @@ export class Discord {
       "content": content,
     });
     return message;
+  }
+
+  public static async sendPersistentInteractionResponse(
+    interaction: CommandInteraction | MessageComponentInteraction,
+    content: string,
+    isPrivate: boolean = false,
+    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
+  ): Promise<InteractionResponse> {
+    if (interaction instanceof MessageComponentInteraction) {
+      return await this.updateInteractionSourceItem(
+        interaction,
+        content,
+        buttonMap,
+      );
+    } else {
+      return await this.sendInteractionResponse(
+        interaction,
+        content,
+        isPrivate,
+        buttonMap,
+      );
+    }
   }
 
   public static async updateInteractionSourceItem(
