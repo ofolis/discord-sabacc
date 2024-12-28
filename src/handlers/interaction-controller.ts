@@ -5,6 +5,7 @@ import {
   DiscordButtonStyle,
   DiscordCommandInteraction,
   DiscordInteractionResponse,
+  DiscordMessage,
   DiscordMessageComponentInteraction,
 } from "../discord";
 import {
@@ -22,6 +23,9 @@ import {
 import {
   GameController,
 } from "./game-controller";
+import {
+  SessionController,
+} from "./session-controller";
 
 export class InteractionController {
   private static formatCardString(
@@ -47,7 +51,7 @@ export class InteractionController {
   private static formatHandRoundMessage(
     session: SessionState,
   ): string {
-    return `**Hand:** \`${(session.currentHandIndex + 1).toString()}\`  |  **Round:** \`${(session.currentRoundIndex + 1).toString()} of 3\``;
+    return `**Hand:** \`${(session.currentHandIndex + 1).toString()}\`  |  **Round:** \`${(session.currentRoundIndex + 1).toString()}/3\``;
   }
 
   private static formatPlayerItemsMessage(
@@ -362,20 +366,22 @@ export class InteractionController {
       "**There is no game currently active in this channel.**",
       "-# Use the **/new** command to start a new game.",
     ];
-    await Discord.sendInteractionResponse(
+    await Discord.sendPersistentInteractionResponse(
       discordInteraction,
       Utils.linesToString(contentLines),
       true,
+      {},
     );
   }
 
   public static async informNotPlaying(
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<void> {
-    await Discord.sendInteractionResponse(
+    await Discord.sendPersistentInteractionResponse(
       discordInteraction,
       "**You are not part of the current game.**",
       true,
+      {},
     );
   }
 
@@ -388,10 +394,11 @@ export class InteractionController {
       `**It is currently ${currentPlayer.globalName ?? currentPlayer.username}'s turn.**`,
       "-# Use the **/info** command to view your hand and see game info.",
     ];
-    await Discord.sendInteractionResponse(
+    await Discord.sendPersistentInteractionResponse(
       discordInteraction,
       Utils.linesToString(contentLines),
       true,
+      {},
     );
   }
 
@@ -415,10 +422,22 @@ export class InteractionController {
       contentLines.push("");
       contentLines.push("-# Use the **/play** command to take your turn.");
     }
-    await Discord.sendInteractionResponse(
+    await Discord.sendPersistentInteractionResponse(
       discordInteraction,
       Utils.linesToString(contentLines),
       true,
+      {},
+    );
+  }
+
+  public static async informStartingGame(
+    discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
+  ): Promise<void> {
+    await Discord.sendPersistentInteractionResponse(
+      discordInteraction,
+      "**Starting a new game...**",
+      true,
+      {},
     );
   }
 
@@ -498,6 +517,145 @@ export class InteractionController {
           break;
         default:
           throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+      }
+    }
+  }
+
+  public static async promptEndGame(
+    discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
+  ): Promise<boolean> {
+    const buttonMap: Record<string, DiscordButtonBuilder> = {
+      "endGame": new DiscordButtonBuilder()
+        .setLabel("End Game")
+        .setStyle(DiscordButtonStyle.Danger),
+      "cancel": new DiscordButtonBuilder()
+        .setLabel("Cancel")
+        .setStyle(DiscordButtonStyle.Secondary),
+    };
+    const contentLines: string[] = [
+      "**A game is currently active in this channel.**",
+      "Do you want to end it and start a new game?",
+    ];
+    const interactionResponse: DiscordInteractionResponse = await Discord.sendPersistentInteractionResponse(
+      discordInteraction,
+      Utils.linesToString(contentLines),
+      true,
+      buttonMap,
+    );
+    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+      interactionResponse,
+      (i) => i.user.id === discordInteraction.user.id,
+    );
+    if (buttonInteraction === null) {
+      await Discord.updateSentItem(
+        interactionResponse,
+        "**End game prompt timed out.**",
+      );
+      return false;
+    } else {
+      switch (buttonInteraction.customId) {
+        case "endGame":
+          await this.informStartingGame(buttonInteraction);
+          return true;
+        case "cancel":
+          await Discord.deleteSentItem(interactionResponse);
+          return false;
+        default:
+          throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+      }
+    }
+  }
+
+  public static async promptJoinGame(
+    session: SessionState,
+    discordInteraction: DiscordMessageComponentInteraction | null = null,
+  ): Promise<void> {
+    const buttonMap: Record<string, DiscordButtonBuilder> = {
+      "joinGame": new DiscordButtonBuilder()
+        .setLabel("Join Game")
+        .setStyle(DiscordButtonStyle.Primary),
+      "startGame": new DiscordButtonBuilder()
+        .setLabel("Start Game")
+        .setStyle(DiscordButtonStyle.Success)
+        .setDisabled(session.players.length <= 1),
+    };
+    const baseContentLines: string[] = [
+      "# New Game",
+      `A new game was started by <@${session.startingPlayer.id}> (${session.startingPlayer.globalName ?? session.startingPlayer.username}).`,
+      "## Players",
+      session.players.map(p => `- <@${p.id}> (${p.globalName ?? p.username})`).join("\n"),
+    ];
+    const outboundContentLines: string[] = [
+      ...baseContentLines,
+      "",
+      "**Click the button below to join!**",
+    ];
+    let outbound: DiscordMessage | DiscordInteractionResponse;
+    if (discordInteraction === null) {
+      outbound = await Discord.sendMessage(
+        session.channelId,
+        Utils.linesToString(outboundContentLines),
+        buttonMap,
+      );
+    } else {
+      outbound = await Discord.updateInteractionSourceItem(
+        discordInteraction,
+        Utils.linesToString(outboundContentLines),
+        buttonMap,
+      );
+    }
+    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+      outbound,
+      null,
+    );
+    if (buttonInteraction === null) {
+      const startedContentLines: string[] = [
+        ...baseContentLines,
+        "",
+        "**Game creation timed out.**",
+      ];
+      await Discord.updateSentItem(
+        outbound,
+        Utils.linesToString(startedContentLines),
+        {},
+      );
+    } else {
+      switch (buttonInteraction.customId) {
+        case "joinGame":
+        {
+          const existingPlayer: PlayerState | null = SessionController.getSessionPlayerById(
+            session,
+            buttonInteraction.user.id,
+          );
+          if (existingPlayer === null) {
+            SessionController.addSessionPlayer(
+              session,
+              buttonInteraction.user,
+            );
+          }
+          await this.promptJoinGame(
+            session,
+            buttonInteraction,
+          );
+          break;
+        }
+        case "startGame":
+        {
+          await GameController.startGame(session);
+          const startedContentLines: string[] = [
+            ...baseContentLines,
+            "",
+            "**The game has started!**",
+          ];
+          await Discord.updateInteractionSourceItem(
+            buttonInteraction,
+            Utils.linesToString(startedContentLines),
+            {},
+          );
+          break;
+        }
+        default:
+          throw new Error("Unknown response.");
       }
     }
   }

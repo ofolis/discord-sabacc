@@ -1,121 +1,17 @@
 import {
-  GameController,
+  InteractionController,
   SessionController,
 } from "..";
 import {
-  Discord,
-  DiscordButtonBuilder,
-  DiscordButtonInteraction,
-  DiscordButtonStyle,
   DiscordCommandInteraction,
-  DiscordInteractionResponse,
-  DiscordMessage,
 } from "../../discord";
 import {
   SessionStatus,
 } from "../../enums";
 import type {
   Command,
-  PlayerState,
   SessionState,
 } from "../../types";
-import {
-  Utils,
-} from "../../utils";
-
-async function promptJoin(
-  session: SessionState,
-  interaction: DiscordButtonInteraction | null = null,
-): Promise<void> {
-  const buttonMap: Record<string, DiscordButtonBuilder> = {
-    "joinGame": new DiscordButtonBuilder()
-      .setLabel("Join Game")
-      .setStyle(DiscordButtonStyle.Primary),
-    "startGame": new DiscordButtonBuilder()
-      .setLabel("Start Game")
-      .setStyle(DiscordButtonStyle.Success)
-      .setDisabled(session.players.length <= 1),
-  };
-  const baseContentLines: string[] = [
-    "# New Game",
-    `A new game was started by <@${session.startingPlayer.id}> (${session.startingPlayer.globalName ?? session.startingPlayer.username}).`,
-    "## Players",
-    session.players.map(p => `- <@${p.id}> (${p.globalName ?? p.username})`).join("\n"),
-  ];
-  const outboundContentLines: string[] = [
-    ...baseContentLines,
-    "",
-    "**Click the button below to join!**",
-  ];
-  let outbound: DiscordMessage | DiscordInteractionResponse;
-  if (interaction === null) {
-    outbound = await Discord.sendMessage(
-      session.channelId,
-      Utils.linesToString(outboundContentLines),
-      buttonMap,
-    );
-  } else {
-    outbound = await Discord.updateInteractionSourceItem(
-      interaction,
-      Utils.linesToString(outboundContentLines),
-      buttonMap,
-    );
-  }
-  const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
-    outbound,
-    null,
-  );
-  if (buttonInteraction === null) {
-    const startedContentLines: string[] = [
-      ...baseContentLines,
-      "",
-      "**Game creation timed out.**",
-    ];
-    await Discord.updateSentItem(
-      outbound,
-      Utils.linesToString(startedContentLines),
-      {},
-    );
-  } else {
-    switch (buttonInteraction.customId) {
-      case "joinGame":
-      {
-        const existingPlayer: PlayerState | null = SessionController.getSessionPlayerById(
-          session,
-          buttonInteraction.user.id,
-        );
-        if (existingPlayer === null) {
-          SessionController.addSessionPlayer(
-            session,
-            buttonInteraction.user,
-          );
-        }
-        await promptJoin(
-          session,
-          buttonInteraction,
-        );
-        break;
-      }
-      case "startGame":
-      {
-        await GameController.startGame(session);
-        const startedContentLines: string[] = [
-          ...baseContentLines,
-          "",
-          "**The game has started!**",
-        ];
-        await Discord.updateInteractionSourceItem(
-          buttonInteraction,
-          Utils.linesToString(startedContentLines),
-          {},
-        );
-        break;
-      }
-      default:
-        throw new Error("Unknown response.");
-    }
-  }
-}
 
 export const command: Command = {
   "name": "new",
@@ -124,37 +20,12 @@ export const command: Command = {
   "isGuild": true,
   "execute": async(interaction: DiscordCommandInteraction): Promise<void> => {
     const session: SessionState | null = SessionController.loadSession(interaction.channelId);
-    let createSession: boolean = true;
-    if (session !== null && session.status !== SessionStatus.COMPLETED) {
-      const buttonMap: Record<string, DiscordButtonBuilder> = {
-        "endGame": new DiscordButtonBuilder()
-          .setLabel("End Game")
-          .setStyle(DiscordButtonStyle.Danger),
-        "cancel": new DiscordButtonBuilder()
-          .setLabel("Cancel")
-          .setStyle(DiscordButtonStyle.Secondary),
-      };
-      const contentLines: string[] = [
-        "**A game is currently active in this channel.**",
-        "Do you want to end it and start a new game?",
-      ];
-      const interactionResponse: DiscordInteractionResponse = await Discord.sendInteractionResponse(
-        interaction,
-        Utils.linesToString(contentLines),
-        true,
-        buttonMap,
-      );
-      const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
-        interactionResponse,
-        (i) => i.user.id === interaction.user.id,
-      );
-      if (buttonInteraction === null || buttonInteraction.customId !== "endGame") {
-        createSession = false;
-      }
-      await Discord.deleteSentItem(interactionResponse);
-    } else {
-      const interactionResponse: DiscordInteractionResponse = await interaction.deferReply();
-      await Discord.deleteSentItem(interactionResponse);
+    let createSession: boolean = false;
+    if (session === null) {
+      createSession = true;
+      await InteractionController.informStartingGame(interaction);
+    } else if (session.status !== SessionStatus.ACTIVE) {
+      createSession = await InteractionController.promptEndGame(interaction);
     }
     if (createSession) {
       const session: SessionState = SessionController.createSession(
@@ -162,9 +33,7 @@ export const command: Command = {
         interaction.user,
         6,
       );
-      await promptJoin(
-        session,
-      );
+      await InteractionController.promptJoinGame(session);
     }
   },
 };
