@@ -72,6 +72,10 @@ export const command: Command = {
                     turnActionResponse[0],
                   );
                   if (drawSourceResponse !== undefined) {
+                    GameController.playerSpendToken(
+                      session,
+                      player,
+                    );
                     GameController.playerDrawCard(
                       session,
                       player,
