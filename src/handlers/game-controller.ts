@@ -16,6 +16,40 @@ import {
 } from "../utils";
 
 export class GameController {
+  private static shuffleAndDealCards(
+    session: SessionState,
+  ): void {
+    for (const player of session.players) {
+      player.currentBloodCards.push(Utils.removeTopArrayItem(session.bloodDeck));
+      player.currentSandCards.push(Utils.removeTopArrayItem(session.sandDeck));
+    }
+    session.bloodDiscard.push(Utils.removeTopArrayItem(session.bloodDeck));
+    session.sandDiscard.push(Utils.removeTopArrayItem(session.sandDeck));
+    SessionController.saveSession(session);
+  }
+
+  public static endTurn(
+    session: SessionState,
+  ): void {
+    if (session.status !== SessionStatus.ACTIVE) {
+      throw new Error("Cannot end turn on non-active session.");
+    }
+    if (session.currentPlayerIndex === session.players.length - 1) {
+      if (session.currentRoundIndex === 2) {
+        // TODO: Score it here, and only shuffle/deal if it needs to be done
+        this.shuffleAndDealCards(session);
+        session.currentHandIndex += 1;
+        session.currentRoundIndex = 0;
+      } else {
+        session.currentRoundIndex += 1;
+      }
+      session.currentPlayerIndex = 0;
+    } else {
+      session.currentPlayerIndex += 1;
+    }
+    SessionController.saveSession(session);
+  }
+
   public static playerSpendToken(
     session: SessionState,
     player: PlayerState,
@@ -105,44 +139,10 @@ export class GameController {
     if (session.players.length <= 1) {
       throw new Error("Game did not have enough players to start.");
     }
-    session.players = Utils.shuffleArray(session.players);
-    for (const player of session.players) {
-      player.currentBloodCards.push(Utils.removeTopArrayItem(session.bloodDeck));
-      player.currentSandCards.push(Utils.removeTopArrayItem(session.sandDeck));
-    }
-    session.bloodDiscard.push(Utils.removeTopArrayItem(session.bloodDeck));
-    session.sandDiscard.push(Utils.removeTopArrayItem(session.sandDeck));
     session.startedAt = Date.now();
     session.status = SessionStatus.ACTIVE;
+    session.players = Utils.shuffleArray(session.players);
+    this.shuffleAndDealCards(session);
     SessionController.saveSession(session);
-    this.startHand(session);
-  }
-
-  public static startHand(
-    session: SessionState,
-  ): void {
-    if (session.status !== SessionStatus.ACTIVE) {
-      throw new Error("Cannot start hand on non-active session.");
-    }
-    this.startRound(session);
-  }
-
-  public static startRound(
-    session: SessionState,
-  ): void {
-    if (session.status !== SessionStatus.ACTIVE) {
-      throw new Error("Cannot start round on non-active session.");
-    }
-    this.startTurn(
-      session,
-    );
-  }
-
-  public static startTurn(
-    session: SessionState,
-  ): void {
-    if (session.status !== SessionStatus.ACTIVE) {
-      throw new Error("Cannot start turn on non-active session.");
-    }
   }
 }

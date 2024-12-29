@@ -111,7 +111,7 @@ export class InteractionController {
     return tokenString;
   }
 
-  public static async announceTurnStart(
+  public static async announceTurnStarted(
     session: SessionState,
   ): Promise<void> {
     const contentLines: string[] = [
@@ -213,7 +213,7 @@ export class InteractionController {
     );
   }
 
-  public static async informTurnEnd(
+  public static async informTurnEnded(
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<void> {
     const contentLines: string[] = [

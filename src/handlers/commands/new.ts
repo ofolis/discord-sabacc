@@ -41,7 +41,7 @@ export const command: Command = {
           6,
         );
         GameController.startGame(session);
-        await InteractionController.announceTurnStart(session);
+        await InteractionController.announceTurnStarted(session);
       }
     }
   },
