@@ -1,14 +1,20 @@
 import {
+  GameController,
   InteractionController,
   SessionController,
 } from "..";
 import {
+  DiscordButtonInteraction,
   DiscordCommandInteraction,
+  DiscordMessageComponentInteraction,
 } from "../../discord";
 import {
+  DrawSource,
   SessionStatus,
+  TurnAction,
 } from "../../enums";
 import type {
+  Card,
   Command,
   PlayerState,
   SessionState,
@@ -37,11 +43,65 @@ export const command: Command = {
             interaction,
           );
         } else {
-          await InteractionController.promptChooseTurnAction(
-            session,
-            player,
-            interaction,
-          );
+          if (GameController.playerHasPendingDiscard(player)) {
+            const discardCardResponse: [DiscordButtonInteraction, Card] | undefined = await InteractionController.promptChooseDiscardCard(
+              session,
+              player,
+              interaction,
+            );
+            if (discardCardResponse !== undefined) {
+              GameController.playerDiscardCard(
+                session,
+                player,
+                discardCardResponse[1],
+              );
+              await InteractionController.informTurnEnd(discardCardResponse[0]);
+            }
+          } else {
+            const turnActionResponse: [DiscordButtonInteraction, TurnAction] | null | undefined = await InteractionController.promptChooseTurnAction(
+              session,
+              player,
+              interaction,
+            );
+            if (turnActionResponse !== undefined && turnActionResponse !== null) {
+              switch (turnActionResponse[1]) {
+                case TurnAction.DRAW: {
+                  const drawSourceResponse: [DiscordMessageComponentInteraction, DrawSource] | null | undefined = await InteractionController.promptChooseDrawSource(
+                    session,
+                    player,
+                    turnActionResponse[0],
+                  );
+                  if (drawSourceResponse !== undefined) {
+                    GameController.playerDrawCard(
+                      session,
+                      player,
+                      drawSourceResponse[1],
+                    );
+                    const discardCardResponse: [DiscordButtonInteraction, Card] | undefined = await InteractionController.promptChooseDiscardCard(
+                      session,
+                      player,
+                      drawSourceResponse[0],
+                    );
+                    if (discardCardResponse !== undefined) {
+                      GameController.playerDiscardCard(
+                        session,
+                        player,
+                        discardCardResponse[1],
+                      );
+                      await InteractionController.informTurnEnd(discardCardResponse[0]);
+                    }
+                  }
+                  break;
+                }
+                case TurnAction.STAND: {
+                  await InteractionController.informTurnEnd(turnActionResponse[0]);
+                  break;
+                }
+                default:
+                  throw new Error("Unknown turn action.");
+              }
+            }
+          }
         }
       }
     }

@@ -21,46 +21,26 @@ import {
 } from "../constants/game/decks";
 
 export class SessionController {
-  public static addSessionPlayer(
-    session: SessionState,
-    discordUser: DiscordUser,
-  ): PlayerState {
-    if (session.status !== SessionStatus.PENDING) {
-      throw new Error("Attempted to add player to a non-pending session.");
-    }
-    const player: PlayerState = {
-      "currentBloodCards": [
-      ],
-      "currentSandCards": [
-      ],
-      "currentSpentTokenTotal": 0,
-      "currentUnspentTokenTotal": session.startingTokenTotal,
-      "id": discordUser.id,
-      "globalName": discordUser.globalName,
-      "username": discordUser.username,
-    };
-    session.players.push(player);
-    this.saveSession(session);
-    return player;
-  }
-
   public static createSession(
     channelId: string,
-    startingDiscordUser: DiscordUser,
+    discordUsers: DiscordUser[],
     startingTokenTotal: number,
   ): SessionState {
-    // Initialize session
-    const startingPlayer: PlayerState = {
-      "currentBloodCards": [
-      ],
-      "currentSandCards": [
-      ],
-      "currentSpentTokenTotal": 0,
-      "currentUnspentTokenTotal": startingTokenTotal,
-      "id": startingDiscordUser.id,
-      "globalName": startingDiscordUser.globalName,
-      "username": startingDiscordUser.username,
-    };
+    const players: PlayerState[] = discordUsers.map(
+      discordUser => {
+        return {
+          "currentBloodCards": [
+          ],
+          "currentSandCards": [
+          ],
+          "currentSpentTokenTotal": 0,
+          "currentUnspentTokenTotal": startingTokenTotal,
+          "id": discordUser.id,
+          "globalName": discordUser.globalName,
+          "username": discordUser.username,
+        };
+      },
+    );
     const bloodDeck: Card[] = Utils.shuffleArray<Card>(createBloodDeck());
     const sandDeck: Card[] = Utils.shuffleArray<Card>(createSandDeck());
     const session: SessionState = {
@@ -71,13 +51,10 @@ export class SessionController {
       "currentHandIndex": 0,
       "currentPlayerIndex": 0,
       "currentRoundIndex": 0,
-      "players": [
-        startingPlayer,
-      ],
+      "players": players,
       "sandDeck": sandDeck,
       "sandDiscard": [
       ],
-      "startingPlayer": startingPlayer,
       "startingTokenTotal": startingTokenTotal,
       "status": SessionStatus.PENDING,
     };

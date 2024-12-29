@@ -1,9 +1,9 @@
 import {
-  InteractionController,
   SessionController,
 } from ".";
 import {
   CardSuit,
+  DrawSource,
   SessionStatus,
 } from "../enums";
 import {
@@ -53,14 +53,37 @@ export class GameController {
   public static playerDrawCard(
     session: SessionState,
     player: PlayerState,
-    cardSuit: CardSuit,
-    useDiscard: boolean,
+    drawSource: DrawSource,
   ): void {
-    const sessionCardSet: Card[] = cardSuit === CardSuit.BLOOD ? useDiscard ? session.bloodDiscard : session.bloodDeck : useDiscard ? session.sandDiscard : session.sandDeck;
-    if (sessionCardSet.length === 0) {
-      throw new Error("Cannot draw from empty session card set.");
+    let card: Card;
+    switch (drawSource) {
+      case DrawSource.BLOOD_DECK:
+        if (session.bloodDeck.length === 0) {
+          throw new Error("Cannot draw from empty blood deck.");
+        }
+        card = Utils.removeTopArrayItem(session.bloodDeck);
+        break;
+      case DrawSource.BLOOD_DISCARD:
+        if (session.bloodDiscard.length === 0) {
+          throw new Error("Cannot draw from empty blood discard.");
+        }
+        card = Utils.removeTopArrayItem(session.bloodDiscard);
+        break;
+      case DrawSource.SAND_DECK:
+        if (session.sandDeck.length === 0) {
+          throw new Error("Cannot draw from empty sand deck.");
+        }
+        card = Utils.removeTopArrayItem(session.sandDeck);
+        break;
+      case DrawSource.SAND_DISCARD:
+        if (session.sandDiscard.length === 0) {
+          throw new Error("Cannot draw from empty sand discard.");
+        }
+        card = Utils.removeTopArrayItem(session.sandDiscard);
+        break;
+      default:
+        throw new Error("Unknown draw source.");
     }
-    const card: Card = Utils.removeTopArrayItem(sessionCardSet);
     if (card.suit === CardSuit.BLOOD) {
       player.currentBloodCards.push(card);
     } else {
@@ -73,9 +96,9 @@ export class GameController {
     return player.currentBloodCards.length > 1 || player.currentSandCards.length > 1;
   }
 
-  public static async startGame(
+  public static startGame(
     session: SessionState,
-  ): Promise<void> {
+  ): void {
     if (session.status !== SessionStatus.PENDING) {
       throw new Error("Cannot start game on non-pending session.");
     }
@@ -92,35 +115,34 @@ export class GameController {
     session.startedAt = Date.now();
     session.status = SessionStatus.ACTIVE;
     SessionController.saveSession(session);
-    await this.startHand(session);
+    this.startHand(session);
   }
 
-  public static async startHand(
+  public static startHand(
     session: SessionState,
-  ): Promise<void> {
+  ): void {
     if (session.status !== SessionStatus.ACTIVE) {
       throw new Error("Cannot start hand on non-active session.");
     }
-    await this.startRound(session);
+    this.startRound(session);
   }
 
-  public static async startRound(
+  public static startRound(
     session: SessionState,
-  ): Promise<void> {
+  ): void {
     if (session.status !== SessionStatus.ACTIVE) {
       throw new Error("Cannot start round on non-active session.");
     }
-    await this.startTurn(
+    this.startTurn(
       session,
     );
   }
 
-  public static async startTurn(
+  public static startTurn(
     session: SessionState,
-  ): Promise<void> {
+  ): void {
     if (session.status !== SessionStatus.ACTIVE) {
       throw new Error("Cannot start turn on non-active session.");
     }
-    await InteractionController.announceTurnStart(session);
   }
 }

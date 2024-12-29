@@ -17,7 +17,6 @@ export type SessionState = {
   "sandDeck": Card[];
   "sandDiscard": Card[];
   "startedAt"?: number;
-  "startingPlayer": PlayerState;
   "startingTokenTotal": number;
   "status": SessionStatus;
 };
