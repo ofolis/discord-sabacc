@@ -55,7 +55,10 @@ export const command: Command = {
                 player,
                 discardCardResponse[1],
               );
+              GameController.endTurn(session);
               await InteractionController.informTurnEnded(discardCardResponse[0]);
+              await InteractionController.announceTurnEnded(session);
+              await InteractionController.announceTurnStarted(session);
             }
           } else {
             const turnActionResponse: [DiscordButtonInteraction, TurnAction] | null | undefined = await InteractionController.promptChooseTurnAction(
@@ -94,23 +97,17 @@ export const command: Command = {
                       );
                       GameController.endTurn(session);
                       await InteractionController.informTurnEnded(discardCardResponse[0]);
-                      // TODO: Move all this into an "end turn" logic area that resolves correctly for every code path in this file.
-                      if (session.status === SessionStatus.COMPLETED) {
-                        await InteractionController.announceGameResult(session);
-                      } else {
-                        if (session.currentRoundIndex === 0) {
-                          await InteractionController.announceHandStarted(session);
-                        } else if (session.currentPlayerIndex === 0) {
-                          await InteractionController.announceRoundStarted(session);
-                        }
-                        await InteractionController.announceTurnStarted(session);
-                      }
+                      await InteractionController.announceTurnEnded(session);
+                      await InteractionController.announceTurnStarted(session);
                     }
                   }
                   break;
                 }
                 case TurnAction.STAND: {
+                  GameController.endTurn(session);
                   await InteractionController.informTurnEnded(turnActionResponse[0]);
+                  await InteractionController.announceTurnEnded(session);
+                  await InteractionController.announceTurnStarted(session);
                   break;
                 }
                 default:

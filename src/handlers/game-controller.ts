@@ -19,6 +19,7 @@ export class GameController {
   private static shuffleAndDealCards(
     session: SessionState,
   ): void {
+    // TODO: collect all cards from the discard piles and the players before shuffling and dealing
     for (const player of session.players) {
       player.currentBloodCards.push(Utils.removeTopArrayItem(session.bloodDeck));
       player.currentSandCards.push(Utils.removeTopArrayItem(session.sandDeck));

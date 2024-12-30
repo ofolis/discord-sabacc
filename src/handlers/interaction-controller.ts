@@ -13,6 +13,7 @@ import {
   CardSuit,
   CardType,
   DrawSource,
+  SessionStatus,
   TurnAction,
 } from "../enums";
 import {
@@ -109,6 +110,31 @@ export class InteractionController {
       tokenString = "None";
     }
     return tokenString;
+  }
+
+  public static async announceTurnEnded(
+    session: SessionState,
+  ): Promise<void> {
+    if (session.status === SessionStatus.COMPLETED) {
+      await Discord.sendMessage(
+        session.channelId,
+        "# End!",
+      );
+    } else if (session.status === SessionStatus.ACTIVE && session.currentPlayerIndex === 0) {
+      if (session.currentRoundIndex === 0) {
+        await Discord.sendMessage(
+          session.channelId,
+          `# Starting Hand ${(session.currentHandIndex + 1).toString()}`,
+        );
+      } else {
+        await Discord.sendMessage(
+          session.channelId,
+          `# Starting Round ${(session.currentRoundIndex + 1).toString()}`,
+        );
+      }
+    } else {
+      throw new Error("Turn ended with unknown session status.");
+    }
   }
 
   public static async announceTurnStarted(
@@ -560,7 +586,7 @@ export class InteractionController {
       switch (buttonInteraction.customId) {
         case "joinGame":
           // Add the user if not already in the list
-          if (!discordUserAccumulator.some(discordUser => discordUser.id === buttonInteraction.user.id)) {
+          if (startingDiscordUser.id !== buttonInteraction.user.id && !discordUserAccumulator.some(discordUser => discordUser.id === buttonInteraction.user.id)) {
             discordUserAccumulator.push(buttonInteraction.user);
           }
           return this.promptNewGameMembers(
