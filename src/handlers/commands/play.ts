@@ -18,6 +18,7 @@ import type {
   Command,
   PlayerState,
   SessionState,
+  TurnHistoryEntry,
 } from "../../types";
 
 export const command: Command = {
@@ -43,22 +44,28 @@ export const command: Command = {
             interaction,
           );
         } else {
-          if (GameController.playerHasPendingDiscard(player)) {
+          if (player.pendingDiscard !== null) {
             const discardCardResponse: [DiscordButtonInteraction, Card] | undefined = await InteractionController.promptChooseDiscardCard(
               session,
               player,
               interaction,
             );
             if (discardCardResponse !== undefined) {
+              const turnHistoryEntry: TurnHistoryEntry = {
+                "discardedCard": discardCardResponse[1],
+                "drawSource": player.pendingDiscard.drawSource,
+                "turnAction": TurnAction.DRAW,
+              };
               GameController.playerDiscardCard(
                 session,
-                player,
                 discardCardResponse[1],
               );
-              GameController.endTurn(session);
+              GameController.playerEndTurn(
+                session,
+                turnHistoryEntry,
+              );
               await InteractionController.informTurnEnded(discardCardResponse[0]);
               await InteractionController.announceTurnEnded(session);
-              await InteractionController.announceTurnStarted(session);
             }
           } else {
             const turnActionResponse: [DiscordButtonInteraction, TurnAction] | null | undefined = await InteractionController.promptChooseTurnAction(
@@ -75,13 +82,8 @@ export const command: Command = {
                     turnActionResponse[0],
                   );
                   if (drawSourceResponse !== undefined) {
-                    GameController.playerSpendToken(
-                      session,
-                      player,
-                    );
                     GameController.playerDrawCard(
                       session,
-                      player,
                       drawSourceResponse[1],
                     );
                     const discardCardResponse: [DiscordButtonInteraction, Card] | undefined = await InteractionController.promptChooseDiscardCard(
@@ -90,24 +92,35 @@ export const command: Command = {
                       drawSourceResponse[0],
                     );
                     if (discardCardResponse !== undefined) {
+                      const turnHistoryEntry: TurnHistoryEntry = {
+                        "discardedCard": discardCardResponse[1],
+                        "drawSource": drawSourceResponse[1],
+                        "turnAction": TurnAction.DRAW,
+                      };
                       GameController.playerDiscardCard(
                         session,
-                        player,
                         discardCardResponse[1],
                       );
-                      GameController.endTurn(session);
+                      GameController.playerEndTurn(
+                        session,
+                        turnHistoryEntry,
+                      );
                       await InteractionController.informTurnEnded(discardCardResponse[0]);
                       await InteractionController.announceTurnEnded(session);
-                      await InteractionController.announceTurnStarted(session);
                     }
                   }
                   break;
                 }
                 case TurnAction.STAND: {
-                  GameController.endTurn(session);
+                  const turnHistoryEntry: TurnHistoryEntry = {
+                    "turnAction": TurnAction.STAND,
+                  };
+                  GameController.playerEndTurn(
+                    session,
+                    turnHistoryEntry,
+                  );
                   await InteractionController.informTurnEnded(turnActionResponse[0]);
                   await InteractionController.announceTurnEnded(session);
-                  await InteractionController.announceTurnStarted(session);
                   break;
                 }
                 default:

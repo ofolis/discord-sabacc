@@ -20,6 +20,7 @@ import {
   Card,
   PlayerState,
   SessionState,
+  TurnHistoryEntry,
 } from "../types";
 import {
   Utils,
@@ -115,7 +116,42 @@ export class InteractionController {
   public static async announceTurnEnded(
     session: SessionState,
   ): Promise<void> {
-    // TODO: announce what the player just did here
+    const turnPlayer: PlayerState = session.players[(session.currentPlayerIndex === 0 ? session.players.length : session.currentPlayerIndex) - 1];
+    const turnHistoryEntry: TurnHistoryEntry = turnPlayer.turnHistory[turnPlayer.turnHistory.length - 1];
+    const contentLines: string[] = [
+    ];
+    switch (turnHistoryEntry.turnAction) {
+      case TurnAction.DRAW:
+        contentLines.push(`# ${turnPlayer.globalName ?? turnPlayer.username} Drew A Card`);
+        switch (turnHistoryEntry.drawSource) {
+          case DrawSource.BLOOD_DECK:
+            contentLines.push("- A card was drawn from the **blood deck**.");
+            break;
+          case DrawSource.BLOOD_DISCARD:
+            contentLines.push("- A card was drawn from the **blood discard**.");
+            break;
+          case DrawSource.SAND_DECK:
+            contentLines.push("- A card was drawn from the **sand deck**.");
+            break;
+          case DrawSource.SAND_DISCARD:
+            contentLines.push("- A card was drawn from the **sand discard**.");
+            break;
+          default:
+            throw new Error("Unknown draw source.");
+        }
+        contentLines.push(`- \`${this.formatCardString(turnHistoryEntry.discardedCard)}\` was discarded.`);
+        break;
+      case TurnAction.STAND:
+        contentLines.push(`# ${turnPlayer.globalName ?? turnPlayer.username} Stood`);
+        contentLines.push("- No card was drawn or discarded.");
+        break;
+      default:
+        throw new Error("Unknown turn action.");
+    }
+    await Discord.sendMessage(
+      session.channelId,
+      Utils.linesToString(contentLines),
+    );
     if (session.status === SessionStatus.COMPLETED) {
       // TODO: Announce game result here
       await Discord.sendMessage(
@@ -135,7 +171,7 @@ export class InteractionController {
           `# Starting Round ${(session.currentRoundIndex + 1).toString()}`,
         );
       }
-      // TODO: Announce turn start here (and remove from play handler)
+      await this.announceTurnStarted(session);
     } else {
       throw new Error("Turn ended with unknown session status.");
     }

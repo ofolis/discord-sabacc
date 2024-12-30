@@ -33,6 +33,9 @@ export class SessionController {
           "currentUnspentTokenTotal": startingTokenTotal,
           "id": discordUser.id,
           "globalName": discordUser.globalName,
+          "pendingDiscard": null,
+          "turnHistory": [
+          ],
           "username": discordUser.username,
         };
       },

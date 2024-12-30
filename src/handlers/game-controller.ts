@@ -13,12 +13,22 @@ import {
   Card,
   PlayerState,
   SessionState,
+  TurnHistoryEntry,
 } from "../types";
 import {
   Utils,
 } from "../utils";
 
 export class GameController {
+  private static getCurrentPlayer(
+    session: SessionState,
+  ): PlayerState {
+    if (session.status !== SessionStatus.ACTIVE) {
+      throw new Error("Cannot get player from non-active session.");
+    }
+    return session.players[session.currentPlayerIndex];
+  }
+
   private static shuffleAndDealCards(
     session: SessionState,
   ): void {
@@ -44,46 +54,18 @@ export class GameController {
     SessionController.saveSession(session);
   }
 
-  public static endTurn(
-    session: SessionState,
-  ): void {
-    if (session.status !== SessionStatus.ACTIVE) {
-      throw new Error("Cannot end turn on non-active session.");
-    }
-    if (session.currentPlayerIndex === session.players.length - 1) {
-      if (session.currentRoundIndex === 2) {
-        // TODO: Score it here, and only shuffle/deal if it needs to be done
-        this.shuffleAndDealCards(session);
-        session.currentHandIndex += 1;
-        session.currentRoundIndex = 0;
-      } else {
-        session.currentRoundIndex += 1;
-      }
-      session.currentPlayerIndex = 0;
-    } else {
-      session.currentPlayerIndex += 1;
-    }
-    SessionController.saveSession(session);
-  }
-
-  public static playerSpendToken(
-    session: SessionState,
-    player: PlayerState,
-  ): void {
-    if (player.currentUnspentTokenTotal <= 0) {
-      throw new Error("Player does not have tokens to spend.");
-    }
-    player.currentUnspentTokenTotal -= 1;
-    player.currentSpentTokenTotal += 1;
-    SessionController.saveSession(session);
-  }
-
   public static playerDiscardCard(
     session: SessionState,
-    player: PlayerState,
     card: Card,
   ): void {
-    const playerCardSet: Card[] = card.suit === CardSuit.BLOOD ? player.currentBloodCards : player.currentSandCards;
+    const currentPlayer: PlayerState = this.getCurrentPlayer(session);
+    if (currentPlayer.pendingDiscard === null) {
+      throw new Error("Player does not have a pending discard.");
+    }
+    if (card.suit !== currentPlayer.pendingDiscard.cardSuit) {
+      throw new Error("Discard card suit does not match pending discard suit.");
+    }
+    const playerCardSet: Card[] = card.suit === CardSuit.BLOOD ? currentPlayer.currentBloodCards : currentPlayer.currentSandCards;
     const playerCardIndex: number = playerCardSet.indexOf(card);
     if (playerCardIndex === -1) {
       throw new Error("Player does not contain requested discard card.");
@@ -97,14 +79,23 @@ export class GameController {
     } else {
       session.sandDiscard.unshift(card);
     }
+    currentPlayer.pendingDiscard = null;
     SessionController.saveSession(session);
   }
 
   public static playerDrawCard(
     session: SessionState,
-    player: PlayerState,
     drawSource: DrawSource,
   ): void {
+    const currentPlayer: PlayerState = this.getCurrentPlayer(session);
+    if (currentPlayer.pendingDiscard !== null) {
+      throw new Error("Player cannot draw while pending discard exists.");
+    }
+    if (currentPlayer.currentUnspentTokenTotal <= 0) {
+      throw new Error("Player does not have tokens to spend.");
+    }
+    currentPlayer.currentUnspentTokenTotal -= 1;
+    currentPlayer.currentSpentTokenTotal += 1;
     let card: Card;
     switch (drawSource) {
       case DrawSource.BLOOD_DECK:
@@ -135,15 +126,37 @@ export class GameController {
         throw new Error("Unknown draw source.");
     }
     if (card.suit === CardSuit.BLOOD) {
-      player.currentBloodCards.push(card);
+      currentPlayer.currentBloodCards.push(card);
     } else {
-      player.currentSandCards.push(card);
+      currentPlayer.currentSandCards.push(card);
     }
+    currentPlayer.pendingDiscard = {
+      "cardSuit": card.suit,
+      "drawSource": drawSource,
+    };
     SessionController.saveSession(session);
   }
 
-  public static playerHasPendingDiscard(player: PlayerState): boolean {
-    return player.currentBloodCards.length > 1 || player.currentSandCards.length > 1;
+  public static playerEndTurn(
+    session: SessionState,
+    turnHistoryEntry: TurnHistoryEntry,
+  ): void {
+    const currentPlayer: PlayerState = this.getCurrentPlayer(session);
+    currentPlayer.turnHistory.push(turnHistoryEntry);
+    if (session.currentPlayerIndex === session.players.length - 1) {
+      if (session.currentRoundIndex === 2) {
+        // TODO: Score it here, and only shuffle/deal if it needs to be done
+        this.shuffleAndDealCards(session);
+        session.currentHandIndex += 1;
+        session.currentRoundIndex = 0;
+      } else {
+        session.currentRoundIndex += 1;
+      }
+      session.currentPlayerIndex = 0;
+    } else {
+      session.currentPlayerIndex += 1;
+    }
+    SessionController.saveSession(session);
   }
 
   public static startGame(
