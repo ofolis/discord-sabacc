@@ -1,4 +1,7 @@
 import {
+  Random,
+} from "random-js";
+import {
   SessionController,
 } from ".";
 import {
@@ -19,7 +22,19 @@ export class GameController {
   private static shuffleAndDealCards(
     session: SessionState,
   ): void {
-    // TODO: collect all cards from the discard piles and the players before shuffling and dealing
+    const random: Random = new Random();
+    session.bloodDeck.push(...session.bloodDiscard);
+    session.bloodDiscard.length = 0; // Empty the array
+    session.sandDeck.push(...session.sandDiscard);
+    session.sandDiscard.length = 0; // Empty the array
+    for (const player of session.players) {
+      session.bloodDeck.push(...player.currentBloodCards);
+      player.currentBloodCards.length = 0; // Empty the array
+      session.sandDeck.push(...player.currentSandCards);
+      player.currentSandCards.length = 0; // Empty the array
+    }
+    random.shuffle(session.bloodDeck);
+    random.shuffle(session.sandDeck);
     for (const player of session.players) {
       player.currentBloodCards.push(Utils.removeTopArrayItem(session.bloodDeck));
       player.currentSandCards.push(Utils.removeTopArrayItem(session.sandDeck));
@@ -134,6 +149,7 @@ export class GameController {
   public static startGame(
     session: SessionState,
   ): void {
+    const random: Random = new Random();
     if (session.status !== SessionStatus.PENDING) {
       throw new Error("Cannot start game on non-pending session.");
     }
@@ -142,7 +158,8 @@ export class GameController {
     }
     session.startedAt = Date.now();
     session.status = SessionStatus.ACTIVE;
-    session.players = Utils.shuffleArray(session.players);
+
+    random.shuffle(session.players);
     this.shuffleAndDealCards(session);
     SessionController.saveSession(session);
   }

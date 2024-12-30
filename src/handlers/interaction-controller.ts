@@ -115,23 +115,27 @@ export class InteractionController {
   public static async announceTurnEnded(
     session: SessionState,
   ): Promise<void> {
+    // TODO: announce what the player just did here
     if (session.status === SessionStatus.COMPLETED) {
+      // TODO: Announce game result here
       await Discord.sendMessage(
         session.channelId,
         "# End!",
       );
-    } else if (session.status === SessionStatus.ACTIVE && session.currentPlayerIndex === 0) {
-      if (session.currentRoundIndex === 0) {
+    } else if (session.status === SessionStatus.ACTIVE) {
+      if (session.currentRoundIndex === 0 && session.currentPlayerIndex === 0) {
+        // TODO: Announce hand result here
         await Discord.sendMessage(
           session.channelId,
           `# Starting Hand ${(session.currentHandIndex + 1).toString()}`,
         );
-      } else {
+      } else if (session.currentPlayerIndex === 0) {
         await Discord.sendMessage(
           session.channelId,
           `# Starting Round ${(session.currentRoundIndex + 1).toString()}`,
         );
       }
+      // TODO: Announce turn start here (and remove from play handler)
     } else {
       throw new Error("Turn ended with unknown session status.");
     }

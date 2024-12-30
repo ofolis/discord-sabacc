@@ -8,13 +8,9 @@ import {
   IO,
 } from "../io";
 import {
-  Card,
   PlayerState,
   SessionState,
 } from "../types";
-import {
-  Utils,
-} from "../utils";
 import {
   createBloodDeck,
   createSandDeck,
@@ -41,10 +37,8 @@ export class SessionController {
         };
       },
     );
-    const bloodDeck: Card[] = Utils.shuffleArray<Card>(createBloodDeck());
-    const sandDeck: Card[] = Utils.shuffleArray<Card>(createSandDeck());
     const session: SessionState = {
-      "bloodDeck": bloodDeck,
+      "bloodDeck": createBloodDeck(),
       "bloodDiscard": [
       ],
       "channelId": channelId,
@@ -52,7 +46,7 @@ export class SessionController {
       "currentPlayerIndex": 0,
       "currentRoundIndex": 0,
       "players": players,
-      "sandDeck": sandDeck,
+      "sandDeck": createSandDeck(),
       "sandDiscard": [
       ],
       "startingTokenTotal": startingTokenTotal,
