@@ -2,6 +2,9 @@ export {
   Card,
 } from "./card";
 export {
+  HandResult,
+} from "./hand-result";
+export {
   PendingDiscard,
 } from "./pending-discard";
 export {

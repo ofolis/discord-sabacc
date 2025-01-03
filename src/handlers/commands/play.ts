@@ -44,89 +44,93 @@ export const command: Command = {
             interaction,
           );
         } else {
-          if (player.pendingDiscard !== null) {
-            const discardCardResponse: [DiscordButtonInteraction, Card] | undefined = await InteractionController.promptChooseDiscardCard(
-              session,
-              player,
-              interaction,
-            );
-            if (discardCardResponse !== undefined) {
-              const turnHistoryEntry: TurnHistoryEntry = {
-                "discardedCard": discardCardResponse[1],
-                "drawSource": player.pendingDiscard.drawSource,
-                "turnAction": TurnAction.DRAW,
-              };
-              GameController.playerDiscardCard(
+          if (session.currentRoundIndex < 3) { // Gameplay rounds
+            if (player.pendingDiscard !== null) {
+              const discardCardResponse: [DiscordButtonInteraction, Card] | undefined = await InteractionController.promptChooseDiscardCard(
                 session,
-                discardCardResponse[1],
+                player,
+                interaction,
               );
-              GameController.playerEndTurn(
+              if (discardCardResponse !== undefined) {
+                const turnHistoryEntry: TurnHistoryEntry = {
+                  "discardedCard": discardCardResponse[1],
+                  "drawSource": player.pendingDiscard.drawSource,
+                  "turnAction": TurnAction.DRAW,
+                };
+                GameController.discardPlayerCard(
+                  session,
+                  player,
+                  discardCardResponse[1],
+                );
+                await GameController.endTurn(
+                  session,
+                  turnHistoryEntry,
+                );
+                await InteractionController.informTurnEnded(discardCardResponse[0]);
+              }
+            } else {
+              const turnActionResponse: [DiscordButtonInteraction, TurnAction] | null | undefined = await InteractionController.promptChooseTurnAction(
                 session,
-                turnHistoryEntry,
+                player,
+                interaction,
               );
-              await InteractionController.informTurnEnded(discardCardResponse[0]);
-              await InteractionController.announceTurnEnded(session);
-            }
-          } else {
-            const turnActionResponse: [DiscordButtonInteraction, TurnAction] | null | undefined = await InteractionController.promptChooseTurnAction(
-              session,
-              player,
-              interaction,
-            );
-            if (turnActionResponse !== undefined && turnActionResponse !== null) {
-              switch (turnActionResponse[1]) {
-                case TurnAction.DRAW: {
-                  const drawSourceResponse: [DiscordMessageComponentInteraction, DrawSource] | null | undefined = await InteractionController.promptChooseDrawSource(
-                    session,
-                    player,
-                    turnActionResponse[0],
-                  );
-                  if (drawSourceResponse !== undefined) {
-                    GameController.playerDrawCard(
-                      session,
-                      drawSourceResponse[1],
-                    );
-                    const discardCardResponse: [DiscordButtonInteraction, Card] | undefined = await InteractionController.promptChooseDiscardCard(
+              if (turnActionResponse !== undefined && turnActionResponse !== null) {
+                switch (turnActionResponse[1]) {
+                  case TurnAction.DRAW: {
+                    const drawSourceResponse: [DiscordMessageComponentInteraction, DrawSource] | null | undefined = await InteractionController.promptChooseDrawSource(
                       session,
                       player,
-                      drawSourceResponse[0],
+                      turnActionResponse[0],
                     );
-                    if (discardCardResponse !== undefined) {
-                      const turnHistoryEntry: TurnHistoryEntry = {
-                        "discardedCard": discardCardResponse[1],
-                        "drawSource": drawSourceResponse[1],
-                        "turnAction": TurnAction.DRAW,
-                      };
-                      GameController.playerDiscardCard(
+                    if (drawSourceResponse !== undefined) {
+                      GameController.drawPlayerCard(
                         session,
-                        discardCardResponse[1],
+                        player,
+                        drawSourceResponse[1],
                       );
-                      GameController.playerEndTurn(
+                      const discardCardResponse: [DiscordButtonInteraction, Card] | undefined = await InteractionController.promptChooseDiscardCard(
                         session,
-                        turnHistoryEntry,
+                        player,
+                        drawSourceResponse[0],
                       );
-                      await InteractionController.informTurnEnded(discardCardResponse[0]);
-                      await InteractionController.announceTurnEnded(session);
+                      if (discardCardResponse !== undefined) {
+                        const turnHistoryEntry: TurnHistoryEntry = {
+                          "discardedCard": discardCardResponse[1],
+                          "drawSource": drawSourceResponse[1],
+                          "turnAction": TurnAction.DRAW,
+                        };
+                        GameController.discardPlayerCard(
+                          session,
+                          player,
+                          discardCardResponse[1],
+                        );
+                        await GameController.endTurn(
+                          session,
+                          turnHistoryEntry,
+                        );
+                        await InteractionController.informTurnEnded(discardCardResponse[0]);
+                      }
                     }
+                    break;
                   }
-                  break;
+                  case TurnAction.STAND: {
+                    const turnHistoryEntry: TurnHistoryEntry = {
+                      "turnAction": TurnAction.STAND,
+                    };
+                    await GameController.endTurn(
+                      session,
+                      turnHistoryEntry,
+                    );
+                    await InteractionController.informTurnEnded(turnActionResponse[0]);
+                    break;
+                  }
+                  default:
+                    throw new Error("Unknown turn action.");
                 }
-                case TurnAction.STAND: {
-                  const turnHistoryEntry: TurnHistoryEntry = {
-                    "turnAction": TurnAction.STAND,
-                  };
-                  GameController.playerEndTurn(
-                    session,
-                    turnHistoryEntry,
-                  );
-                  await InteractionController.informTurnEnded(turnActionResponse[0]);
-                  await InteractionController.announceTurnEnded(session);
-                  break;
-                }
-                default:
-                  throw new Error("Unknown turn action.");
               }
             }
+          } else { // Scoring round
+            // TODO: write scoring turn logic
           }
         }
       }

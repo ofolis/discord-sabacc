@@ -13,7 +13,6 @@ import {
   CardSuit,
   CardType,
   DrawSource,
-  SessionStatus,
   TurnAction,
 } from "../enums";
 import {
@@ -51,7 +50,11 @@ export class InteractionController {
   private static formatHandRoundMessage(
     session: SessionState,
   ): string {
-    return `**Hand:** \`${(session.currentHandIndex + 1).toString()}\`  |  **Round:** \`${(session.currentRoundIndex + 1).toString()}/3\``;
+    return `**Hand:** \`${
+      (session.currentHandIndex + 1).toString()
+    }\`  |  **Round:** \`${
+      session.currentRoundIndex < 3 ? `${(session.currentRoundIndex + 1).toString()}/3` : "REVEAL"
+    }\``;
   }
 
   private static formatPlayerItemsMessage(
@@ -105,12 +108,48 @@ export class InteractionController {
     player: PlayerState,
   ): string {
     let tokenString: string = "";
-    tokenString += "⚪".repeat(player.currentUnspentTokenTotal);
+    tokenString += "⚪".repeat(player.currentTokenTotal - player.currentSpentTokenTotal);
     tokenString += "⚫".repeat(player.currentSpentTokenTotal);
     if (tokenString.length === 0) {
       tokenString = "None";
     }
     return tokenString;
+  }
+
+  public static async announceGameEnded(
+    session: SessionState,
+  ): Promise<void> {
+    await Discord.sendMessage(
+      session.channelId,
+      "# Ended Game",
+    );
+  }
+
+  public static async announceGameStarted(
+    session: SessionState,
+  ): Promise<void> {
+    await Discord.sendMessage(
+      session.channelId,
+      "# Starting Game",
+    );
+  }
+
+  public static async announceHandEnded(
+    session: SessionState,
+  ): Promise<void> {
+    await Discord.sendMessage(
+      session.channelId,
+      `# Ended Hand ${(session.currentHandIndex + 1).toString()}`,
+    );
+  }
+
+  public static async announceRoundStarted(
+    session: SessionState,
+  ): Promise<void> {
+    await Discord.sendMessage(
+      session.channelId,
+      `# Starting Round ${(session.currentRoundIndex + 1).toString()}`,
+    );
   }
 
   public static async announceTurnEnded(
@@ -152,29 +191,6 @@ export class InteractionController {
       session.channelId,
       Utils.linesToString(contentLines),
     );
-    if (session.status === SessionStatus.COMPLETED) {
-      // TODO: Announce game result here
-      await Discord.sendMessage(
-        session.channelId,
-        "# End!",
-      );
-    } else if (session.status === SessionStatus.ACTIVE) {
-      if (session.currentRoundIndex === 0 && session.currentPlayerIndex === 0) {
-        // TODO: Announce hand result here
-        await Discord.sendMessage(
-          session.channelId,
-          `# Starting Hand ${(session.currentHandIndex + 1).toString()}`,
-        );
-      } else if (session.currentPlayerIndex === 0) {
-        await Discord.sendMessage(
-          session.channelId,
-          `# Starting Round ${(session.currentRoundIndex + 1).toString()}`,
-        );
-      }
-      await this.announceTurnStarted(session);
-    } else {
-      throw new Error("Turn ended with unknown session status.");
-    }
   }
 
   public static async announceTurnStarted(
@@ -448,7 +464,7 @@ export class InteractionController {
   ): Promise<[DiscordButtonInteraction, TurnAction] | null | undefined> {
     const buttonMap: Record<string, DiscordButtonBuilder> = {};
     const drawDisabled: boolean =
-      player.currentUnspentTokenTotal === 0 ||
+      player.currentSpentTokenTotal === player.currentTokenTotal ||
       (
         session.bloodDeck.length === 0 &&
         session.bloodDiscard.length === 0 &&
