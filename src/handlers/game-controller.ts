@@ -362,9 +362,48 @@ export class GameController {
     }
   }
 
-  public static rollImposterDie(): number {
+  public static generatePlayerCardDieRollValues(
+    session: SessionState,
+    player: PlayerState,
+    playerCard: PlayerCard,
+  ): void {
+    SessionController.validateSessionPlayer(
+      session,
+      player,
+    );
+    SessionController.validatePlayerCard(
+      player,
+      playerCard,
+    );
+    if (playerCard.dieRollValues.length !== 0) {
+      throw new Error("Die roll values already exist on player card.");
+    }
     const random: Random = new Random();
-    return random.die(6);
+    playerCard.dieRollValues.push(random.die(6));
+    playerCard.dieRollValues.push(random.die(6));
+    SessionController.saveSession(session);
+  }
+
+  public static setPlayerCardDieRollValue(
+    session: SessionState,
+    player: PlayerState,
+    playerCard: PlayerCard,
+    dieValue: number,
+  ): void {
+    SessionController.validateSessionPlayer(
+      session,
+      player,
+    );
+    SessionController.validatePlayerCard(
+      player,
+      playerCard,
+    );
+    if (!playerCard.dieRollValues.includes(dieValue)) {
+      throw new Error("Die roll value does not exist on player card.");
+    }
+    Utils.emptyArray(playerCard.dieRollValues);
+    playerCard.dieRollValues.push(dieValue);
+    SessionController.saveSession(session);
   }
 
   public static standPlayer(

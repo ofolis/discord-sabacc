@@ -20,6 +20,9 @@ import type {
   PlayerState,
   SessionState,
 } from "../../types";
+import {
+  Utils,
+} from "../../utils";
 
 // TODO: Find a better way to handle the handler export and it's helpers -- move away from arrow function?
 
@@ -28,6 +31,7 @@ async function handleGameRound(
   session: SessionState,
   player: PlayerState,
 ): Promise<void> {
+  // TODO: this still needs to be split up better
   const playerHasPendingDiscard: boolean = player.currentBloodCards.length > 1 || player.currentSandCards.length > 1;
   if (playerHasPendingDiscard) {
     const discardCardResponse: [DiscordButtonInteraction, PlayerCard] | undefined = await InteractionController.promptChooseDiscardCard(
@@ -106,20 +110,44 @@ async function handleScoringRound(
   session: SessionState,
   player: PlayerState,
 ): Promise<void> {
-  // TODO: write scoring turn logic
-  if (player.currentBloodCards[0].card.type === CardType.IMPOSTER) {
-    if (player.currentBloodCards[0].dieRollValues.length === 0) {
-      // Roll
+  // TODO: finish scoring turn logic
+  const bloodPlayerCard: PlayerCard = player.currentBloodCards[0];
+  const sandPlayerCard: PlayerCard = player.currentSandCards[0];
+  if (bloodPlayerCard.card.type === CardType.IMPOSTER) {
+    if (bloodPlayerCard.dieRollValues.length === 0) {
+      const rollResponse: DiscordButtonInteraction | null | undefined = await InteractionController.promptRollForImposter(
+        bloodPlayerCard,
+        interaction,
+      );
+      if (rollResponse !== undefined && rollResponse !== null) {
+        GameController.generatePlayerCardDieRollValues(
+          session,
+          player,
+          bloodPlayerCard,
+        );
+        const dieChoiceResponse: [DiscordButtonInteraction, number] | undefined = await InteractionController.promptChooseImposterDie(
+          bloodPlayerCard,
+          rollResponse,
+        );
+        if (dieChoiceResponse !== undefined) {
+          GameController.setPlayerCardDieRollValue(
+            session,
+            player,
+            bloodPlayerCard,
+            dieChoiceResponse[1],
+          );
+        }
+      }
     }
-    if (player.currentBloodCards[0].dieRollValues.length > 1) {
+    if (bloodPlayerCard.dieRollValues.length > 1) {
       // Choose
     }
   }
-  if (player.currentBloodCards[1].card.type === CardType.IMPOSTER) {
-    if (player.currentBloodCards[1].dieRollValues.length === 0) {
+  if (sandPlayerCard.card.type === CardType.IMPOSTER) {
+    if (sandPlayerCard.dieRollValues.length === 0) {
       // Roll
     }
-    if (player.currentBloodCards[1].dieRollValues.length > 1) {
+    if (sandPlayerCard.dieRollValues.length > 1) {
       // Choose
     }
   }

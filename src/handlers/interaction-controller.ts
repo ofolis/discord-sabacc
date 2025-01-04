@@ -465,7 +465,7 @@ export class InteractionController {
   public static async promptChooseImposterDie(
     playerCard: PlayerCard,
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
-  ): Promise<number | undefined> {
+  ): Promise<[DiscordButtonInteraction, number] | undefined> {
     if (playerCard.card.type !== CardType.IMPOSTER) {
       throw new Error("Attempted set die value on a non-imposter card.");
     }
@@ -503,10 +503,16 @@ export class InteractionController {
     } else {
       switch (buttonInteraction.customId) {
         case "firstDie": {
-          return playerCard.dieRollValues[0];
+          return [
+            buttonInteraction,
+            playerCard.dieRollValues[0],
+          ];
         }
         case "secondDie":
-          return playerCard.dieRollValues[1];
+          return [
+            buttonInteraction,
+            playerCard.dieRollValues[1],
+          ];
         default:
           throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
       }
@@ -730,7 +736,7 @@ export class InteractionController {
   public static async promptRollForImposter(
     playerCard: PlayerCard,
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
-  ): Promise<boolean | undefined> {
+  ): Promise<DiscordButtonInteraction | null | undefined> {
     if (playerCard.card.type !== CardType.IMPOSTER) {
       throw new Error("Attempted to roll for a non-imposter card.");
     }
@@ -768,11 +774,11 @@ export class InteractionController {
     } else {
       switch (buttonInteraction.customId) {
         case "rollDice": {
-          return true;
+          return buttonInteraction;
         }
         case "cancel":
           await Discord.deleteSentItem(interactionResponse);
-          return false;
+          return null;
         default:
           throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
       }
