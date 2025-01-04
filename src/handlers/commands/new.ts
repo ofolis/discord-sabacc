@@ -22,14 +22,14 @@ export const command: Command = {
   "isGuild": true,
   "execute": async(interaction: DiscordCommandInteraction): Promise<void> => {
     const session: SessionState | null = SessionController.loadSession(interaction.channelId);
-    let createSession: boolean = false;
+    let createSession: boolean | undefined;
     if (session !== null && (session.status === SessionStatus.ACTIVE || session.status === SessionStatus.PENDING)) {
       createSession = await InteractionController.promptEndCurrentGame(interaction);
     } else {
       createSession = true;
       await InteractionController.informStartingGame(interaction);
     }
-    if (createSession) {
+    if (createSession === true) {
       const newGameMembersResponse: DiscordUser[] | undefined = await InteractionController.promptNewGameMembers(
         interaction.channelId,
         interaction.user,
@@ -40,7 +40,7 @@ export const command: Command = {
           newGameMembersResponse,
           6,
         );
-        GameController.startGame(session);
+        await GameController.startGame(session);
         await InteractionController.announceTurnStarted(session);
       }
     }

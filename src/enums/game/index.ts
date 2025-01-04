@@ -5,8 +5,8 @@ export {
   CardType,
 } from "./card-type";
 export {
-  DrawSource,
-} from "./draw-source";
+  PlayerCardSource,
+} from "./player-card-source";
 export {
   SessionStatus,
 } from "./session-status";

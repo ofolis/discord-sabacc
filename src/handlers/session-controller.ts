@@ -9,7 +9,7 @@ import {
   IO,
 } from "../io";
 import {
-  Card,
+  PlayerCard,
   PlayerState,
   SessionState,
 } from "../types";
@@ -33,14 +33,11 @@ export class SessionController {
           ],
           "currentSpentTokenTotal": 0,
           "currentTokenTotal": startingTokenTotal,
+          "currentTurnRecord": null,
           "id": discordUser.id,
           "isEliminated": false,
           "globalName": discordUser.globalName,
           "handResults": [
-          ],
-          "pendingDiscard": null,
-          "pendingImposterValues": {},
-          "turnHistory": [
           ],
           "username": discordUser.username,
         };
@@ -63,16 +60,6 @@ export class SessionController {
     };
     this.saveSession(session);
     return session;
-  }
-
-  public static getPlayerPendingImposterValue(
-    player: PlayerState,
-    suit: CardSuit,
-  ): number {
-    if (player.pendingImposterValues[suit] === undefined) {
-      throw new Error("Player does not contain required pending imposter value.");
-    }
-    return player.pendingImposterValues[suit];
   }
 
   public static getSessionPlayerById(
@@ -101,12 +88,12 @@ export class SessionController {
 
   public static validatePlayerCard(
     player: PlayerState,
-    card: Card,
+    playerCard: PlayerCard,
   ): void {
-    if (!player.currentBloodCards.includes(card) && !player.currentSandCards.includes(card)) {
+    if (!player.currentBloodCards.includes(playerCard) && !player.currentSandCards.includes(playerCard)) {
       throw new Error("Player does not contain card.");
     }
-    if (card.suit === CardSuit.BLOOD && player.currentSandCards.includes(card) || card.suit === CardSuit.SAND && player.currentBloodCards.includes(card)) {
+    if (playerCard.card.suit === CardSuit.BLOOD && player.currentSandCards.includes(playerCard) || playerCard.card.suit === CardSuit.SAND && player.currentBloodCards.includes(playerCard)) {
       throw new Error("Player card is in the wrong set.");
     }
   }
@@ -114,14 +101,20 @@ export class SessionController {
   public static validatePlayerCardSets(
     player: PlayerState,
   ): void {
-    for (const card of player.currentBloodCards) {
-      if (card.suit !== CardSuit.BLOOD) {
-        throw new Error("Blood card set contained a non-blood card.");
+    if (player.currentBloodCards.length === 0) {
+      throw new Error("Player did not contain any blood cards.");
+    }
+    if (player.currentSandCards.length === 0) {
+      throw new Error("Player did not contain any sand cards.");
+    }
+    for (const playerCard of player.currentBloodCards) {
+      if (playerCard.card.suit !== CardSuit.BLOOD) {
+        throw new Error("Player blood card set contained a non-blood card.");
       }
     }
-    for (const card of player.currentSandCards) {
-      if (card.suit !== CardSuit.SAND) {
-        throw new Error("Sand card set contained a non-sand card.");
+    for (const playerCard of player.currentSandCards) {
+      if (playerCard.card.suit !== CardSuit.SAND) {
+        throw new Error("Player sand card set contained a non-sand card.");
       }
     }
   }

@@ -1,24 +1,18 @@
 import {
-  Card,
   HandResult,
-  PendingDiscard,
-  TurnHistoryEntry,
+  PlayerCard,
+  TurnRecord,
 } from ".";
-import {
-  CardSuit,
-} from "../../enums";
 
 export type PlayerState = {
-  "currentBloodCards": Card[];
-  "currentSandCards": Card[];
+  "currentBloodCards": PlayerCard[];
+  "currentSandCards": PlayerCard[];
   "currentSpentTokenTotal": number;
   "currentTokenTotal": number;
+  "currentTurnRecord": TurnRecord | null;
   "id": string;
   "isEliminated": boolean;
   "globalName": string | null;
   "handResults": HandResult[];
-  "pendingDiscard": PendingDiscard | null;
-  "pendingImposterValues": Partial<Record<CardSuit, number>>;
-  "turnHistory": TurnHistoryEntry[];
   "username": string;
 };

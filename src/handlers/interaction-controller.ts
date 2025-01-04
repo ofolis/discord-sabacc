@@ -12,14 +12,14 @@ import {
 import {
   CardSuit,
   CardType,
-  DrawSource,
+  PlayerCardSource,
   TurnAction,
 } from "../enums";
 import {
   Card,
+  PlayerCard,
   PlayerState,
   SessionState,
-  TurnHistoryEntry,
 } from "../types";
 import {
   Utils,
@@ -61,10 +61,10 @@ export class InteractionController {
     player: PlayerState,
   ): string {
     const bloodCardsString: string = player.currentBloodCards
-      .map(card => `\`${this.formatCardString(card)}\``)
+      .map(playerCard => `\`${this.formatCardString(playerCard.card)}\``)
       .join(" ") || "`None`";
     const sandCardsString: string = player.currentSandCards
-      .map(card => `\`${this.formatCardString(card)}\``)
+      .map(playerCard => `\`${this.formatCardString(playerCard.card)}\``)
       .join(" ") || "`None`";
     const contentLines: string[] = [
       `Sand: ${sandCardsString}`,
@@ -155,33 +155,38 @@ export class InteractionController {
   public static async announceTurnEnded(
     session: SessionState,
   ): Promise<void> {
-    const turnPlayer: PlayerState = session.players[(session.currentPlayerIndex === 0 ? session.players.length : session.currentPlayerIndex) - 1];
-    const turnHistoryEntry: TurnHistoryEntry = turnPlayer.turnHistory[turnPlayer.turnHistory.length - 1];
+    const player: PlayerState = session.players[(session.currentPlayerIndex === 0 ? session.players.length : session.currentPlayerIndex) - 1];
+    if (player.currentTurnRecord === null) {
+      throw new Error("Player did not contain a turn record.");
+    }
     const contentLines: string[] = [
     ];
-    switch (turnHistoryEntry.turnAction) {
+    switch (player.currentTurnRecord.action) {
       case TurnAction.DRAW:
-        contentLines.push(`# ${turnPlayer.globalName ?? turnPlayer.username} Drew A Card`);
-        switch (turnHistoryEntry.drawSource) {
-          case DrawSource.BLOOD_DECK:
+        if (player.currentTurnRecord.discardedCard === null) {
+          throw new Error("Player turn record did not contain a discarded card.");
+        }
+        contentLines.push(`# ${player.globalName ?? player.username} Drew A Card`);
+        switch (player.currentTurnRecord.drawnCard.source) {
+          case PlayerCardSource.BLOOD_DECK:
             contentLines.push("- A card was drawn from the **blood deck**.");
             break;
-          case DrawSource.BLOOD_DISCARD:
+          case PlayerCardSource.BLOOD_DISCARD:
             contentLines.push("- A card was drawn from the **blood discard**.");
             break;
-          case DrawSource.SAND_DECK:
+          case PlayerCardSource.SAND_DECK:
             contentLines.push("- A card was drawn from the **sand deck**.");
             break;
-          case DrawSource.SAND_DISCARD:
+          case PlayerCardSource.SAND_DISCARD:
             contentLines.push("- A card was drawn from the **sand discard**.");
             break;
           default:
             throw new Error("Unknown draw source.");
         }
-        contentLines.push(`- \`${this.formatCardString(turnHistoryEntry.discardedCard)}\` was discarded.`);
+        contentLines.push(`- \`${this.formatCardString(player.currentTurnRecord.discardedCard.card)}\` was discarded.`);
         break;
       case TurnAction.STAND:
-        contentLines.push(`# ${turnPlayer.globalName ?? turnPlayer.username} Stood`);
+        contentLines.push(`# ${player.globalName ?? player.username} Stood`);
         contentLines.push("- No card was drawn or discarded.");
         break;
       default:
@@ -313,7 +318,7 @@ export class InteractionController {
     session: SessionState,
     player: PlayerState,
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
-  ): Promise<[DiscordButtonInteraction, Card] | undefined> {
+  ): Promise<[DiscordButtonInteraction, PlayerCard] | undefined> {
     const buttonMap: Record<string, DiscordButtonBuilder> = {};
     const contentLines: string[] = [
       this.formatHandRoundMessage(session),
@@ -324,20 +329,20 @@ export class InteractionController {
       "",
       "**Choose a card to discard.**",
     ];
-    let cardSet: Card[];
+    let playerCardSet: PlayerCard[];
     if (player.currentBloodCards.length > 1) {
-      cardSet = player.currentBloodCards;
+      playerCardSet = player.currentBloodCards;
     } else if (player.currentSandCards.length > 1) {
-      cardSet = player.currentSandCards;
+      playerCardSet = player.currentSandCards;
     } else {
       throw new Error("Player does not require a discard.");
     }
-    const discardMap: Record<string, Card> = {};
-    cardSet.forEach((card, index) => {
+    const discardMap: Record<string, PlayerCard> = {};
+    playerCardSet.forEach((playerCard, index) => {
       const key: string = `discardOption${index.toString()}`;
-      discardMap[key] = card;
+      discardMap[key] = playerCard;
       buttonMap[key] = new DiscordButtonBuilder()
-        .setLabel(this.formatCardString(card))
+        .setLabel(this.formatCardString(playerCard.card))
         .setStyle(DiscordButtonStyle.Primary);
     });
     const interactionResponse: DiscordInteractionResponse = await Discord.sendPersistentInteractionResponse(
@@ -353,7 +358,7 @@ export class InteractionController {
     if (buttonInteraction === null) {
       await Discord.updateSentItem(
         interactionResponse,
-        "**Discard action timed out.**",
+        "_Discard action timed out._",
         {},
       );
       return undefined;
@@ -361,10 +366,10 @@ export class InteractionController {
       if (!(buttonInteraction.customId in discardMap)) {
         throw new Error();
       }
-      const card: Card = discardMap[buttonInteraction.customId];
+      const playerCard: PlayerCard = discardMap[buttonInteraction.customId];
       return [
         buttonInteraction,
-        card,
+        playerCard,
       ];
     }
   }
@@ -373,7 +378,7 @@ export class InteractionController {
     session: SessionState,
     player: PlayerState,
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
-  ): Promise<[DiscordButtonInteraction, DrawSource] | undefined> {
+  ): Promise<[DiscordButtonInteraction, Exclude<PlayerCardSource, PlayerCardSource.DEALT>] | undefined> {
     const buttonMap: Record<string, DiscordButtonBuilder> = {};
     const contentLines: string[] = [
       this.formatHandRoundMessage(session),
@@ -425,7 +430,7 @@ export class InteractionController {
     if (buttonInteraction === null) {
       await Discord.updateSentItem(
         interactionResponse,
-        "**Card draw action timed out.**",
+        "_Card draw action timed out._",
         {},
       );
       return undefined;
@@ -434,23 +439,74 @@ export class InteractionController {
         case "bloodDeck":
           return [
             buttonInteraction,
-            DrawSource.BLOOD_DECK,
+            PlayerCardSource.BLOOD_DECK,
           ];
         case "bloodDiscard":
           return [
             buttonInteraction,
-            DrawSource.BLOOD_DISCARD,
+            PlayerCardSource.BLOOD_DISCARD,
           ];
         case "sandDeck":
           return [
             buttonInteraction,
-            DrawSource.SAND_DECK,
+            PlayerCardSource.SAND_DECK,
           ];
         case "sandDiscard":
           return [
             buttonInteraction,
-            DrawSource.SAND_DISCARD,
+            PlayerCardSource.SAND_DISCARD,
           ];
+        default:
+          throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+      }
+    }
+  }
+
+  public static async promptChooseImposterDie(
+    playerCard: PlayerCard,
+    discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
+  ): Promise<number | undefined> {
+    if (playerCard.card.type !== CardType.IMPOSTER) {
+      throw new Error("Attempted set die value on a non-imposter card.");
+    }
+    if (playerCard.dieRollValues.length !== 2) {
+      throw new Error("Imposter player card does not contain exactly two die roll values.");
+    }
+    const buttonMap: Record<string, DiscordButtonBuilder> = {
+      "firstDie": new DiscordButtonBuilder()
+        .setLabel(playerCard.dieRollValues[0].toString())
+        .setStyle(DiscordButtonStyle.Primary),
+      "secondDie": new DiscordButtonBuilder()
+        .setLabel(playerCard.dieRollValues[1].toString())
+        .setStyle(DiscordButtonStyle.Secondary),
+    };
+    const contentLines: string[] = [
+      "# Choose Die Result",
+      `Choose the die value that you want to use for your \`${this.formatCardString(playerCard.card)}\` card.`,
+    ];
+    const interactionResponse: DiscordInteractionResponse = await Discord.sendPersistentInteractionResponse(
+      discordInteraction,
+      Utils.linesToString(contentLines),
+      true,
+      buttonMap,
+    );
+    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+      interactionResponse,
+      (i) => i.user.id === discordInteraction.user.id,
+    );
+    if (buttonInteraction === null) {
+      await Discord.updateSentItem(
+        interactionResponse,
+        "_Die selection prompt timed out._",
+      );
+      return;
+    } else {
+      switch (buttonInteraction.customId) {
+        case "firstDie": {
+          return playerCard.dieRollValues[0];
+        }
+        case "secondDie":
+          return playerCard.dieRollValues[1];
         default:
           throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
       }
@@ -506,7 +562,7 @@ export class InteractionController {
     if (buttonInteraction === null) {
       await Discord.updateSentItem(
         interactionResponse,
-        "**Turn play timed out.**",
+        "*_Turn play timed out._",
         {},
       );
       return undefined;
@@ -533,7 +589,7 @@ export class InteractionController {
 
   public static async promptEndCurrentGame(
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
-  ): Promise<boolean> {
+  ): Promise<boolean | undefined> {
     const buttonMap: Record<string, DiscordButtonBuilder> = {
       "endGame": new DiscordButtonBuilder()
         .setLabel("End Game")
@@ -559,9 +615,9 @@ export class InteractionController {
     if (buttonInteraction === null) {
       await Discord.updateSentItem(
         interactionResponse,
-        "**End game prompt timed out.**",
+        "_End game prompt timed out._",
       );
-      return false;
+      return;
     } else {
       switch (buttonInteraction.customId) {
         case "endGame":
@@ -628,9 +684,7 @@ export class InteractionController {
     );
     if (buttonInteraction === null) {
       const startedContentLines: string[] = [
-        ...baseContentLines,
-        "",
-        "**Game creation timed out.**",
+        "_Game creation timed out._",
       ];
       await Discord.updateSentItem(
         outbound,
@@ -667,6 +721,58 @@ export class InteractionController {
             ...discordUserAccumulator,
           ];
         }
+        default:
+          throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+      }
+    }
+  }
+
+  public static async promptRollForImposter(
+    playerCard: PlayerCard,
+    discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
+  ): Promise<boolean | undefined> {
+    if (playerCard.card.type !== CardType.IMPOSTER) {
+      throw new Error("Attempted to roll for a non-imposter card.");
+    }
+    if (playerCard.dieRollValues.length > 0) {
+      throw new Error("Imposter player card already has one or more die roll values.");
+    }
+    const buttonMap: Record<string, DiscordButtonBuilder> = {
+      "rollDice": new DiscordButtonBuilder()
+        .setLabel("Roll Dice")
+        .setStyle(DiscordButtonStyle.Primary),
+      "cancel": new DiscordButtonBuilder()
+        .setLabel("Cancel")
+        .setStyle(DiscordButtonStyle.Secondary),
+    };
+    const contentLines: string[] = [
+      "# Roll For Imposter",
+      `Roll the dice to get a value for your \`${this.formatCardString(playerCard.card)}\` card.`,
+    ];
+    const interactionResponse: DiscordInteractionResponse = await Discord.sendPersistentInteractionResponse(
+      discordInteraction,
+      Utils.linesToString(contentLines),
+      true,
+      buttonMap,
+    );
+    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+      interactionResponse,
+      (i) => i.user.id === discordInteraction.user.id,
+    );
+    if (buttonInteraction === null) {
+      await Discord.updateSentItem(
+        interactionResponse,
+        "_Dice roll prompt timed out._",
+      );
+      return;
+    } else {
+      switch (buttonInteraction.customId) {
+        case "rollDice": {
+          return true;
+        }
+        case "cancel":
+          await Discord.deleteSentItem(interactionResponse);
+          return false;
         default:
           throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
       }

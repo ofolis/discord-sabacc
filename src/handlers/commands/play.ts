@@ -9,17 +9,121 @@ import {
   DiscordMessageComponentInteraction,
 } from "../../discord";
 import {
-  DrawSource,
+  CardType,
+  PlayerCardSource,
   SessionStatus,
   TurnAction,
 } from "../../enums";
 import type {
-  Card,
   Command,
+  PlayerCard,
   PlayerState,
   SessionState,
-  TurnHistoryEntry,
 } from "../../types";
+
+// TODO: Find a better way to handle the handler export and it's helpers -- move away from arrow function?
+
+async function handleGameRound(
+  interaction: DiscordCommandInteraction,
+  session: SessionState,
+  player: PlayerState,
+): Promise<void> {
+  const playerHasPendingDiscard: boolean = player.currentBloodCards.length > 1 || player.currentSandCards.length > 1;
+  if (playerHasPendingDiscard) {
+    const discardCardResponse: [DiscordButtonInteraction, PlayerCard] | undefined = await InteractionController.promptChooseDiscardCard(
+      session,
+      player,
+      interaction,
+    );
+    if (discardCardResponse !== undefined) {
+      GameController.discardPlayerCard(
+        session,
+        player,
+        discardCardResponse[1],
+      );
+      await GameController.endTurn(
+        session,
+      );
+      await InteractionController.informTurnEnded(discardCardResponse[0]);
+    }
+  } else {
+    const turnActionResponse: [DiscordButtonInteraction, TurnAction] | null | undefined = await InteractionController.promptChooseTurnAction(
+      session,
+      player,
+      interaction,
+    );
+    if (turnActionResponse !== undefined && turnActionResponse !== null) {
+      switch (turnActionResponse[1]) {
+        case TurnAction.DRAW: {
+          const drawSourceResponse: [DiscordMessageComponentInteraction, Exclude<PlayerCardSource, PlayerCardSource.DEALT>] | null | undefined = await InteractionController.promptChooseDrawSource(
+            session,
+            player,
+            turnActionResponse[0],
+          );
+          if (drawSourceResponse !== undefined) {
+            GameController.drawPlayerCard(
+              session,
+              player,
+              drawSourceResponse[1],
+            );
+            const discardCardResponse: [DiscordButtonInteraction, PlayerCard] | undefined = await InteractionController.promptChooseDiscardCard(
+              session,
+              player,
+              drawSourceResponse[0],
+            );
+            if (discardCardResponse !== undefined) {
+              GameController.discardPlayerCard(
+                session,
+                player,
+                discardCardResponse[1],
+              );
+              await GameController.endTurn(
+                session,
+              );
+              await InteractionController.informTurnEnded(discardCardResponse[0]);
+            }
+          }
+          break;
+        }
+        case TurnAction.STAND: {
+          GameController.standPlayer(
+            session,
+            player,
+          );
+          await GameController.endTurn(session);
+          await InteractionController.informTurnEnded(turnActionResponse[0]);
+          break;
+        }
+        default:
+          throw new Error("Unknown turn action.");
+      }
+    }
+  }
+}
+
+async function handleScoringRound(
+  interaction: DiscordCommandInteraction,
+  session: SessionState,
+  player: PlayerState,
+): Promise<void> {
+  // TODO: write scoring turn logic
+  if (player.currentBloodCards[0].card.type === CardType.IMPOSTER) {
+    if (player.currentBloodCards[0].dieRollValues.length === 0) {
+      // Roll
+    }
+    if (player.currentBloodCards[0].dieRollValues.length > 1) {
+      // Choose
+    }
+  }
+  if (player.currentBloodCards[1].card.type === CardType.IMPOSTER) {
+    if (player.currentBloodCards[1].dieRollValues.length === 0) {
+      // Roll
+    }
+    if (player.currentBloodCards[1].dieRollValues.length > 1) {
+      // Choose
+    }
+  }
+}
 
 export const command: Command = {
   "name": "play",
@@ -44,93 +148,18 @@ export const command: Command = {
             interaction,
           );
         } else {
-          if (session.currentRoundIndex < 3) { // Gameplay rounds
-            if (player.pendingDiscard !== null) {
-              const discardCardResponse: [DiscordButtonInteraction, Card] | undefined = await InteractionController.promptChooseDiscardCard(
-                session,
-                player,
-                interaction,
-              );
-              if (discardCardResponse !== undefined) {
-                const turnHistoryEntry: TurnHistoryEntry = {
-                  "discardedCard": discardCardResponse[1],
-                  "drawSource": player.pendingDiscard.drawSource,
-                  "turnAction": TurnAction.DRAW,
-                };
-                GameController.discardPlayerCard(
-                  session,
-                  player,
-                  discardCardResponse[1],
-                );
-                await GameController.endTurn(
-                  session,
-                  turnHistoryEntry,
-                );
-                await InteractionController.informTurnEnded(discardCardResponse[0]);
-              }
-            } else {
-              const turnActionResponse: [DiscordButtonInteraction, TurnAction] | null | undefined = await InteractionController.promptChooseTurnAction(
-                session,
-                player,
-                interaction,
-              );
-              if (turnActionResponse !== undefined && turnActionResponse !== null) {
-                switch (turnActionResponse[1]) {
-                  case TurnAction.DRAW: {
-                    const drawSourceResponse: [DiscordMessageComponentInteraction, DrawSource] | null | undefined = await InteractionController.promptChooseDrawSource(
-                      session,
-                      player,
-                      turnActionResponse[0],
-                    );
-                    if (drawSourceResponse !== undefined) {
-                      GameController.drawPlayerCard(
-                        session,
-                        player,
-                        drawSourceResponse[1],
-                      );
-                      const discardCardResponse: [DiscordButtonInteraction, Card] | undefined = await InteractionController.promptChooseDiscardCard(
-                        session,
-                        player,
-                        drawSourceResponse[0],
-                      );
-                      if (discardCardResponse !== undefined) {
-                        const turnHistoryEntry: TurnHistoryEntry = {
-                          "discardedCard": discardCardResponse[1],
-                          "drawSource": drawSourceResponse[1],
-                          "turnAction": TurnAction.DRAW,
-                        };
-                        GameController.discardPlayerCard(
-                          session,
-                          player,
-                          discardCardResponse[1],
-                        );
-                        await GameController.endTurn(
-                          session,
-                          turnHistoryEntry,
-                        );
-                        await InteractionController.informTurnEnded(discardCardResponse[0]);
-                      }
-                    }
-                    break;
-                  }
-                  case TurnAction.STAND: {
-                    const turnHistoryEntry: TurnHistoryEntry = {
-                      "turnAction": TurnAction.STAND,
-                    };
-                    await GameController.endTurn(
-                      session,
-                      turnHistoryEntry,
-                    );
-                    await InteractionController.informTurnEnded(turnActionResponse[0]);
-                    break;
-                  }
-                  default:
-                    throw new Error("Unknown turn action.");
-                }
-              }
-            }
-          } else { // Scoring round
-            // TODO: write scoring turn logic
+          if (session.currentRoundIndex < 3) {
+            await handleGameRound(
+              interaction,
+              session,
+              player,
+            );
+          } else {
+            await handleScoringRound(
+              interaction,
+              session,
+              player,
+            );
           }
         }
       }

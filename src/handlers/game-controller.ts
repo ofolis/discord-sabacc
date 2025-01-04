@@ -8,15 +8,16 @@ import {
 import {
   CardSuit,
   CardType,
-  DrawSource,
+  PlayerCardSource,
   SessionStatus,
+  TurnAction,
 } from "../enums";
 import {
   Card,
   HandResult,
+  PlayerCard,
   PlayerState,
   SessionState,
-  TurnHistoryEntry,
 } from "../types";
 import {
   Utils,
@@ -46,25 +47,23 @@ export class GameController {
         if (player.currentSandCards.length > 1) {
           throw new Error("Player ended the round with more than one sand card.");
         }
-        const bloodCard: Card = player.currentBloodCards[0];
-        const sandCard: Card = player.currentSandCards[0];
+        const bloodPlayerCard: PlayerCard = player.currentBloodCards[0];
+        const sandPlayerCard: PlayerCard = player.currentSandCards[0];
         const bloodCardValue: number = this.getFinalCardValue(
-          bloodCard,
-          sandCard,
-          player,
+          bloodPlayerCard,
+          sandPlayerCard,
         );
         const sandCardValue: number = this.getFinalCardValue(
-          sandCard,
-          bloodCard,
-          player,
+          sandPlayerCard,
+          bloodPlayerCard,
         );
         partialHandResults.push({
-          "bloodCard": bloodCard,
+          "bloodCard": bloodPlayerCard,
           "bloodCardValue": bloodCardValue,
           "cardDifference": Math.abs(bloodCardValue - sandCardValue),
           "lowestCardValue": bloodCardValue <= sandCardValue ? bloodCardValue : sandCardValue,
           "playerIndex": session.players.indexOf(player),
-          "sandCard": sandCard,
+          "sandCard": sandPlayerCard,
           "sandCardValue": sandCardValue,
         });
       }
@@ -141,34 +140,37 @@ export class GameController {
   }
 
   private static getFinalCardValue(
-    primaryCard: Card,
-    secondaryCard: Card,
-    player: PlayerState,
+    primaryPlayerCard: PlayerCard,
+    secondaryPlayerCard: PlayerCard,
   ): number {
-    switch (primaryCard.type) {
+    switch (primaryPlayerCard.card.type) {
       case CardType.IMPOSTER:
-        return SessionController.getPlayerPendingImposterValue(
-          player,
-          primaryCard.suit,
-        );
+        if (primaryPlayerCard.dieRollValues.length === 0) {
+          throw new Error("Primary imposter player card does not contain any die roll values.");
+        } else if (primaryPlayerCard.dieRollValues.length > 1) {
+          throw new Error("Primary imposter player card contains more than one die roll value.");
+        }
+        return primaryPlayerCard.dieRollValues[0];
       case CardType.NUMBER:
-        return primaryCard.value;
+        return primaryPlayerCard.card.value;
       case CardType.SYLOP:
-        switch (secondaryCard.type) {
+        switch (secondaryPlayerCard.card.type) {
           case CardType.IMPOSTER:
-            return SessionController.getPlayerPendingImposterValue(
-              player,
-              secondaryCard.suit,
-            );
+            if (secondaryPlayerCard.dieRollValues.length === 0) {
+              throw new Error("Secondary imposter player card does not contain any die roll values.");
+            } else if (secondaryPlayerCard.dieRollValues.length > 1) {
+              throw new Error("Secondary imposter player card contains more than one die roll value.");
+            }
+            return secondaryPlayerCard.dieRollValues[0];
           case CardType.NUMBER:
-            return secondaryCard.value;
+            return secondaryPlayerCard.card.value;
           case CardType.SYLOP:
             return 0;
           default:
-            throw new Error("Unknown secondary card type.");
+            throw new Error("Unknown secondary player card type.");
         }
       default:
-        throw new Error("Unknown primary card type.");
+        throw new Error("Unknown primary player card type.");
     }
   }
 
@@ -189,20 +191,34 @@ export class GameController {
   ): void {
     const random: Random = new Random();
     session.bloodDeck.push(...session.bloodDiscard);
-    session.bloodDiscard.length = 0; // Empty the array
+    Utils.emptyArray(session.bloodDiscard);
     session.sandDeck.push(...session.sandDiscard);
-    session.sandDiscard.length = 0; // Empty the array
+    Utils.emptyArray(session.sandDiscard);
     for (const player of session.players) {
-      session.bloodDeck.push(...player.currentBloodCards);
-      player.currentBloodCards.length = 0; // Empty the array
-      session.sandDeck.push(...player.currentSandCards);
-      player.currentSandCards.length = 0; // Empty the array
+      const bloodCards: Card[] = player.currentBloodCards.map((playerCard) => playerCard.card);
+      session.bloodDeck.push(...bloodCards);
+      Utils.emptyArray(player.currentBloodCards);
+      const sandCards: Card[] = player.currentSandCards.map((playerCard) => playerCard.card);
+      session.sandDeck.push(...sandCards);
+      Utils.emptyArray(player.currentSandCards);
     }
     random.shuffle(session.bloodDeck);
     random.shuffle(session.sandDeck);
     for (const player of session.players) {
-      player.currentBloodCards.push(Utils.removeTopArrayItem(session.bloodDeck));
-      player.currentSandCards.push(Utils.removeTopArrayItem(session.sandDeck));
+      const dealtBloodCard: Card = Utils.removeTopArrayItem(session.bloodDeck);
+      const dealtSandCard: Card = Utils.removeTopArrayItem(session.sandDeck);
+      player.currentBloodCards.push({
+        "card": dealtBloodCard,
+        "dieRollValues": [
+        ],
+        "source": PlayerCardSource.DEALT,
+      });
+      player.currentSandCards.push({
+        "card": dealtSandCard,
+        "dieRollValues": [
+        ],
+        "source": PlayerCardSource.DEALT,
+      });
     }
     session.bloodDiscard.push(Utils.removeTopArrayItem(session.bloodDeck));
     session.sandDiscard.push(Utils.removeTopArrayItem(session.sandDeck));
@@ -212,110 +228,125 @@ export class GameController {
   private static async startTurn(
     session: SessionState,
   ): Promise<void> {
+    for (const player of session.players) {
+      player.currentTurnRecord = null;
+    }
     await InteractionController.announceTurnStarted(session);
   }
 
   public static discardPlayerCard(
     session: SessionState,
     player: PlayerState,
-    card: Card,
+    playerCard: PlayerCard,
   ): void {
     SessionController.validateSessionPlayer(
       session,
       player,
     );
+    SessionController.validatePlayerCardSets(player);
     SessionController.validatePlayerCard(
       player,
-      card,
+      playerCard,
     );
-    if (player.pendingDiscard === null) {
+    if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.DRAW || player.currentTurnRecord.discardedCard !== null) {
+      throw new Error("Player turn record is invalid.");
+    }
+    const bloodDiscardIsValid: boolean = player.currentBloodCards.length > 1;
+    const sandDiscardIsValid: boolean = player.currentSandCards.length > 1;
+    if (!bloodDiscardIsValid && !sandDiscardIsValid) {
       throw new Error("Player does not have a pending discard.");
     }
-    if (card.suit !== player.pendingDiscard.cardSuit) {
-      throw new Error("Discard card suit does not match pending discard suit.");
+    if (playerCard.card.suit === CardSuit.BLOOD && !bloodDiscardIsValid) {
+      throw new Error("Player blood discard is invalid.");
     }
-    const playerCardSet: Card[] = card.suit === CardSuit.BLOOD ? player.currentBloodCards : player.currentSandCards;
-    const playerCardIndex: number = playerCardSet.indexOf(card);
+    if (playerCard.card.suit === CardSuit.SAND && !sandDiscardIsValid) {
+      throw new Error("Player sand discard is invalid.");
+    }
+    const playerCardSet: PlayerCard[] = playerCard.card.suit === CardSuit.BLOOD ? player.currentBloodCards : player.currentSandCards;
+    const discardSet: Card[] = playerCard.card.suit === CardSuit.BLOOD ? session.bloodDiscard : session.sandDiscard;
+    const playerCardIndex: number = playerCardSet.indexOf(playerCard);
     if (playerCardIndex === -1) {
-      throw new Error("Player does not contain requested discard card.");
+      throw new Error("Player card was validated but did not exist in set.");
     }
     playerCardSet.splice(
       playerCardIndex,
       1,
     );
-    if (card.suit === CardSuit.BLOOD) {
-      session.bloodDiscard.unshift(card);
-    } else {
-      session.sandDiscard.unshift(card);
-    }
-    player.pendingDiscard = null;
+    discardSet.unshift(playerCard.card);
+    player.currentTurnRecord.discardedCard = playerCard;
     SessionController.saveSession(session);
   }
 
   public static drawPlayerCard(
     session: SessionState,
     player: PlayerState,
-    drawSource: DrawSource,
+    drawSource: Exclude<PlayerCardSource, PlayerCardSource.DEALT>,
   ): void {
     SessionController.validateSessionPlayer(
       session,
       player,
     );
-    if (player.pendingDiscard !== null) {
-      throw new Error("Player cannot draw while pending discard exists.");
+    if (player.currentTurnRecord !== null) {
+      throw new Error("Player turn record already exists.");
     }
     if (player.currentSpentTokenTotal >= player.currentTokenTotal) {
       throw new Error("Player does not have tokens to spend.");
     }
     player.currentSpentTokenTotal++;
-    let card: Card;
+    let drawSourceSet: Card[];
+    let playerCardSet: PlayerCard[];
     switch (drawSource) {
-      case DrawSource.BLOOD_DECK:
+      case PlayerCardSource.BLOOD_DECK:
         if (session.bloodDeck.length === 0) {
           throw new Error("Cannot draw from empty blood deck.");
         }
-        card = Utils.removeTopArrayItem(session.bloodDeck);
+        drawSourceSet = session.bloodDeck;
+        playerCardSet = player.currentBloodCards;
         break;
-      case DrawSource.BLOOD_DISCARD:
+      case PlayerCardSource.BLOOD_DISCARD:
         if (session.bloodDiscard.length === 0) {
           throw new Error("Cannot draw from empty blood discard.");
         }
-        card = Utils.removeTopArrayItem(session.bloodDiscard);
+        drawSourceSet = session.bloodDiscard;
+        playerCardSet = player.currentBloodCards;
         break;
-      case DrawSource.SAND_DECK:
+      case PlayerCardSource.SAND_DECK:
         if (session.sandDeck.length === 0) {
           throw new Error("Cannot draw from empty sand deck.");
         }
-        card = Utils.removeTopArrayItem(session.sandDeck);
+        drawSourceSet = session.sandDeck;
+        playerCardSet = player.currentSandCards;
         break;
-      case DrawSource.SAND_DISCARD:
+      case PlayerCardSource.SAND_DISCARD:
         if (session.sandDiscard.length === 0) {
           throw new Error("Cannot draw from empty sand discard.");
         }
-        card = Utils.removeTopArrayItem(session.sandDiscard);
+        drawSourceSet = session.sandDiscard;
+        playerCardSet = player.currentSandCards;
         break;
       default:
         throw new Error("Unknown draw source.");
     }
-    if (card.suit === CardSuit.BLOOD) {
-      player.currentBloodCards.push(card);
-    } else {
-      player.currentSandCards.push(card);
-    }
-    player.pendingDiscard = {
-      "cardSuit": card.suit,
-      "drawSource": drawSource,
+    const card: Card = Utils.removeTopArrayItem(drawSourceSet);
+    const playerCard: PlayerCard = {
+      "card": card,
+      "dieRollValues": [
+      ],
+      "source": drawSource,
+    };
+    playerCardSet.push(playerCard);
+    player.currentTurnRecord = {
+      "action": TurnAction.DRAW,
+      "discardedCard": null,
+      "drawnCard": playerCard,
     };
     SessionController.saveSession(session);
   }
 
   public static async endTurn(
     session: SessionState,
-    turnHistoryEntry: TurnHistoryEntry,
   ): Promise<void> {
-    const currentPlayer: PlayerState = session.players[session.currentPlayerIndex];
     const isLastPlayer: boolean = session.currentPlayerIndex === session.players.length - 1;
-    currentPlayer.turnHistory.push(turnHistoryEntry);
     if (isLastPlayer) {
       session.currentPlayerIndex = 0;
     } else {
@@ -329,6 +360,28 @@ export class GameController {
     if (session.status === SessionStatus.ACTIVE) {
       await this.startTurn(session);
     }
+  }
+
+  public static rollImposterDie(): number {
+    const random: Random = new Random();
+    return random.die(6);
+  }
+
+  public static standPlayer(
+    session: SessionState,
+    player: PlayerState,
+  ): void {
+    SessionController.validateSessionPlayer(
+      session,
+      player,
+    );
+    if (player.currentTurnRecord !== null) {
+      throw new Error("Player turn record already exists.");
+    }
+    player.currentTurnRecord = {
+      "action": TurnAction.STAND,
+    };
+    SessionController.saveSession(session);
   }
 
   public static async startGame(

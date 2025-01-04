@@ -1,15 +1,15 @@
 import {
-  Card,
-} from "./card";
+  PlayerCard,
+} from ".";
 
 export type HandResult = {
-  "bloodCard": Card;
+  "bloodCard": PlayerCard;
   "bloodCardValue": number;
   "cardDifference": number;
   "lowestCardValue": number;
   "playerIndex": number;
   "rankIndex": number;
-  "sandCard": Card;
+  "sandCard": PlayerCard;
   "sandCardValue": number;
   "tokenLossTotal": number;
 };
