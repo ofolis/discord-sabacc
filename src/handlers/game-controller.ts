@@ -11,6 +11,7 @@ import {
   PlayerCardSource,
   SessionStatus,
   TurnAction,
+  TurnStatus,
 } from "../enums";
 import {
   Card,
@@ -339,6 +340,7 @@ export class GameController {
       "action": TurnAction.DRAW,
       "discardedCard": null,
       "drawnCard": playerCard,
+      "status": TurnStatus.ACTIVE,
     };
     SessionController.saveSession(session);
   }
@@ -419,6 +421,7 @@ export class GameController {
     }
     player.currentTurnRecord = {
       "action": TurnAction.STAND,
+      "status": TurnStatus.ACTIVE,
     };
     SessionController.saveSession(session);
   }

@@ -163,6 +163,9 @@ export class InteractionController {
     ];
     switch (player.currentTurnRecord.action) {
       case TurnAction.DRAW:
+        if (player.currentTurnRecord.drawnCard === null) {
+          throw new Error("Player turn record did not contain a drawn card.");
+        }
         if (player.currentTurnRecord.discardedCard === null) {
           throw new Error("Player turn record did not contain a discarded card.");
         }
@@ -523,7 +526,7 @@ export class InteractionController {
     session: SessionState,
     player: PlayerState,
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
-  ): Promise<[DiscordButtonInteraction, TurnAction] | null | undefined> {
+  ): Promise<[DiscordButtonInteraction, TurnAction | null] | undefined> {
     const buttonMap: Record<string, DiscordButtonBuilder> = {};
     const drawDisabled: boolean =
       player.currentSpentTokenTotal === player.currentTokenTotal ||
@@ -585,8 +588,10 @@ export class InteractionController {
             TurnAction.STAND,
           ];
         case "cancel":
-          await Discord.deleteSentItem(interactionResponse);
-          return null;
+          return [
+            buttonInteraction,
+            null,
+          ];
         default:
           throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
       }
@@ -595,7 +600,7 @@ export class InteractionController {
 
   public static async promptEndCurrentGame(
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
-  ): Promise<boolean | undefined> {
+  ): Promise<[DiscordButtonInteraction, boolean] | undefined> {
     const buttonMap: Record<string, DiscordButtonBuilder> = {
       "endGame": new DiscordButtonBuilder()
         .setLabel("End Game")
@@ -627,11 +632,15 @@ export class InteractionController {
     } else {
       switch (buttonInteraction.customId) {
         case "endGame":
-          await this.informStartingGame(buttonInteraction);
-          return true;
+          return [
+            buttonInteraction,
+            true,
+          ];
         case "cancel":
-          await Discord.deleteSentItem(interactionResponse);
-          return false;
+          return [
+            buttonInteraction,
+            false,
+          ];
         default:
           throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
       }
@@ -736,7 +745,7 @@ export class InteractionController {
   public static async promptRollForImposter(
     playerCard: PlayerCard,
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
-  ): Promise<DiscordButtonInteraction | null | undefined> {
+  ): Promise<[DiscordButtonInteraction, boolean] | undefined> {
     if (playerCard.card.type !== CardType.IMPOSTER) {
       throw new Error("Attempted to roll for a non-imposter card.");
     }
@@ -774,11 +783,16 @@ export class InteractionController {
     } else {
       switch (buttonInteraction.customId) {
         case "rollDice": {
-          return buttonInteraction;
+          return [
+            buttonInteraction,
+            true,
+          ];
         }
         case "cancel":
-          await Discord.deleteSentItem(interactionResponse);
-          return null;
+          return [
+            buttonInteraction,
+            false,
+          ];
         default:
           throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
       }
