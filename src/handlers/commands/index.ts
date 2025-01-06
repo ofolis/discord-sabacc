@@ -1,9 +1,9 @@
 export {
-  command as Info,
-} from "./info";
+  InfoCommand,
+} from "./info-command";
 export {
-  command as New,
-} from "./new";
+  NewCommand,
+} from "./new-command";
 export {
-  command as Play,
-} from "./play";
+  PlayCommand,
+} from "./play-command";

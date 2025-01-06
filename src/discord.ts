@@ -1,4 +1,7 @@
 import {
+  Command,
+} from "./abstracts";
+import {
   ActionRowBuilder,
   ActionRowData,
   APIActionRowComponent,
@@ -25,9 +28,6 @@ import {
 import {
   Environment,
 } from "./environment";
-import type {
-  Command,
-} from "./types";
 
 export {
   ButtonBuilder as DiscordButtonBuilder,
@@ -93,18 +93,15 @@ export class Discord {
 
   private static async deployGlobalCommands(
     rest: REST,
-    commandMap: Record<string, Command>,
-    builderMap: Record<string, SlashCommandBuilder>,
+    commandMap: Record<string, {
+      "builder": SlashCommandBuilder;
+      "command": Command;
+    }>,
   ): Promise<void> {
     console.log("Deploying global commands...");
-    const commandBuilders: SlashCommandBuilder[] = Object.entries(commandMap)
-      .filter(([
-        _,
-        value,
-      ]) => value.isGlobal)
-      .map(([
-        key,
-      ]) => builderMap[key]);
+    const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
+      .filter((value) => value.command.isGlobal)
+      .map((value) => value.builder);
     await rest.put(
       Routes.applicationCommands(Environment.config.discordApplicationId),
       {
@@ -116,19 +113,16 @@ export class Discord {
 
   private static async deployGuildCommands(
     rest: REST,
-    commandMap: Record<string, Command>,
-    builderMap: Record<string, SlashCommandBuilder>,
+    commandMap: Record<string, {
+      "builder": SlashCommandBuilder;
+      "command": Command;
+    }>,
     guildIds: string[],
   ): Promise<void> {
     console.log("Deploying guild commands...");
-    const commandBuilders: SlashCommandBuilder[] = Object.entries(commandMap)
-      .filter(([
-        _,
-        value,
-      ]) => value.isGuild)
-      .map(([
-        key,
-      ]) => builderMap[key]);
+    const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
+      .filter((value) => value.command.isGuild)
+      .map((value) => value.builder);
     const promises: Promise<unknown>[] = guildIds.map(async(guildId: string) => await rest.put(
       Routes.applicationGuildCommands(
         Environment.config.discordApplicationId,
@@ -162,31 +156,35 @@ export class Discord {
   }
 
   public static async deployCommands(
-    commandMap: Record<string, Command>,
+    commandList: Command[],
     guildIds: string[] | undefined = undefined,
   ): Promise<void> {
     const rest: REST = new REST({
       "version": "10",
     }).setToken(Environment.config.discordBotToken);
+    const commandMap: Record<string, {
+      "builder": SlashCommandBuilder;
+      "command": Command;
+    }> = {};
+    for (const command of commandList) {
+      if (command.name in commandMap) {
+        throw new Error("Command names are not unique.");
+      }
+      commandMap[command.name] = {
+        "builder": new SlashCommandBuilder().setName(command.name).setDescription(command.description),
+        "command": command,
+      };
+    }
     if (guildIds === undefined) {
       guildIds = Array.from(this.client.guilds.cache.keys());
     }
-    const builderMap: Record<string, SlashCommandBuilder> = Object.fromEntries(Object.entries(commandMap).map(([
-      key,
-      value,
-    ]) => [
-      key,
-      new SlashCommandBuilder().setName(value.name).setDescription(value.description),
-    ]));
     await this.deployGlobalCommands(
       rest,
       commandMap,
-      builderMap,
     );
     await this.deployGuildCommands(
       rest,
       commandMap,
-      builderMap,
       guildIds,
     );
   }

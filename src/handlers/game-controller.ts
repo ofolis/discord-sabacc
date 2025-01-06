@@ -74,8 +74,6 @@ export class GameController {
       a,
       b,
     ));
-    // TODO: REmove this line
-    console.log(partialHandResults);
     let currentRankIndex: number = 0;
     const handResults: HandResult[] = partialHandResults.map((
       partialHandResult,

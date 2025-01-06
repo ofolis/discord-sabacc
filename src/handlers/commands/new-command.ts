@@ -4,6 +4,9 @@ import {
   SessionController,
 } from "..";
 import {
+  Command,
+} from "../../abstracts";
+import {
   DiscordButtonInteraction,
   DiscordCommandInteraction,
   DiscordMessageComponentInteraction,
@@ -13,16 +16,19 @@ import {
   SessionStatus,
 } from "../../enums";
 import type {
-  Command,
   SessionState,
 } from "../../types";
 
-export const command: Command = {
-  "name": "new",
-  "description": "Start a new game.",
-  "isGlobal": false,
-  "isGuild": true,
-  "execute": async(interaction: DiscordCommandInteraction): Promise<void> => {
+export class NewCommand implements Command {
+  public readonly description: string = "Start a new game.";
+
+  public readonly isGlobal: boolean = false;
+
+  public readonly isGuild: boolean = true;
+
+  public readonly name: string = "new";
+
+  public async execute(interaction: DiscordCommandInteraction): Promise<void> {
     const session: SessionState | null = SessionController.loadSession(interaction.channelId);
     let currentInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction = interaction;
     let createSession: boolean = false;
@@ -50,5 +56,5 @@ export const command: Command = {
         await GameController.startGame(session);
       }
     }
-  },
-};
+  }
+}

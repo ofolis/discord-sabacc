@@ -2,6 +2,9 @@ import {
   InteractionController,
   SessionController,
 } from "..";
+import {
+  Command,
+} from "../../abstracts";
 import type {
   DiscordCommandInteraction,
 } from "../../discord";
@@ -9,17 +12,20 @@ import {
   SessionStatus,
 } from "../../enums";
 import type {
-  Command,
   PlayerState,
   SessionState,
 } from "../../types";
 
-export const command: Command = {
-  "name": "info",
-  "description": "View your hand and see game info.",
-  "isGlobal": false,
-  "isGuild": true,
-  "execute": async(interaction: DiscordCommandInteraction): Promise<void> => {
+export class InfoCommand implements Command {
+  public readonly description: string = "View your hand and see game info.";
+
+  public readonly isGlobal: boolean = false;
+
+  public readonly isGuild: boolean = true;
+
+  public readonly name: string = "info";
+
+  public async execute(interaction: DiscordCommandInteraction): Promise<void> {
     const session: SessionState | null = SessionController.loadSession(interaction.channelId);
     if (session === null || session.status !== SessionStatus.ACTIVE) {
       await InteractionController.informNoGame(interaction);
@@ -38,5 +44,5 @@ export const command: Command = {
         );
       }
     }
-  },
-};
+  }
+}

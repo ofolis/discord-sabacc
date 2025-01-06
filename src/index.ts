@@ -1,37 +1,30 @@
 import {
+  Command,
+} from "./abstracts";
+import {
   Environment,
 } from "./environment";
 import {
   Discord,
 } from "./discord";
 import {
-  Info,
-  New,
-  Play,
+  InfoCommand,
+  NewCommand,
+  PlayCommand,
 } from "./handlers/commands";
-import type {
-  Command,
-} from "./types";
 
 const commands: Command[] = [
-  Info,
-  New,
-  Play,
+  new InfoCommand(),
+  new NewCommand(),
+  new PlayCommand(),
 ];
 
 function initializeApp(): void {
-  const commandMap: Record<string, Command> = commands.reduce<Record<string, Command>>(
-    (map, command) => {
-      map[command.name] = command;
-      return map;
-    },
-    {},
-  );
   Discord.client.once(
     "ready",
     () => {
       console.log("Initializing Discord bot...");
-      Discord.deployCommands(commandMap).then(
+      Discord.deployCommands(commands).then(
         () => {
           console.log("Discord bot is ready.");
         },
@@ -47,7 +40,7 @@ function initializeApp(): void {
     (guild) => {
       console.log(`Initializing guild ${guild.id}...`);
       Discord.deployCommands(
-        commandMap,
+        commands,
         [
           guild.id,
         ],
