@@ -18,6 +18,9 @@ import {
   TurnAction,
   TurnStatus,
 } from "../../enums";
+import {
+  Log,
+} from "../../log";
 import type {
   PlayerCard,
   PlayerState,
@@ -39,7 +42,10 @@ export class PlayCommand implements Command {
     player: PlayerState,
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
     if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.DRAW) {
-      throw new Error("There is no draw action current turn record.");
+      Log.throw(
+        "There is no draw action current turn record.",
+        player.currentTurnRecord,
+      );
     }
     if (player.currentTurnRecord.drawnCard === null) {
       const drawSourceResponse: [DiscordMessageComponentInteraction, Exclude<PlayerCardSource, PlayerCardSource.DEALT>] | null = await InteractionController.promptChooseDrawSource(
@@ -66,7 +72,10 @@ export class PlayCommand implements Command {
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the turn record might have been reset
     if (player.currentTurnRecord?.drawnCard !== null) {
       if (player.currentTurnRecord.discardedCard !== null) {
-        throw new Error("Current turn record already contains a discarded card.");
+        Log.throw(
+          "Current turn record already contains a discarded card.",
+          player.currentTurnRecord,
+        );
       }
       const discardCardResponse: [DiscordButtonInteraction, PlayerCard] | null = await InteractionController.promptChooseDiscardCard(
         session,
@@ -107,11 +116,17 @@ export class PlayCommand implements Command {
     }
     if (player.currentTurnRecord !== null) {
       if (player.currentTurnRecord.action === TurnAction.REVEAL) {
-        throw new Error("Reveal action is not valid in game rounds.");
+        Log.throw(
+          "Reveal action is not valid in game rounds.",
+          player.currentTurnRecord,
+        );
       }
       if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
         // TODO: rewrite/standardize error messages to format "This failed. The reason is this."
-        throw new Error("Turn actions can only occur on active turns.");
+        Log.throw(
+          "Turn actions can only occur on active turns.",
+          player.currentTurnRecord,
+        );
       }
       switch (player.currentTurnRecord.action) {
         case TurnAction.DRAW:
@@ -129,8 +144,10 @@ export class PlayCommand implements Command {
           );
           break;
         default:
-          // TODO: create util to handle throwing errors AND dump any contextual data -- implement on all thrown errors
-          throw new Error("Unknown turn action.");
+          Log.throw(
+            "Unknown turn action.",
+            player.currentTurnRecord,
+          );
       }
     }
     return currentInteraction;
@@ -180,7 +197,10 @@ export class PlayCommand implements Command {
     player: PlayerState,
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
     if (player.currentBloodCards.length !== 1 || player.currentSandCards.length !== 1) {
-      throw new Error("Player does not contain exactly one card of each suit.");
+      Log.throw(
+        "Player does not contain exactly one card of each suit.",
+        player,
+      );
     }
     if (player.currentTurnRecord === null) {
       const revealCardsResponse: DiscordButtonInteraction | null = await InteractionController.promptRevealCards(
@@ -201,10 +221,16 @@ export class PlayCommand implements Command {
     }
     if (player.currentTurnRecord !== null) {
       if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
-        throw new Error("Turn actions can only occur on active turns.");
+        Log.throw(
+          "Turn actions can only occur on active turns.",
+          player.currentTurnRecord,
+        );
       }
       if (player.currentTurnRecord.action !== TurnAction.REVEAL) {
-        throw new Error("Only reveal actions are allowed in reveal rounds.");
+        Log.throw(
+          "Only reveal actions are allowed in reveal rounds.",
+          player.currentTurnRecord,
+        );
       }
       const bloodPlayerCard: PlayerCard = player.currentBloodCards[0];
       const sandPlayerCard: PlayerCard = player.currentSandCards[0];
@@ -240,7 +266,10 @@ export class PlayCommand implements Command {
     player: PlayerState,
   ): DiscordCommandInteraction | DiscordMessageComponentInteraction {
     if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.STAND) {
-      throw new Error("There is no stand action current turn record.");
+      Log.throw(
+        "There is no stand action current turn record.",
+        player,
+      );
     }
     GameController.standPlayer(
       session,

@@ -1,7 +1,4 @@
 import {
-  Command,
-} from "./abstracts";
-import {
   ActionRowBuilder,
   ActionRowData,
   APIActionRowComponent,
@@ -26,8 +23,14 @@ import {
   TextChannel,
 } from "discord.js";
 import {
+  Command,
+} from "./abstracts";
+import {
   Environment,
 } from "./environment";
+import {
+  Log,
+} from "./log";
 
 export {
   ButtonBuilder as DiscordButtonBuilder,
@@ -60,7 +63,7 @@ export class Discord {
     buttonMap: Record<string, ButtonBuilder>,
   ): ActionRowBuilder<ButtonBuilder> {
     if (Object.keys(buttonMap).length === 0) {
-      throw new Error("Button map contained no entries.");
+      Log.throw("Button map contained no entries.");
     }
     const buttonRow: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>();
     for (const customId in buttonMap) {
@@ -98,7 +101,7 @@ export class Discord {
       "command": Command;
     }>,
   ): Promise<void> {
-    console.log("Deploying global commands...");
+    Log.info("Deploying global commands...");
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
       .filter((value) => value.command.isGlobal)
       .map((value) => value.builder);
@@ -108,7 +111,7 @@ export class Discord {
         "body": commandBuilders,
       },
     );
-    console.log("Successfully deployed global commands.");
+    Log.info("Successfully deployed global commands.");
   }
 
   private static async deployGuildCommands(
@@ -119,7 +122,7 @@ export class Discord {
     }>,
     guildIds: string[],
   ): Promise<void> {
-    console.log("Deploying guild commands...");
+    Log.info("Deploying guild commands...");
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
       .filter((value) => value.command.isGuild)
       .map((value) => value.builder);
@@ -133,7 +136,7 @@ export class Discord {
       },
     ));
     await Promise.all(promises);
-    console.log("Successfully deployed guild commands.");
+    Log.info("Successfully deployed guild commands.");
   }
 
   private static getChannel(
@@ -141,10 +144,13 @@ export class Discord {
   ): TextChannel {
     const channel: Channel | undefined = Discord.client.channels.cache.get(channelId);
     if (channel === undefined) {
-      throw new Error(`Channel ${channelId} was not found in the channel cache.`);
+      Log.throw(`Channel ${channelId} was not found in the channel cache.`);
     }
     if (channel.type !== ChannelType.GuildText) {
-      throw new Error(`Channel ${channelId} was not a guild text channel.`);
+      Log.throw(
+        `Channel ${channelId} was not a guild text channel.`,
+        channel,
+      );
     }
     return channel;
   }
@@ -168,7 +174,7 @@ export class Discord {
     }> = {};
     for (const command of commandList) {
       if (command.name in commandMap) {
-        throw new Error("Command names are not unique.");
+        Log.throw("Command names are not unique.");
       }
       commandMap[command.name] = {
         "builder": new SlashCommandBuilder().setName(command.name).setDescription(command.description),

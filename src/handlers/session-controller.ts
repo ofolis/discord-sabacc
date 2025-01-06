@@ -1,4 +1,8 @@
 import {
+  createBloodDeck,
+  createSandDeck,
+} from "../constants/game/decks";
+import {
   DiscordUser,
 } from "../discord";
 import {
@@ -9,14 +13,13 @@ import {
   IO,
 } from "../io";
 import {
+  Log,
+} from "../log";
+import {
   PlayerCard,
   PlayerState,
   SessionState,
 } from "../types";
-import {
-  createBloodDeck,
-  createSandDeck,
-} from "../constants/game/decks";
 
 export class SessionController {
   public static createSession(
@@ -93,10 +96,18 @@ export class SessionController {
     playerCard: PlayerCard,
   ): void {
     if (!player.currentBloodCards.includes(playerCard) && !player.currentSandCards.includes(playerCard)) {
-      throw new Error("Player does not contain card.");
+      Log.throw(
+        "Player does not contain card.",
+        player,
+        playerCard,
+      );
     }
     if (playerCard.card.suit === CardSuit.BLOOD && player.currentSandCards.includes(playerCard) || playerCard.card.suit === CardSuit.SAND && player.currentBloodCards.includes(playerCard)) {
-      throw new Error("Player card is in the wrong set.");
+      Log.throw(
+        "Player card is in the wrong set.",
+        player,
+        playerCard,
+      );
     }
   }
 
@@ -104,19 +115,31 @@ export class SessionController {
     player: PlayerState,
   ): void {
     if (player.currentBloodCards.length === 0) {
-      throw new Error("Player did not contain any blood cards.");
+      Log.throw(
+        "Player did not contain any blood cards.",
+        player,
+      );
     }
     if (player.currentSandCards.length === 0) {
-      throw new Error("Player did not contain any sand cards.");
+      Log.throw(
+        "Player did not contain any sand cards.",
+        player,
+      );
     }
     for (const playerCard of player.currentBloodCards) {
       if (playerCard.card.suit !== CardSuit.BLOOD) {
-        throw new Error("Player blood card set contained a non-blood card.");
+        Log.throw(
+          "Player blood card set contained a non-blood card.",
+          player,
+        );
       }
     }
     for (const playerCard of player.currentSandCards) {
       if (playerCard.card.suit !== CardSuit.SAND) {
-        throw new Error("Player sand card set contained a non-sand card.");
+        Log.throw(
+          "Player sand card set contained a non-sand card.",
+          player,
+        );
       }
     }
   }
@@ -126,7 +149,11 @@ export class SessionController {
     player: PlayerState,
   ): void {
     if (!session.players.includes(player)) {
-      throw new Error("Session does not contain player.");
+      Log.throw(
+        "Session does not contain player.",
+        session,
+        player,
+      );
     }
   }
 }

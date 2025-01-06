@@ -1,3 +1,7 @@
+import {
+  Log,
+} from "./log";
+
 export class Utils {
   public static emptyArray(
     array: unknown[],
@@ -23,7 +27,7 @@ export class Utils {
   ): T {
     const topItem: T | undefined = array.shift();
     if (topItem === undefined) {
-      throw new Error("Cannot remove item from empty array.");
+      Log.throw("Cannot remove item from empty array.");
     }
     return topItem;
   }

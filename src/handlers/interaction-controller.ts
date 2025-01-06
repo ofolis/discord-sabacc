@@ -16,6 +16,9 @@ import {
   TurnAction,
 } from "../enums";
 import {
+  Log,
+} from "../log";
+import {
   Card,
   PlayerCard,
   PlayerState,
@@ -48,12 +51,18 @@ export class InteractionController {
     let typeLabel: string = typeLabels[card.type];
     if (playerCard !== null && card.type === CardType.IMPOSTER && playerCard.dieRollValues.length > 0) {
       if (playerCard.dieRollValues.length !== 1) {
-        throw new Error("");
+        Log.throw(
+          "Imposter card did not have exactly one die roll value.",
+          playerCard,
+        );
       }
       typeLabel = `${playerCard.dieRollValues[0].toString()} (${typeLabels[CardType.IMPOSTER]})`;
     }
     if (!suitSymbol || !typeLabel) {
-      throw new Error(`Card had unknown suit (${card.suit.toString()}) or type (${card.type.toString()}).`);
+      Log.throw(
+        `Card had unknown suit (${card.suit.toString()}) or type (${card.type.toString()}).`,
+        card,
+      );
     }
     return `${suitSymbol}${typeLabel}`;
   }
@@ -170,7 +179,10 @@ export class InteractionController {
     session: SessionState,
   ): Promise<void> {
     if (session.handResults.length < session.currentHandIndex + 1) {
-      throw new Error("Results do not exist for current hand.");
+      Log.throw(
+        "Results do not exist for current hand.",
+        session,
+      );
     }
     const messageLineGroups: string[][] = [
       [
@@ -238,17 +250,26 @@ export class InteractionController {
   ): Promise<void> {
     const player: PlayerState = session.players[(session.currentPlayerIndex === 0 ? session.players.length : session.currentPlayerIndex) - 1];
     if (player.currentTurnRecord === null) {
-      throw new Error("Player did not contain a turn record.");
+      Log.throw(
+        "Player did not contain a turn record.",
+        player,
+      );
     }
     const contentLines: string[] = [
     ];
     switch (player.currentTurnRecord.action) {
       case TurnAction.DRAW:
         if (player.currentTurnRecord.drawnCard === null) {
-          throw new Error("Player turn record did not contain a drawn card.");
+          Log.throw(
+            "Player turn record did not contain a drawn card.",
+            player.currentTurnRecord,
+          );
         }
         if (player.currentTurnRecord.discardedCard === null) {
-          throw new Error("Player turn record did not contain a discarded card.");
+          Log.throw(
+            "Player turn record did not contain a discarded card.",
+            player.currentTurnRecord,
+          );
         }
         contentLines.push(`**${player.globalName ?? player.username} Drew A Card**`);
         switch (player.currentTurnRecord.drawnCard.source) {
@@ -265,7 +286,10 @@ export class InteractionController {
             contentLines.push("- A card was drawn from the **sand discard**.");
             break;
           default:
-            throw new Error("Unknown draw source.");
+            Log.throw(
+              "Unknown draw source.",
+              player.currentTurnRecord.drawnCard.source,
+            );
         }
         contentLines.push(`- \`${this.formatCardString(player.currentTurnRecord.discardedCard.card)}\` was discarded.`);
         break;
@@ -279,7 +303,10 @@ export class InteractionController {
         contentLines.push("- No card was drawn or discarded.");
         break;
       default:
-        throw new Error("Unknown turn action.");
+        Log.throw(
+          "Unknown turn action.",
+          player.currentTurnRecord,
+        );
     }
     await Discord.sendMessage(
       session.channelId,
@@ -430,7 +457,10 @@ export class InteractionController {
     } else if (player.currentSandCards.length > 1) {
       playerCardSet = player.currentSandCards;
     } else {
-      throw new Error("Player does not require a discard.");
+      Log.throw(
+        "Player does not require a discard.",
+        player,
+      );
     }
     const discardMap: Record<string, PlayerCard> = {};
     playerCardSet.forEach((playerCard, index) => {
@@ -459,7 +489,11 @@ export class InteractionController {
       return null;
     } else {
       if (!(buttonInteraction.customId in discardMap)) {
-        throw new Error();
+        Log.throw(
+          "Requested discard was not mapped correctly.",
+          buttonInteraction.customId,
+          discardMap,
+        );
       }
       const playerCard: PlayerCard = discardMap[buttonInteraction.customId];
       return [
@@ -558,7 +592,10 @@ export class InteractionController {
           await Discord.deleteSentItem(interactionResponse);
           return null;
         default:
-          throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+          Log.throw(
+            "Unknown response ID.",
+            buttonInteraction.customId,
+          );
       }
     }
   }
@@ -568,10 +605,10 @@ export class InteractionController {
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<[DiscordButtonInteraction, number] | null> {
     if (playerCard.card.type !== CardType.IMPOSTER) {
-      throw new Error("Attempted set die value on a non-imposter card.");
+      Log.throw("Attempted set die value on a non-imposter card.");
     }
     if (playerCard.dieRollValues.length !== 2) {
-      throw new Error("Imposter player card does not contain exactly two die roll values.");
+      Log.throw("Imposter player card does not contain exactly two die roll values.");
     }
     const buttonMap: Record<string, DiscordButtonBuilder> = {
       "firstDie": new DiscordButtonBuilder()
@@ -615,7 +652,10 @@ export class InteractionController {
             playerCard.dieRollValues[1],
           ];
         default:
-          throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+          Log.throw(
+            "Unknown response ID.",
+            buttonInteraction.customId,
+          );
       }
     }
   }
@@ -689,7 +729,10 @@ export class InteractionController {
           await Discord.deleteSentItem(interactionResponse);
           return null;
         default:
-          throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+          Log.throw(
+            "Unknown response ID.",
+            buttonInteraction.customId,
+          );
       }
     }
   }
@@ -733,7 +776,10 @@ export class InteractionController {
           await Discord.deleteSentItem(interactionResponse);
           return null;
         default:
-          throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+          Log.throw(
+            "Unknown response ID.",
+            buttonInteraction.customId,
+          );
       }
     }
   }
@@ -828,7 +874,10 @@ export class InteractionController {
           ];
         }
         default:
-          throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+          Log.throw(
+            "Unknown response ID.",
+            buttonInteraction.customId,
+          );
       }
     }
   }
@@ -871,7 +920,10 @@ export class InteractionController {
           await Discord.deleteSentItem(interactionResponse);
           return null;
         default:
-          throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+          Log.throw(
+            "Unknown response ID.",
+            buttonInteraction.customId,
+          );
       }
     }
   }
@@ -881,10 +933,16 @@ export class InteractionController {
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<DiscordButtonInteraction | null> {
     if (playerCard.card.type !== CardType.IMPOSTER) {
-      throw new Error("Attempted to roll for a non-imposter card.");
+      Log.throw(
+        "Attempted to roll for a non-imposter card.",
+        playerCard,
+      );
     }
     if (playerCard.dieRollValues.length > 0) {
-      throw new Error("Imposter player card already has one or more die roll values.");
+      Log.throw(
+        "Imposter player card already has one or more die roll values.",
+        playerCard,
+      );
     }
     const buttonMap: Record<string, DiscordButtonBuilder> = {
       "rollDice": new DiscordButtonBuilder()
@@ -923,7 +981,10 @@ export class InteractionController {
           await Discord.deleteSentItem(interactionResponse);
           return null;
         default:
-          throw new Error(`Unknown response ID "${buttonInteraction.customId}".`);
+          Log.throw(
+            "Unknown response ID.",
+            buttonInteraction.customId,
+          );
       }
     }
   }

@@ -1,4 +1,7 @@
 import dotenv from "dotenv";
+import {
+  Log,
+} from "./log";
 import type {
   Config,
 } from "./types";
@@ -16,7 +19,10 @@ export class Environment {
       this.envLoaded = true;
     }
     if (typeof process.env[key] !== "string") {
-      throw new Error(`Environment variable "${key}" is not defined.`);
+      Log.throw(
+        `Environment variable "${key}" is not defined.`,
+        process.env,
+      );
     }
     return process.env[key];
   }
