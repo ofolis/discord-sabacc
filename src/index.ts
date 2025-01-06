@@ -23,7 +23,6 @@ const commands: Command[] = [
 ];
 
 function initializeApp(): void {
-  // TODO: stop using `once` and `on`
   Discord.client.once(
     "ready",
     () => {

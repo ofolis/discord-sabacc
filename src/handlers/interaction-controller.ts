@@ -29,6 +29,7 @@ import {
 } from "../utils";
 
 // TODO: optimize this, lots of opportunities to simplify
+// TODO: check to ensure early returns and positive IF statements
 export class InteractionController {
   private static formatCardString(
     card: Card | PlayerCard,

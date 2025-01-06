@@ -28,6 +28,7 @@ import {
 } from "../utils";
 
 // TODO: optimize where possible; split longer methods into their parts (helpers)
+// TODO: check to ensure early returns and positive IF statements
 export class GameController {
   private static async endGame(
     session: SessionState,
@@ -210,7 +211,7 @@ export class GameController {
             );
         }
       // TODO: fix this, why is it flagging this?
-      // eslint-disable-next-line no-fallthrough -- incorrect flagging
+      // eslint-disable-next-line no-fallthrough
       default:
         Log.throw(
           "Unknown primary player card type.",
