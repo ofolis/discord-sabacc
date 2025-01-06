@@ -12,4 +12,6 @@ export type HandResult = {
   "sandCard": PlayerCard;
   "sandCardValue": number;
   "tokenLossTotal": number;
+  "tokenPenaltyTotal": number;
+  "spentTokenTotal": number;
 };

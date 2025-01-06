@@ -6,6 +6,7 @@ import {
 import {
   DiscordButtonInteraction,
   DiscordCommandInteraction,
+  DiscordMessageComponentInteraction,
   DiscordUser,
 } from "../../discord";
 import {
@@ -23,31 +24,30 @@ export const command: Command = {
   "isGuild": true,
   "execute": async(interaction: DiscordCommandInteraction): Promise<void> => {
     const session: SessionState | null = SessionController.loadSession(interaction.channelId);
-    let createSession: boolean | undefined;
-    if (session !== null && (session.status === SessionStatus.ACTIVE || session.status === SessionStatus.PENDING)) {
-      // TODO: finish moving the follow-up actions in here from the end game prompt (and there was one other?) because the interaction controller methods that were changed to return the cancel button interaction no longer delete the original message or "inform starting game" on "end game" press
-      const endCurrentGameResponse: [DiscordButtonInteraction, boolean] | undefined = await InteractionController.promptEndCurrentGame(interaction);
-      if (!endCurrentGameResponse?.[1]) {
-        return;
-      }
-      InteractionController.informStartingGame(discordInteraction);
-    } else {
+    let currentInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction = interaction;
+    let createSession: boolean = false;
+    if (session === null || session.status === SessionStatus.COMPLETED) {
       createSession = true;
-      await InteractionController.informStartingGame(interaction);
+    } else {
+      const endCurrentGameResponse: DiscordButtonInteraction | null = await InteractionController.promptEndCurrentGame(interaction);
+      if (endCurrentGameResponse !== null) {
+        currentInteraction = endCurrentGameResponse;
+        createSession = true;
+      }
     }
-    if (createSession === true) {
-      const newGameMembersResponse: DiscordUser[] | undefined = await InteractionController.promptNewGameMembers(
+    if (createSession) {
+      await InteractionController.informStartingGame(currentInteraction);
+      const newGameMembersResponse: DiscordUser[] | null = await InteractionController.promptNewGameMembers(
         interaction.channelId,
         interaction.user,
       );
-      if (newGameMembersResponse !== undefined) {
+      if (newGameMembersResponse !== null) {
         const session: SessionState = SessionController.createSession(
           interaction.channelId,
           newGameMembersResponse,
           6,
         );
         await GameController.startGame(session);
-        await InteractionController.announceTurnStarted(session);
       }
     }
   },

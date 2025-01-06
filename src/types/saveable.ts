@@ -1,3 +1,3 @@
 export type Saveable = {
-  [key: string]: boolean | boolean[] | number | number[] | string | string[] | Saveable | Saveable[] | null | undefined;
+  [key: string]: boolean | boolean[] | number | number[] | string | string[] | Saveable | Saveable[] | Saveable[][] | null | undefined;
 };

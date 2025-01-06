@@ -12,6 +12,9 @@ export type TurnRecord = {
   "drawnCard": PlayerCard | null;
   "status": TurnStatus;
 } | {
+  "action": TurnAction.REVEAL;
+  "status": TurnStatus;
+} | {
   "action": TurnAction.STAND;
   "status": TurnStatus;
 };

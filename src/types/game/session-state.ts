@@ -1,5 +1,6 @@
 import {
   Card,
+  HandResult,
   PlayerState,
 } from "..";
 import {
@@ -13,6 +14,7 @@ export type SessionState = {
   "currentHandIndex": number;
   "currentPlayerIndex": number;
   "currentRoundIndex": 0 | 1 | 2 | 3;
+  "handResults": HandResult[][];
   "players": PlayerState[];
   "sandDeck": Card[];
   "sandDiscard": Card[];

@@ -51,6 +51,8 @@ export class SessionController {
       "currentHandIndex": 0,
       "currentPlayerIndex": 0,
       "currentRoundIndex": 0,
+      "handResults": [
+      ],
       "players": players,
       "sandDeck": createSandDeck(),
       "sandDiscard": [

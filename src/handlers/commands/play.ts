@@ -33,41 +33,46 @@ async function handleDrawAction(
     throw new Error("There is no draw action current turn record.");
   }
   if (player.currentTurnRecord.drawnCard === null) {
-    const drawSourceResponse: [DiscordMessageComponentInteraction, Exclude<PlayerCardSource, PlayerCardSource.DEALT>] | undefined = await InteractionController.promptChooseDrawSource(
+    const drawSourceResponse: [DiscordMessageComponentInteraction, Exclude<PlayerCardSource, PlayerCardSource.DEALT>] | null = await InteractionController.promptChooseDrawSource(
       session,
       player,
       currentInteraction,
     );
-    if (drawSourceResponse === undefined) {
+    if (drawSourceResponse === null) {
+      GameController.setPlayerTurnAction(
+        session,
+        player,
+        null,
+      );
       return currentInteraction;
+    } else {
+      currentInteraction = drawSourceResponse[0];
+      GameController.drawPlayerCard(
+        session,
+        player,
+        drawSourceResponse[1],
+      );
     }
-    currentInteraction = drawSourceResponse[0];
-    GameController.drawPlayerCard(
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- the turn record might have been reset
+  if (player.currentTurnRecord?.drawnCard !== null) {
+    if (player.currentTurnRecord.discardedCard !== null) {
+      throw new Error("Current turn record already contains a discarded card.");
+    }
+    const discardCardResponse: [DiscordButtonInteraction, PlayerCard] | null = await InteractionController.promptChooseDiscardCard(
       session,
       player,
-      drawSourceResponse[1],
+      currentInteraction,
     );
+    if (discardCardResponse !== null) {
+      currentInteraction = discardCardResponse[0];
+      GameController.discardPlayerCard(
+        session,
+        player,
+        discardCardResponse[1],
+      );
+    }
   }
-  if (player.currentTurnRecord.drawnCard === null) {
-    throw new Error("Current turn record does not contain a drawn card.");
-  }
-  if (player.currentTurnRecord.discardedCard !== null) {
-    throw new Error("Current turn record already contains a discarded card.");
-  }
-  const discardCardResponse: [DiscordButtonInteraction, PlayerCard] | undefined = await InteractionController.promptChooseDiscardCard(
-    session,
-    player,
-    currentInteraction,
-  );
-  if (discardCardResponse === undefined) {
-    return currentInteraction;
-  }
-  currentInteraction = discardCardResponse[0];
-  GameController.discardPlayerCard(
-    session,
-    player,
-    discardCardResponse[1],
-  );
   return currentInteraction;
 }
 
@@ -92,45 +97,47 @@ async function handleGameRound(
   player: PlayerState,
 ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
   if (player.currentTurnRecord === null) {
-    const turnActionResponse: [DiscordButtonInteraction, TurnAction] | null | undefined = await InteractionController.promptChooseTurnAction(
+    const turnActionResponse: [DiscordButtonInteraction, TurnAction] | null = await InteractionController.promptChooseTurnAction(
       session,
       player,
       currentInteraction,
     );
-    if (turnActionResponse !== undefined && turnActionResponse !== null) {
+    if (turnActionResponse !== null) {
       currentInteraction = turnActionResponse[0];
       GameController.setPlayerTurnAction(
         session,
         player,
         turnActionResponse[1],
       );
-    } else {
-      return currentInteraction;
     }
   }
-  if (player.currentTurnRecord === null) {
-    throw new Error("No current turn record exists.");
-  }
-  if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
-    throw new Error("Current turn record is not active.");
-  }
-  switch (player.currentTurnRecord.action) {
-    case TurnAction.DRAW:
-      currentInteraction = await handleDrawAction(
-        currentInteraction,
-        session,
-        player,
-      );
-      break;
-    case TurnAction.STAND:
-      currentInteraction = handleStandAction(
-        currentInteraction,
-        session,
-        player,
-      );
-      break;
-    default:
-      throw new Error("Unknown turn action.");
+  if (player.currentTurnRecord !== null) {
+    if (player.currentTurnRecord.action === TurnAction.REVEAL) {
+      throw new Error("Reveal action is not valid in game rounds.");
+    }
+    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
+      // TODO: rewrite/standardize error messages to format "This failed. The reason is this."
+      throw new Error("Turn actions can only occur on active turns.");
+    }
+    switch (player.currentTurnRecord.action) {
+      case TurnAction.DRAW:
+        currentInteraction = await handleDrawAction(
+          currentInteraction,
+          session,
+          player,
+        );
+        break;
+      case TurnAction.STAND:
+        currentInteraction = handleStandAction(
+          currentInteraction,
+          session,
+          player,
+        );
+        break;
+      default:
+        // TODO: create util to handle throwing errors AND dump any contextual data -- implement on all thrown errors
+        throw new Error("Unknown turn action.");
+    }
   }
   return currentInteraction;
 }
@@ -142,30 +149,25 @@ async function handleImposterCard(
   playerCard: PlayerCard,
 ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
   if (playerCard.dieRollValues.length === 0) {
-    const rollResponse: DiscordButtonInteraction | null | undefined = await InteractionController.promptRollForImposter(
+    const rollResponse: DiscordButtonInteraction | null = await InteractionController.promptRollForImposter(
       playerCard,
       currentInteraction,
     );
-    if (rollResponse === null || rollResponse === undefined) {
-      return currentInteraction;
-    }
-    if (rollResponse !== undefined && rollResponse !== null) {
+    if (rollResponse !== null) {
       currentInteraction = rollResponse;
       GameController.generatePlayerCardDieRollValues(
         session,
         player,
         playerCard,
       );
-    } else {
-      return;
     }
   }
   if (playerCard.dieRollValues.length > 1) {
-    const dieChoiceResponse: [DiscordButtonInteraction, number] | undefined = await InteractionController.promptChooseImposterDie(
+    const dieChoiceResponse: [DiscordButtonInteraction, number] | null = await InteractionController.promptChooseImposterDie(
       playerCard,
       currentInteraction,
     );
-    if (dieChoiceResponse !== undefined) {
+    if (dieChoiceResponse !== null) {
       currentInteraction = dieChoiceResponse[0];
       GameController.setPlayerCardDieRollValue(
         session,
@@ -173,8 +175,6 @@ async function handleImposterCard(
         playerCard,
         dieChoiceResponse[1],
       );
-    } else {
-      return;
     }
   }
   return currentInteraction;
@@ -188,23 +188,54 @@ async function handleScoringRound(
   if (player.currentBloodCards.length !== 1 || player.currentSandCards.length !== 1) {
     throw new Error("Player does not contain exactly one card of each suit.");
   }
-  const bloodPlayerCard: PlayerCard = player.currentBloodCards[0];
-  const sandPlayerCard: PlayerCard = player.currentSandCards[0];
-  if (bloodPlayerCard.card.type === CardType.IMPOSTER && bloodPlayerCard.dieRollValues.length !== 1) {
-    currentInteraction = await handleImposterCard(
+  if (player.currentTurnRecord === null) {
+    const revealCardsResponse: DiscordButtonInteraction | null = await InteractionController.promptRevealCards(
       currentInteraction,
-      session,
-      player,
-      bloodPlayerCard,
     );
+    if (revealCardsResponse !== null) {
+      currentInteraction = revealCardsResponse;
+      GameController.setPlayerTurnAction(
+        session,
+        player,
+        TurnAction.REVEAL,
+      );
+      await GameController.revealCards(
+        session,
+        player,
+      );
+    }
   }
-  if (sandPlayerCard.card.type === CardType.IMPOSTER && sandPlayerCard.dieRollValues.length !== 1) {
-    currentInteraction = await handleImposterCard(
-      currentInteraction,
-      session,
-      player,
-      sandPlayerCard,
-    );
+  if (player.currentTurnRecord !== null) {
+    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
+      throw new Error("Turn actions can only occur on active turns.");
+    }
+    if (player.currentTurnRecord.action !== TurnAction.REVEAL) {
+      throw new Error("Only reveal actions are allowed in reveal rounds.");
+    }
+    const bloodPlayerCard: PlayerCard = player.currentBloodCards[0];
+    const sandPlayerCard: PlayerCard = player.currentSandCards[0];
+    if (bloodPlayerCard.card.type === CardType.IMPOSTER && bloodPlayerCard.dieRollValues.length !== 1) {
+      currentInteraction = await handleImposterCard(
+        currentInteraction,
+        session,
+        player,
+        bloodPlayerCard,
+      );
+    }
+    if ((bloodPlayerCard.card.type !== CardType.IMPOSTER || bloodPlayerCard.dieRollValues.length === 1) && sandPlayerCard.card.type === CardType.IMPOSTER && sandPlayerCard.dieRollValues.length !== 1) {
+      currentInteraction = await handleImposterCard(
+        currentInteraction,
+        session,
+        player,
+        sandPlayerCard,
+      );
+    }
+    if ((bloodPlayerCard.card.type !== CardType.IMPOSTER || bloodPlayerCard.dieRollValues.length === 1) && (sandPlayerCard.card.type !== CardType.IMPOSTER || sandPlayerCard.dieRollValues.length === 1)) {
+      GameController.submitCards(
+        session,
+        player,
+      );
+    }
   }
   return currentInteraction;
 }
@@ -216,6 +247,7 @@ export const command: Command = {
   "isGuild": true,
   "execute": async(interaction: DiscordCommandInteraction): Promise<void> => {
     const session: SessionState | null = SessionController.loadSession(interaction.channelId);
+    // TODO: figure out the best way to approach these IF statements -- shortest option first? positive logic only? etc
     if (session === null || session.status !== SessionStatus.ACTIVE) {
       await InteractionController.informNoGame(interaction);
     } else {

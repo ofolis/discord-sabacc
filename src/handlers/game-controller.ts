@@ -37,7 +37,7 @@ export class GameController {
   private static async endHand(
     session: SessionState,
   ): Promise<void> {
-    const partialHandResults: Pick<HandResult, "bloodCard" | "bloodCardValue" | "cardDifference" | "lowestCardValue" | "playerIndex" | "sandCard" | "sandCardValue">[] = [
+    const partialHandResults: Pick<HandResult, "bloodCard" | "bloodCardValue" | "cardDifference" | "lowestCardValue" | "playerIndex" | "sandCard" | "sandCardValue" | "spentTokenTotal">[] = [
     ];
     for (const player of session.players) {
       if (!player.isEliminated) {
@@ -66,6 +66,7 @@ export class GameController {
           "playerIndex": session.players.indexOf(player),
           "sandCard": sandPlayerCard,
           "sandCardValue": sandCardValue,
+          "spentTokenTotal": player.currentSpentTokenTotal,
         });
       }
     }
@@ -73,6 +74,8 @@ export class GameController {
       a,
       b,
     ));
+    // TODO: REmove this line
+    console.log(partialHandResults);
     let currentRankIndex: number = 0;
     const handResults: HandResult[] = partialHandResults.map((
       partialHandResult,
@@ -83,29 +86,35 @@ export class GameController {
         partialHandResult,
         partialHandResults[index - 1],
       ) === 0 ? true : false;
-      if (!isTiedWithPrevious) {
+      if (index !== 0 && !isTiedWithPrevious) {
         currentRankIndex++;
       }
+      let tokenPenaltyTotal: number;
       let tokenLossTotal: number;
       if (isSabacc) {
         if (currentRankIndex === 0) {
+          tokenPenaltyTotal = 0;
           tokenLossTotal = 0;
         } else {
-          tokenLossTotal = 1;
+          tokenPenaltyTotal = 1;
+          tokenLossTotal = partialHandResult.spentTokenTotal + tokenPenaltyTotal;
         }
       } else {
-        tokenLossTotal = partialHandResult.cardDifference;
+        tokenPenaltyTotal = partialHandResult.cardDifference;
+        tokenLossTotal = partialHandResult.spentTokenTotal + partialHandResult.cardDifference;
       }
       return {
         ...partialHandResult,
         "rankIndex": currentRankIndex,
         "tokenLossTotal": tokenLossTotal,
+        "tokenPenaltyTotal": tokenPenaltyTotal,
       };
     });
     let remainingPlayerTotal: number = 0;
     for (const handResult of handResults) {
       const player: PlayerState = session.players[handResult.playerIndex];
       if (handResult.tokenLossTotal >= player.currentTokenTotal) {
+        handResult.tokenLossTotal = player.currentTokenTotal;
         player.currentTokenTotal = 0;
         player.isEliminated = true;
       } else {
@@ -115,10 +124,18 @@ export class GameController {
       player.currentSpentTokenTotal = 0;
       player.handResults.push(handResult);
     }
+    session.handResults.push(handResults);
     SessionController.saveSession(session);
     await InteractionController.announceHandEnded(session);
     if (remainingPlayerTotal <= 1) {
       await this.endGame(session);
+    }
+    if (session.status === SessionStatus.ACTIVE) {
+      session.currentHandIndex += 1;
+      this.iterateStartingPlayer(session);
+      this.shuffleAndDealCards(session);
+      SessionController.saveSession(session);
+      await InteractionController.announceHandStarted(session);
     }
   }
 
@@ -187,6 +204,15 @@ export class GameController {
     return Math.sign(valueComparison) as -1 | 0 | 1;
   }
 
+  private static iterateStartingPlayer(
+    session: SessionState,
+  ): void {
+    session.players.push(session.players.splice(
+      0,
+      1,
+    )[0]);
+  }
+
   private static shuffleAndDealCards(
     session: SessionState,
   ): void {
@@ -223,7 +249,6 @@ export class GameController {
     }
     session.bloodDiscard.push(Utils.removeTopArrayItem(session.bloodDeck));
     session.sandDiscard.push(Utils.removeTopArrayItem(session.sandDeck));
-    SessionController.saveSession(session);
   }
 
   private static async startTurn(
@@ -232,6 +257,7 @@ export class GameController {
     for (const player of session.players) {
       player.currentTurnRecord = null;
     }
+    SessionController.saveSession(session);
     await InteractionController.announceTurnStarted(session);
   }
 
@@ -249,8 +275,17 @@ export class GameController {
       player,
       playerCard,
     );
-    if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.DRAW || player.currentTurnRecord.discardedCard !== null) {
-      throw new Error("Player turn record is invalid.");
+    if (player.currentTurnRecord === null) {
+      throw new Error("Player turn record does not exist.");
+    }
+    if (player.currentTurnRecord.action !== TurnAction.DRAW) {
+      throw new Error("Player turn action is not draw.");
+    }
+    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
+      throw new Error("Player turn record is not active.");
+    }
+    if (player.currentTurnRecord.discardedCard !== null) {
+      throw new Error("Player already had a discarded card.");
     }
     const bloodDiscardIsValid: boolean = player.currentBloodCards.length > 1;
     const sandDiscardIsValid: boolean = player.currentSandCards.length > 1;
@@ -275,6 +310,7 @@ export class GameController {
     );
     discardSet.unshift(playerCard.card);
     player.currentTurnRecord.discardedCard = playerCard;
+    player.currentTurnRecord.status = TurnStatus.COMPLETED;
     SessionController.saveSession(session);
   }
 
@@ -287,8 +323,17 @@ export class GameController {
       session,
       player,
     );
-    if (player.currentTurnRecord !== null) {
-      throw new Error("Player turn record already exists.");
+    if (player.currentTurnRecord === null) {
+      throw new Error("Player turn record does not exist.");
+    }
+    if (player.currentTurnRecord.action !== TurnAction.DRAW) {
+      throw new Error("Player turn action is not draw.");
+    }
+    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
+      throw new Error("Player turn record is not active.");
+    }
+    if (player.currentTurnRecord.drawnCard !== null) {
+      throw new Error("Player already had a drawn card.");
     }
     if (player.currentSpentTokenTotal >= player.currentTokenTotal) {
       throw new Error("Player does not have tokens to spend.");
@@ -336,18 +381,20 @@ export class GameController {
       "source": drawSource,
     };
     playerCardSet.push(playerCard);
-    player.currentTurnRecord = {
-      "action": TurnAction.DRAW,
-      "discardedCard": null,
-      "drawnCard": playerCard,
-      "status": TurnStatus.ACTIVE,
-    };
+    player.currentTurnRecord.drawnCard = playerCard;
     SessionController.saveSession(session);
   }
 
   public static async endTurn(
     session: SessionState,
   ): Promise<void> {
+    const currentPlayer: PlayerState = session.players[session.currentPlayerIndex];
+    if (currentPlayer.currentTurnRecord === null) {
+      throw new Error("Player turn record does not exist.");
+    }
+    if (currentPlayer.currentTurnRecord.status !== TurnStatus.COMPLETED) {
+      throw new Error("Player turn record is not completed.");
+    }
     const isLastPlayer: boolean = session.currentPlayerIndex === session.players.length - 1;
     if (isLastPlayer) {
       session.currentPlayerIndex = 0;
@@ -386,6 +433,28 @@ export class GameController {
     SessionController.saveSession(session);
   }
 
+  public static async revealCards(
+    session: SessionState,
+    player: PlayerState,
+  ): Promise<void> {
+    SessionController.validateSessionPlayer(
+      session,
+      player,
+    );
+    if (player.currentTurnRecord === null) {
+      throw new Error("Player turn record does not exist.");
+    }
+    if (player.currentTurnRecord.action !== TurnAction.REVEAL) {
+      throw new Error("Player turn action is not reveal.");
+    }
+    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
+      throw new Error("Player turn record is not active.");
+    }
+    if (player.currentBloodCards[0].card.type === CardType.IMPOSTER || player.currentSandCards[0].card.type === CardType.IMPOSTER) {
+      await InteractionController.announceCardsRevealed(session);
+    }
+  }
+
   public static setPlayerCardDieRollValue(
     session: SessionState,
     player: PlayerState,
@@ -408,6 +477,45 @@ export class GameController {
     SessionController.saveSession(session);
   }
 
+  public static setPlayerTurnAction(
+    session: SessionState,
+    player: PlayerState,
+    turnAction: TurnAction | null,
+  ): void {
+    SessionController.validateSessionPlayer(
+      session,
+      player,
+    );
+    switch (turnAction) {
+      case TurnAction.DRAW:
+        player.currentTurnRecord = {
+          "action": TurnAction.DRAW,
+          "discardedCard": null,
+          "drawnCard": null,
+          "status": TurnStatus.ACTIVE,
+        };
+        break;
+      case TurnAction.REVEAL:
+        player.currentTurnRecord = {
+          "action": TurnAction.REVEAL,
+          "status": TurnStatus.ACTIVE,
+        };
+        break;
+      case TurnAction.STAND:
+        player.currentTurnRecord = {
+          "action": TurnAction.STAND,
+          "status": TurnStatus.ACTIVE,
+        };
+        break;
+      case null:
+        player.currentTurnRecord = null;
+        break;
+      default:
+        throw new Error("Unknown turn action.");
+    }
+    SessionController.saveSession(session);
+  }
+
   public static standPlayer(
     session: SessionState,
     player: PlayerState,
@@ -416,13 +524,16 @@ export class GameController {
       session,
       player,
     );
-    if (player.currentTurnRecord !== null) {
-      throw new Error("Player turn record already exists.");
+    if (player.currentTurnRecord === null) {
+      throw new Error("Player turn record does not exist.");
     }
-    player.currentTurnRecord = {
-      "action": TurnAction.STAND,
-      "status": TurnStatus.ACTIVE,
-    };
+    if (player.currentTurnRecord.action !== TurnAction.STAND) {
+      throw new Error("Player turn action is not stand.");
+    }
+    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
+      throw new Error("Player turn record is not active.");
+    }
+    player.currentTurnRecord.status = TurnStatus.COMPLETED;
     SessionController.saveSession(session);
   }
 
@@ -442,5 +553,26 @@ export class GameController {
     this.shuffleAndDealCards(session);
     SessionController.saveSession(session);
     await this.startTurn(session);
+  }
+
+  public static submitCards(
+    session: SessionState,
+    player: PlayerState,
+  ): void {
+    SessionController.validateSessionPlayer(
+      session,
+      player,
+    );
+    if (player.currentTurnRecord === null) {
+      throw new Error("Player turn record does not exist.");
+    }
+    if (player.currentTurnRecord.action !== TurnAction.REVEAL) {
+      throw new Error("Player turn action is not reveal.");
+    }
+    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
+      throw new Error("Player turn record is not active.");
+    }
+    player.currentTurnRecord.status = TurnStatus.COMPLETED;
+    SessionController.saveSession(session);
   }
 }
