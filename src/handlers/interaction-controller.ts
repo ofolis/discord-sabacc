@@ -161,9 +161,20 @@ export class InteractionController {
   public static async announceGameEnded(
     session: SessionState,
   ): Promise<void> {
+    const activePlayers: PlayerState[] = session.players.filter((player) => !player.isEliminated);
+    if (activePlayers.length !== 1) {
+      Log.throw(
+        "Game ended without exactly one remaining player.",
+        session.players,
+      );
+    }
+    const contentLines: string[] = [
+      "# Ended Game",
+      `${activePlayers[0].globalName ?? activePlayers[0].username} wins!`,
+    ];
     await Discord.sendMessage(
       session.channelId,
-      "# Ended Game",
+      Utils.linesToString(contentLines),
     );
   }
 
