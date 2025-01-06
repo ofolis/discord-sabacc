@@ -75,7 +75,7 @@ export class PlayCommand implements Command {
         player.currentTurnRecord,
       );
     }
-    if (player.currentTurnRecord.discardedCard === null) {
+    if (player.currentTurnRecord.discardedCard !== null) {
       Log.throw(
         "Current turn record already contains a discarded card.",
         player.currentTurnRecord,
