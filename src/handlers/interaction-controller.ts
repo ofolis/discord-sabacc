@@ -173,25 +173,6 @@ export class InteractionController {
     return Utils.linesToString(contentLines);
   }
 
-  public static async announceCardsRevealed(
-    session: SessionState,
-  ): Promise<void> {
-    const currentPlayer: PlayerState = session.players[session.currentPlayerIndex];
-    const bloodPlayerCard: PlayerCard = currentPlayer.currentBloodCards[0];
-    const sandPlayerCard: PlayerCard = currentPlayer.currentSandCards[0];
-    const contentLines: string[] = [
-      `## ${this.formatPlayerNameString(currentPlayer)} Revealed Their Cards`,
-      `\`${this.formatCardString(sandPlayerCard)}\` \`${this.formatCardString(bloodPlayerCard)}\``,
-    ];
-    if ((bloodPlayerCard.card.type === CardType.IMPOSTER && bloodPlayerCard.dieRollValues.length !== 1) || (sandPlayerCard.card.type === CardType.IMPOSTER && sandPlayerCard.dieRollValues.length !== 1)) {
-      contentLines.push("-# Imposter cards still need to be resolved.");
-    }
-    await Discord.sendMessage(
-      session.channelId,
-      Utils.linesToString(contentLines),
-    );
-  }
-
   public static async announceGameEnded(
     session: SessionState,
   ): Promise<void> {
@@ -204,7 +185,8 @@ export class InteractionController {
     }
     const contentLines: string[] = [
       "# Ended Game",
-      `${activePlayers[0].globalName ?? activePlayers[0].username} wins!`,
+      `After ${(session.currentRoundIndex + 1).toString()} rounds, the game is over!`,
+      `${this.formatPlayerNameString(activePlayers[0])} (${this.formatPlayerTagString(activePlayers[0])}) wins! 🎉`,
     ];
     await Discord.sendMessage(
       session.channelId,
@@ -352,6 +334,7 @@ export class InteractionController {
         break;
       case TurnAction.REVEAL:
         contentLines.push(`## ${this.formatPlayerNameString(player)} Completed Their Hand`);
+        contentLines.push("Here's their final cards...");
         contentLines.push(`# \`${this.formatCardString(player.currentSandCards[0])}\` \`${this.formatCardString(player.currentBloodCards[0])}\``);
         break;
       case TurnAction.STAND:
@@ -376,8 +359,8 @@ export class InteractionController {
     session: SessionState,
   ): Promise<void> {
     const contentLines: string[] = [
-      `## ${this.formatPlayerTagString(session.players[session.currentPlayerIndex])}'s Turn`,
-      "Use the **/play** command to take your turn.",
+      `## ${this.formatPlayerNameString(session.players[session.currentPlayerIndex])}'s Turn`,
+      `${this.formatPlayerTagString(session.players[session.currentPlayerIndex])} use the **/play** command to take your turn.`,
       "### Players",
       this.formatPlayerListMessage(session),
     ];
@@ -449,7 +432,7 @@ export class InteractionController {
   ): Promise<void> {
     const isPlayerTurn: boolean = session.players[session.currentPlayerIndex].id === discordInteraction.user.id;
     const contentLines: string[] = [
-      isPlayerTurn ? "## Your Turn" : `## ${session.players[session.currentPlayerIndex].username}'s Turn`,
+      isPlayerTurn ? "## Your Turn" : `## ${this.formatPlayerNameString(session.players[session.currentPlayerIndex])}'s Turn`,
       this.formatHandRoundMessage(session),
       "### Discard",
       this.formatTableDiscardMessage(session),
@@ -864,7 +847,7 @@ export class InteractionController {
     };
     const baseContentLines: string[] = [
       "# New Game",
-      `${this.formatChannelTagString()} A new game was started by ${this.formatPlayerNameString(startingDiscordUser)}.`,
+      `${this.formatChannelTagString()} a new game was started by ${this.formatPlayerNameString(startingDiscordUser)}.`,
       "### Players",
       discordUserList.map(discordUser => `- ${this.formatPlayerNameString(discordUser)} (${this.formatPlayerTagString(discordUser)})`).join("\n"),
     ];

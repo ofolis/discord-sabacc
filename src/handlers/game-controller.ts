@@ -524,37 +524,6 @@ export class GameController {
     SessionController.saveSession(session);
   }
 
-  public static async revealCards(
-    session: SessionState,
-    player: PlayerState,
-  ): Promise<void> {
-    SessionController.validateSessionPlayer(
-      session,
-      player,
-    );
-    if (player.currentTurnRecord === null) {
-      Log.throw(
-        "Player turn record does not exist.",
-        player,
-      );
-    }
-    if (player.currentTurnRecord.action !== TurnAction.REVEAL) {
-      Log.throw(
-        "Player turn action is not reveal.",
-        player.currentTurnRecord,
-      );
-    }
-    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
-      Log.throw(
-        "Player turn record is not active.",
-        player.currentTurnRecord,
-      );
-    }
-    if (player.currentBloodCards[0].card.type === CardType.IMPOSTER || player.currentSandCards[0].card.type === CardType.IMPOSTER) {
-      await InteractionController.announceCardsRevealed(session);
-    }
-  }
-
   public static setPlayerCardDieRollValue(
     session: SessionState,
     player: PlayerState,

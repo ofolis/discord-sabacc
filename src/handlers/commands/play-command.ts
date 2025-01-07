@@ -242,10 +242,6 @@ export class PlayCommand implements Command {
           player,
           TurnAction.REVEAL,
         );
-        await GameController.revealCards(
-          session,
-          player,
-        );
       }
     }
     if (player.currentTurnRecord === null) {
