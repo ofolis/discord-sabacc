@@ -99,17 +99,17 @@ export class GameController {
       }
       let tokenPenaltyTotal: number;
       let tokenLossTotal: number;
-      if (isSabacc) {
-        if (currentRankIndex === 0) {
-          tokenPenaltyTotal = 0;
-          tokenLossTotal = 0;
-        } else {
+      if (currentRankIndex === 0) {
+        tokenPenaltyTotal = 0;
+        tokenLossTotal = 0;
+      } else {
+        if (isSabacc) {
           tokenPenaltyTotal = 1;
           tokenLossTotal = partialHandResult.spentTokenTotal + tokenPenaltyTotal;
+        } else {
+          tokenPenaltyTotal = partialHandResult.cardDifference;
+          tokenLossTotal = partialHandResult.spentTokenTotal + partialHandResult.cardDifference;
         }
-      } else {
-        tokenPenaltyTotal = partialHandResult.cardDifference;
-        tokenLossTotal = partialHandResult.spentTokenTotal + partialHandResult.cardDifference;
       }
       return {
         ...partialHandResult,
