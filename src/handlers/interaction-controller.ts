@@ -73,13 +73,7 @@ export class InteractionController {
           card,
         );
     }
-    if (playerCard !== null && card.type === CardType.IMPOSTER && playerCard.dieRollValues.length > 0) {
-      if (playerCard.dieRollValues.length !== 1) {
-        Log.throw(
-          "Cannot format card string. Imposter player card did not have exactly one die roll value.",
-          playerCard,
-        );
-      }
+    if (playerCard !== null && card.type === CardType.IMPOSTER && playerCard.dieRollValues.length === 1) {
       typeLabel = `${playerCard.dieRollValues[0].toString()} (${typeLabel})`;
     }
     return `${suitIcon}${typeLabel}`;
