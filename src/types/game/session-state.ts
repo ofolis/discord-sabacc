@@ -13,7 +13,7 @@ export type SessionState = {
   "channelId": string;
   "currentHandIndex": number;
   "currentPlayerIndex": number;
-  "currentRoundIndex": 0 | 1 | 2 | 3;
+  "currentRoundIndex": number;
   "handResults": HandResult[][];
   "players": PlayerState[];
   "sandDeck": Card[];

@@ -271,6 +271,9 @@ export default tseslint.config(
           "caughtErrorsIgnorePattern": "^_",
         },
       ],
+      "@typescript-eslint/strict-boolean-expressions": [
+        "error",
+      ],
       "@typescript-eslint/typedef": [
         "error",
         {
