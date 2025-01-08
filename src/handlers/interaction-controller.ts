@@ -28,8 +28,6 @@ import {
   Utils,
 } from "../utils";
 
-// TODO: optimize this, lots of opportunities to simplify
-// TODO: check to ensure early returns and positive IF statements
 export class InteractionController {
   private static formatCardSuitIcon(
     cardSuit: CardSuit,
@@ -80,29 +78,20 @@ export class InteractionController {
   }
 
   private static formatChannelTagString(): string {
-    const channelTag: string = "@everyone";
-    return channelTag;
+    return "@everyone";
   }
 
   private static formatHandRoundMessage(
     session: SessionState,
   ): string {
-    return `**Hand:** \`${
-      (session.currentHandIndex + 1).toString()
-    }\`  |  **Round:** \`${
-      session.currentRoundIndex < 3 ? `${(session.currentRoundIndex + 1).toString()}/3` : "REVEAL"
-    }\``;
+    return `**Hand:** \`${(session.currentHandIndex + 1).toString()}\`  |  **Round:** \`${session.currentRoundIndex < 3 ? `${(session.currentRoundIndex + 1).toString()}/3` : "REVEAL"}\``;
   }
 
   private static formatPlayerItemsMessage(
     player: PlayerState,
   ): string {
-    const bloodCardsString: string = player.currentBloodCards
-      .map(playerCard => `\`${this.formatCardString(playerCard.card)}\``)
-      .join(" ") || "`None`";
-    const sandCardsString: string = player.currentSandCards
-      .map(playerCard => `\`${this.formatCardString(playerCard.card)}\``)
-      .join(" ") || "`None`";
+    const bloodCardsString: string = player.currentBloodCards.length > 0 ? player.currentBloodCards.map(playerCard => `\`${this.formatCardString(playerCard.card)}\``).join(" ") : "`None`";
+    const sandCardsString: string = player.currentSandCards.length > 0 ? player.currentSandCards.map(playerCard => `\`${this.formatCardString(playerCard.card)}\``).join(" ") : "`None`";
     const contentLines: string[] = [
       `Sand: ${sandCardsString}`,
       `Blood: ${bloodCardsString}`,
@@ -114,45 +103,32 @@ export class InteractionController {
   private static formatPlayerListMessage(
     session: SessionState,
   ): string {
-    const messageLineGroups: string[][] = [
+    const contentLines: string[] = [
     ];
-    for (const [
-      playerIndex,
-      player,
-    ] of session.players.entries()) {
-      const contentLines: string[] = [
-        `- **${this.formatPlayerNameString(player)}**${playerIndex === session.currentPlayerIndex ? " 👤" : ""}`,
-        `  - Tokens: \`${this.formatPlayerTokenString(player)}\``,
-      ];
-      messageLineGroups.push(contentLines);
-    }
-    return messageLineGroups.flat(1).join("\n");
+    session.players.forEach((player, index) => contentLines.push(
+      `- **${this.formatPlayerNameString(player)}**${index === session.currentPlayerIndex ? " 👤" : ""}`,
+      `  - Tokens: \`${this.formatPlayerTokenString(player)}\``,
+    ));
+    return Utils.linesToString(contentLines);
   }
 
   private static formatPlayerNameString(
     player: PlayerState | DiscordUser,
   ): string {
-    const playerName: string = (player.globalName ?? player.username).toUpperCase();
-    return playerName;
+    return (player.globalName ?? player.username).toUpperCase();
   }
 
   private static formatPlayerTagString(
     player: PlayerState | DiscordUser,
   ): string {
-    const playerTag: string = `<@${player.id}>`;
-    return playerTag;
+    return `<@${player.id}>`;
   }
 
   private static formatPlayerTokenString(
     player: PlayerState,
   ): string {
-    let tokenString: string = "";
-    tokenString += "⚪".repeat(player.currentTokenTotal - player.currentSpentTokenTotal);
-    tokenString += "⚫".repeat(player.currentSpentTokenTotal);
-    if (tokenString.length === 0) {
-      tokenString = "None";
-    }
-    return tokenString;
+    const tokenString: string = "⚪".repeat(player.currentTokenTotal - player.currentSpentTokenTotal) + "⚫".repeat(player.currentSpentTokenTotal);
+    return tokenString.length === 0 ? "None" : tokenString;
   }
 
   private static formatTableDiscardMessage(
@@ -167,10 +143,30 @@ export class InteractionController {
     return Utils.linesToString(contentLines);
   }
 
+  private static async handleButtonInteraction(
+    interactionResponse: DiscordInteractionResponse | DiscordMessage,
+    discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction | null,
+    timeoutMessage: string,
+    timeoutDelay: number = 60000,
+  ): Promise<DiscordButtonInteraction | null> {
+    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+      interactionResponse,
+      discordInteraction !== null ? (i): boolean => i.user.id === discordInteraction.user.id : null,
+      timeoutDelay,
+    );
+    if (buttonInteraction === null) {
+      await Discord.updateSentItem(
+        interactionResponse,
+        timeoutMessage,
+      );
+    }
+    return buttonInteraction;
+  }
+
   public static async announceGameEnded(
     session: SessionState,
   ): Promise<void> {
-    const activePlayers: PlayerState[] = session.players.filter((player) => !player.isEliminated);
+    const activePlayers: PlayerState[] = session.players.filter(player => !player.isEliminated);
     if (activePlayers.length !== 1) {
       Log.throw(
         "Cannot announce game ended. There is more than one remaining player.",
@@ -206,11 +202,9 @@ export class InteractionController {
         session,
       );
     }
-    const messageLineGroups: string[][] = [
-      [
-        `# Ended Hand ${(session.currentHandIndex + 1).toString()}`,
-        "Here are the results...",
-      ],
+    const contentLines: string[] = [
+      `# Ended Hand ${(session.currentHandIndex + 1).toString()}`,
+      "Here are the results...",
     ];
     const usedPlayerIndexes: number[] = [
     ];
@@ -228,27 +222,18 @@ export class InteractionController {
           tokenDetailStrings.push(`\`${handResult.tokenPenaltyTotal.toString()} PENALTY\``);
         }
       }
-      const contentLines: string[] = [
+      contentLines.push(
         `- \`#${(handResult.rankIndex + 1).toString()}\` ${player.isEliminated ? `~~**${this.formatPlayerNameString(player)}**~~ 💀` : `**${this.formatPlayerNameString(player)}**`}`,
         `  - Cards: \`${this.formatCardString(handResult.sandCard)}\` \`${this.formatCardString(handResult.bloodCard)}\`${handResult.cardDifference === 0 ? " _Sabacc!_" : ""}`,
         `  - Tokens: \`${"⚪".repeat(player.currentTokenTotal)}${"🔴".repeat(handResult.tokenLossTotal)}\` (${tokenDetailStrings.join("+")})`,
-      ];
-      messageLineGroups.push(contentLines);
+      );
       usedPlayerIndexes.push(handResult.playerIndex);
     }
-    for (const [
-      playerIndex,
-      player,
-    ] of session.players.entries()) {
-      if (usedPlayerIndexes.includes(playerIndex)) {
-        continue;
+    session.players.forEach((player, playerIndex) => {
+      if (!usedPlayerIndexes.includes(playerIndex)) {
+        contentLines.push(`~~${this.formatPlayerNameString(player)}~~ 💀`);
       }
-      const contentLines: string[] = [
-        `~~${this.formatPlayerNameString(player)}~~ 💀`,
-      ];
-      messageLineGroups.push(contentLines);
-    }
-    const contentLines: string[] = messageLineGroups.flat(1);
+    });
     await Discord.sendMessage(
       session.channelId,
       Utils.linesToString(contentLines),
@@ -272,14 +257,11 @@ export class InteractionController {
     session: SessionState,
   ): Promise<void> {
     const contentLines: string[] = [
+      session.currentRoundIndex < 3
+        ? `## Starting Round ${(session.currentRoundIndex + 1).toString()}`
+        : "## Starting Reveal Round",
+      this.formatHandRoundMessage(session),
     ];
-    if (session.currentRoundIndex < 3) {
-      contentLines.push(`## Starting Round ${(session.currentRoundIndex + 1).toString()}`);
-      contentLines.push(this.formatHandRoundMessage(session));
-    } else {
-      contentLines.push("## Starting Reveal Round");
-      contentLines.push("Players will reveal their cards and complete the hand.");
-    }
     await Discord.sendMessage(
       session.channelId,
       Utils.linesToString(contentLines),
@@ -300,42 +282,40 @@ export class InteractionController {
     ];
     switch (player.currentTurnRecord.action) {
       case TurnAction.DRAW:
-        if (player.currentTurnRecord.drawnCard === null) {
+        if (player.currentTurnRecord.drawnCard  === null || player.currentTurnRecord.discardedCard === null) {
           Log.throw(
-            "Cannot announce turn ended. Player turn record did not contain a drawn card.",
-            player.currentTurnRecord,
-          );
-        }
-        if (player.currentTurnRecord.discardedCard === null) {
-          Log.throw(
-            "Cannot announce turn ended. Player turn record did not contain a discarded card.",
+            "Cannot announce turn ended. Player turn record did not contain both a drawn and discarded card.",
             player.currentTurnRecord,
           );
         }
         contentLines.push(`## ${this.formatPlayerNameString(player)} Drew A Card`);
-        if (player.currentTurnRecord.drawnCard.source === PlayerCardSource.BLOOD_DECK || player.currentTurnRecord.drawnCard.source === PlayerCardSource.SAND_DECK) {
+        if ([
+          PlayerCardSource.BLOOD_DECK,
+          PlayerCardSource.SAND_DECK,
+        ].includes(player.currentTurnRecord.drawnCard.source)) {
           contentLines.push(`A card was drawn from the \`${this.formatCardSuitIcon(player.currentTurnRecord.drawnCard.card.suit)}\` deck and \`${this.formatCardString(player.currentTurnRecord.discardedCard.card)}\` was discarded.`);
-        } else if (player.currentTurnRecord.drawnCard.source === PlayerCardSource.BLOOD_DISCARD || player.currentTurnRecord.drawnCard.source === PlayerCardSource.SAND_DISCARD) {
-          contentLines.push(`\`${this.formatCardString(player.currentTurnRecord.drawnCard.card)}\` was drawn from the \`${this.formatCardSuitIcon(player.currentTurnRecord.drawnCard.card.suit)}\` discard and \`${this.formatCardString(player.currentTurnRecord.discardedCard.card)}\` was discarded.`);
         } else {
-          Log.throw(
-            "Cannot announce turn ended. Unknown draw source.",
-            player.currentTurnRecord.drawnCard.source,
-          );
+          contentLines.push(`\`${this.formatCardString(player.currentTurnRecord.drawnCard.card)}\` was drawn from the \`${this.formatCardSuitIcon(player.currentTurnRecord.drawnCard.card.suit)}\` discard and \`${this.formatCardString(player.currentTurnRecord.discardedCard.card)}\` was discarded.`);
         }
-        contentLines.push("### Discard");
-        contentLines.push(this.formatTableDiscardMessage(session));
+        contentLines.push(
+          "### Discard",
+          this.formatTableDiscardMessage(session),
+        );
         break;
       case TurnAction.REVEAL:
-        contentLines.push(`## ${this.formatPlayerNameString(player)} Completed Their Hand`);
-        contentLines.push("Here's their final cards...");
-        contentLines.push(`# \`${this.formatCardString(player.currentSandCards[0])}\` \`${this.formatCardString(player.currentBloodCards[0])}\``);
+        contentLines.push(
+          `## ${this.formatPlayerNameString(player)} Completed Their Hand`,
+          "Here's their final cards...",
+          `# \`${this.formatCardString(player.currentSandCards[0])}\` \`${this.formatCardString(player.currentBloodCards[0])}\``,
+        );
         break;
       case TurnAction.STAND:
-        contentLines.push(`## ${this.formatPlayerNameString(player)} Stood`);
-        contentLines.push("No card was drawn or discarded.");
-        contentLines.push("### Discard");
-        contentLines.push(this.formatTableDiscardMessage(session));
+        contentLines.push(
+          `## ${this.formatPlayerNameString(player)} Stood`,
+          "No card was drawn or discarded.",
+          "### Discard",
+          this.formatTableDiscardMessage(session),
+        );
         break;
       default:
         Log.throw(
@@ -460,12 +440,9 @@ export class InteractionController {
   public static async informTurnEnded(
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<void> {
-    const contentLines: string[] = [
-      "_Your turn is complete._",
-    ];
     await Discord.sendPersistentInteractionResponse(
       discordInteraction,
-      Utils.linesToString(contentLines),
+      "_Your turn is complete._",
       true,
       {},
     );
@@ -486,12 +463,8 @@ export class InteractionController {
       "",
       "**Choose a card to discard.**",
     ];
-    let playerCardSet: PlayerCard[];
-    if (player.currentBloodCards.length > 1) {
-      playerCardSet = player.currentBloodCards;
-    } else if (player.currentSandCards.length > 1) {
-      playerCardSet = player.currentSandCards;
-    } else {
+    const playerCardSet: PlayerCard[] | null = player.currentBloodCards.length > 1 ? player.currentBloodCards : player.currentSandCards.length > 1 ? player.currentSandCards : null;
+    if (playerCardSet === null) {
       Log.throw(
         "Cannot prompt choose discard card. Player does not require a discard.",
         player,
@@ -501,9 +474,7 @@ export class InteractionController {
     playerCardSet.forEach((playerCard, index) => {
       const key: string = `discardOption${index.toString()}`;
       discardMap[key] = playerCard;
-      buttonMap[key] = new DiscordButtonBuilder()
-        .setLabel(this.formatCardString(playerCard.card))
-        .setStyle(DiscordButtonStyle.Primary);
+      buttonMap[key] = new DiscordButtonBuilder().setLabel(this.formatCardString(playerCard.card)).setStyle(DiscordButtonStyle.Primary);
     });
     const interactionResponse: DiscordInteractionResponse = await Discord.sendPersistentInteractionResponse(
       discordInteraction,
@@ -513,7 +484,7 @@ export class InteractionController {
     );
     const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
       interactionResponse,
-      (i) => i.user.id === discordInteraction.user.id,
+      i => i.user.id === discordInteraction.user.id,
     );
     if (buttonInteraction === null) {
       await Discord.updateSentItem(
@@ -522,20 +493,18 @@ export class InteractionController {
         {},
       );
       return null;
-    } else {
-      if (!(buttonInteraction.customId in discardMap)) {
-        Log.throw(
-          "Cannot prompt choose discard card. Requested discard was not mapped correctly.",
-          buttonInteraction.customId,
-          discardMap,
-        );
-      }
-      const playerCard: PlayerCard = discardMap[buttonInteraction.customId];
-      return [
-        buttonInteraction,
-        playerCard,
-      ];
     }
+    if (!(buttonInteraction.customId in discardMap)) {
+      Log.throw(
+        "Cannot prompt choose discard card. Unknown button interaction response ID.",
+        buttonInteraction.customId,
+        discardMap,
+      );
+    }
+    return [
+      buttonInteraction,
+      discardMap[buttonInteraction.customId],
+    ];
   }
 
   public static async promptChooseDrawSource(
@@ -554,84 +523,70 @@ export class InteractionController {
       "**Choose a draw option.**",
     ];
     if (session.sandDiscard.length > 0) {
-      buttonMap.sandDiscard = new DiscordButtonBuilder()
-        .setLabel(this.formatCardString(session.sandDiscard[0]))
-        .setStyle(DiscordButtonStyle.Primary);
+      buttonMap.sandDiscard = new DiscordButtonBuilder().setLabel(this.formatCardString(session.sandDiscard[0])).setStyle(DiscordButtonStyle.Primary);
     } else {
       contentLines.push("-# There is currently no sand discard to draw.");
     }
     if (session.bloodDiscard.length > 0) {
-      buttonMap.bloodDiscard = new DiscordButtonBuilder()
-        .setLabel(this.formatCardString(session.bloodDiscard[0]))
-        .setStyle(DiscordButtonStyle.Primary);
+      buttonMap.bloodDiscard = new DiscordButtonBuilder().setLabel(this.formatCardString(session.bloodDiscard[0])).setStyle(DiscordButtonStyle.Primary);
     } else {
       contentLines.push("-# There is currently no blood discard to draw.");
     }
     if (session.sandDeck.length > 0) {
-      buttonMap.sandDeck = new DiscordButtonBuilder()
-        .setLabel("🟨?")
-        .setStyle(DiscordButtonStyle.Primary);
+      buttonMap.sandDeck = new DiscordButtonBuilder().setLabel("🟨?").setStyle(DiscordButtonStyle.Primary);
     } else {
       contentLines.push("-# There is currently no sand deck to draw.");
     }
     if (session.bloodDeck.length > 0) {
-      buttonMap.bloodDeck = new DiscordButtonBuilder()
-        .setLabel("🟥?")
-        .setStyle(DiscordButtonStyle.Primary);
+      buttonMap.bloodDeck = new DiscordButtonBuilder().setLabel("🟥?").setStyle(DiscordButtonStyle.Primary);
     } else {
       contentLines.push("-# There is currently no blood deck to draw.");
     }
-    buttonMap.cancel = new DiscordButtonBuilder()
-      .setLabel("Cancel")
-      .setStyle(DiscordButtonStyle.Secondary);
+    buttonMap.cancel = new DiscordButtonBuilder().setLabel("Cancel").setStyle(DiscordButtonStyle.Secondary);
     const interactionResponse: DiscordInteractionResponse = await Discord.sendPersistentInteractionResponse(
       discordInteraction,
       Utils.linesToString(contentLines),
       true,
       buttonMap,
     );
-    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+    const buttonInteraction: DiscordButtonInteraction | null = await this.handleButtonInteraction(
       interactionResponse,
-      (i) => i.user.id === discordInteraction.user.id,
+      discordInteraction,
+      "_Card draw action timed out._",
     );
     if (buttonInteraction === null) {
-      await Discord.updateSentItem(
-        interactionResponse,
-        "_Card draw action timed out._",
-        {},
-      );
       return null;
-    } else {
-      switch (buttonInteraction.customId) {
-        case "bloodDeck":
-          return [
-            buttonInteraction,
-            PlayerCardSource.BLOOD_DECK,
-          ];
-        case "bloodDiscard":
-          return [
-            buttonInteraction,
-            PlayerCardSource.BLOOD_DISCARD,
-          ];
-        case "sandDeck":
-          return [
-            buttonInteraction,
-            PlayerCardSource.SAND_DECK,
-          ];
-        case "sandDiscard":
-          return [
-            buttonInteraction,
-            PlayerCardSource.SAND_DISCARD,
-          ];
-        case "cancel":
-          await Discord.deleteSentItem(interactionResponse);
-          return null;
-        default:
-          Log.throw(
-            "Cannot resolve choose draw source prompt. Unknown button interaction response ID.",
-            buttonInteraction.customId,
-          );
-      }
+    }
+
+    switch (buttonInteraction.customId) {
+      case "bloodDeck":
+        return [
+          buttonInteraction,
+          PlayerCardSource.BLOOD_DECK,
+        ];
+      case "bloodDiscard":
+        return [
+          buttonInteraction,
+          PlayerCardSource.BLOOD_DISCARD,
+        ];
+      case "sandDeck":
+        return [
+          buttonInteraction,
+          PlayerCardSource.SAND_DECK,
+        ];
+      case "sandDiscard":
+        return [
+          buttonInteraction,
+          PlayerCardSource.SAND_DISCARD,
+        ];
+      case "cancel":
+        await Discord.deleteSentItem(interactionResponse);
+        return null;
+      default:
+        Log.throw(
+          "Cannot resolve choose draw source prompt. Unknown button interaction response ID.",
+          buttonInteraction.customId,
+        );
     }
   }
 
@@ -640,19 +595,15 @@ export class InteractionController {
     playerCard: PlayerCard,
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<[DiscordButtonInteraction, number] | null> {
-    if (playerCard.card.type !== CardType.IMPOSTER) {
-      Log.throw("Cannot prompt choose imposter die. Card is not an imposter card.");
-    }
-    if (playerCard.dieRollValues.length !== 2) {
-      Log.throw("Cannot prompt choose imposter die. Imposter player card does not contain exactly two die roll values.");
+    if (playerCard.card.type !== CardType.IMPOSTER || playerCard.dieRollValues.length !== 2) {
+      Log.throw(
+        "Cannot prompt choose imposter die. Invalid player card type or die roll values.",
+        playerCard,
+      );
     }
     const buttonMap: Record<string, DiscordButtonBuilder> = {
-      "firstDie": new DiscordButtonBuilder()
-        .setLabel(playerCard.dieRollValues[0].toString())
-        .setStyle(DiscordButtonStyle.Primary),
-      "secondDie": new DiscordButtonBuilder()
-        .setLabel(playerCard.dieRollValues[1].toString())
-        .setStyle(DiscordButtonStyle.Primary),
+      "firstDie": new DiscordButtonBuilder().setLabel(playerCard.dieRollValues[0].toString()).setStyle(DiscordButtonStyle.Primary),
+      "secondDie": new DiscordButtonBuilder().setLabel(playerCard.dieRollValues[1].toString()).setStyle(DiscordButtonStyle.Primary),
     };
     const contentLines: string[] = [
       "### Choose Die Result",
@@ -665,35 +616,31 @@ export class InteractionController {
       true,
       buttonMap,
     );
-    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+    const buttonInteraction: DiscordButtonInteraction | null = await this.handleButtonInteraction(
       interactionResponse,
-      (i) => i.user.id === discordInteraction.user.id,
+      discordInteraction,
+      "_Die selection prompt timed out._",
     );
     if (buttonInteraction === null) {
-      await Discord.updateSentItem(
-        interactionResponse,
-        "_Die selection prompt timed out._",
-      );
       return null;
-    } else {
-      switch (buttonInteraction.customId) {
-        case "firstDie": {
-          return [
-            buttonInteraction,
-            playerCard.dieRollValues[0],
-          ];
-        }
-        case "secondDie":
-          return [
-            buttonInteraction,
-            playerCard.dieRollValues[1],
-          ];
-        default:
-          Log.throw(
-            "Cannot resolve choose imposter die prompt. Unknown button interaction response ID.",
-            buttonInteraction.customId,
-          );
-      }
+    }
+
+    switch (buttonInteraction.customId) {
+      case "firstDie":
+        return [
+          buttonInteraction,
+          playerCard.dieRollValues[0],
+        ];
+      case "secondDie":
+        return [
+          buttonInteraction,
+          playerCard.dieRollValues[1],
+        ];
+      default:
+        Log.throw(
+          "Cannot resolve choose imposter die prompt. Unknown button interaction response ID.",
+          buttonInteraction.customId,
+        );
     }
   }
 
@@ -702,15 +649,13 @@ export class InteractionController {
     player: PlayerState,
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<[DiscordButtonInteraction, TurnAction] | null> {
-    const buttonMap: Record<string, DiscordButtonBuilder> = {};
-    const drawDisabled: boolean =
-      player.currentSpentTokenTotal === player.currentTokenTotal ||
-      (
-        session.bloodDeck.length === 0 &&
-        session.bloodDiscard.length === 0 &&
-        session.sandDeck.length === 0 &&
-        session.sandDiscard.length === 0
-      ) ? true : false;
+    const drawDisabled: boolean = player.currentSpentTokenTotal === player.currentTokenTotal ||
+        (session.bloodDeck.length === 0 && session.bloodDiscard.length === 0 && session.sandDeck.length === 0 && session.sandDiscard.length === 0);
+    const buttonMap: Record<string, DiscordButtonBuilder> = {
+      "draw": new DiscordButtonBuilder().setLabel("Draw").setStyle(DiscordButtonStyle.Success).setDisabled(drawDisabled),
+      "stand": new DiscordButtonBuilder().setLabel("Stand").setStyle(DiscordButtonStyle.Primary),
+      "cancel": new DiscordButtonBuilder().setLabel("Cancel").setStyle(DiscordButtonStyle.Secondary),
+    };
     const contentLines: string[] = [
       this.formatHandRoundMessage(session),
       "### Discard",
@@ -723,54 +668,40 @@ export class InteractionController {
     if (drawDisabled) {
       contentLines.push("-# **Draw** is disabled because you have no remaining tokens.");
     }
-    buttonMap.draw = new DiscordButtonBuilder()
-      .setLabel("Draw")
-      .setStyle(DiscordButtonStyle.Success)
-      .setDisabled(drawDisabled);
-    buttonMap.stand = new DiscordButtonBuilder()
-      .setLabel("Stand")
-      .setStyle(DiscordButtonStyle.Primary);
-    buttonMap.cancel = new DiscordButtonBuilder()
-      .setLabel("Cancel")
-      .setStyle(DiscordButtonStyle.Secondary);
     const interactionResponse: DiscordInteractionResponse = await Discord.sendPersistentInteractionResponse(
       discordInteraction,
       Utils.linesToString(contentLines),
       true,
       buttonMap,
     );
-    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+    const buttonInteraction: DiscordButtonInteraction | null = await this.handleButtonInteraction(
       interactionResponse,
-      (i) => i.user.id === discordInteraction.user.id,
+      discordInteraction,
+      "*_Turn play timed out._",
     );
     if (buttonInteraction === null) {
-      await Discord.updateSentItem(
-        interactionResponse,
-        "*_Turn play timed out._",
-        {},
-      );
       return null;
-    } else {
-      switch (buttonInteraction.customId) {
-        case "draw":
-          return [
-            buttonInteraction,
-            TurnAction.DRAW,
-          ];
-        case "stand":
-          return [
-            buttonInteraction,
-            TurnAction.STAND,
-          ];
-        case "cancel":
-          await Discord.deleteSentItem(interactionResponse);
-          return null;
-        default:
-          Log.throw(
-            "Cannot resolve choose turn action prompt. Unknown button interaction response ID.",
-            buttonInteraction.customId,
-          );
-      }
+    }
+
+    switch (buttonInteraction.customId) {
+      case "draw":
+        return [
+          buttonInteraction,
+          TurnAction.DRAW,
+        ];
+      case "stand":
+        return [
+          buttonInteraction,
+          TurnAction.STAND,
+        ];
+      case "cancel":
+        await Discord.deleteSentItem(interactionResponse);
+        return null;
+      default:
+        Log.throw(
+          "Cannot resolve choose turn action prompt. Unknown button interaction response ID.",
+          buttonInteraction.customId,
+        );
     }
   }
 
@@ -778,12 +709,8 @@ export class InteractionController {
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<DiscordButtonInteraction | null> {
     const buttonMap: Record<string, DiscordButtonBuilder> = {
-      "endGame": new DiscordButtonBuilder()
-        .setLabel("End Game")
-        .setStyle(DiscordButtonStyle.Danger),
-      "cancel": new DiscordButtonBuilder()
-        .setLabel("Cancel")
-        .setStyle(DiscordButtonStyle.Secondary),
+      "endGame": new DiscordButtonBuilder().setLabel("End Game").setStyle(DiscordButtonStyle.Danger),
+      "cancel": new DiscordButtonBuilder().setLabel("Cancel").setStyle(DiscordButtonStyle.Secondary),
     };
     const contentLines: string[] = [
       "## Game Is In Progress",
@@ -795,29 +722,26 @@ export class InteractionController {
       true,
       buttonMap,
     );
-    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+    const buttonInteraction: DiscordButtonInteraction | null = await this.handleButtonInteraction(
       interactionResponse,
-      (i) => i.user.id === discordInteraction.user.id,
+      discordInteraction,
+      "*_End game prompt timed out._",
     );
     if (buttonInteraction === null) {
-      await Discord.updateSentItem(
-        interactionResponse,
-        "_End game prompt timed out._",
-      );
       return null;
-    } else {
-      switch (buttonInteraction.customId) {
-        case "endGame":
-          return buttonInteraction;
-        case "cancel":
-          await Discord.deleteSentItem(interactionResponse);
-          return null;
-        default:
-          Log.throw(
-            "Cannot resolve end current game prompt. Unknown button interaction response ID.",
-            buttonInteraction.customId,
-          );
-      }
+    }
+
+    switch (buttonInteraction.customId) {
+      case "endGame":
+        return buttonInteraction;
+      case "cancel":
+        await Discord.deleteSentItem(interactionResponse);
+        return null;
+      default:
+        Log.throw(
+          "Cannot resolve end current game prompt. Unknown button interaction response ID.",
+          buttonInteraction.customId,
+        );
     }
   }
 
@@ -833,13 +757,8 @@ export class InteractionController {
       ...discordUserAccumulator,
     ];
     const buttonMap: Record<string, DiscordButtonBuilder> = {
-      "joinGame": new DiscordButtonBuilder()
-        .setLabel("Join Game")
-        .setStyle(DiscordButtonStyle.Primary),
-      "startGame": new DiscordButtonBuilder()
-        .setLabel("Start Game")
-        .setStyle(DiscordButtonStyle.Success)
-        .setDisabled(discordUserList.length <= 1),
+      "joinGame": new DiscordButtonBuilder().setLabel("Join Game").setStyle(DiscordButtonStyle.Primary),
+      "startGame": new DiscordButtonBuilder().setLabel("Start Game").setStyle(DiscordButtonStyle.Success).setDisabled(discordUserList.length <= 1),
     };
     const baseContentLines: string[] = [
       "# New Game",
@@ -866,56 +785,46 @@ export class InteractionController {
         buttonMap,
       );
     }
-    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+    const buttonInteraction: DiscordButtonInteraction | null = await this.handleButtonInteraction(
       outbound,
       null,
-      600000, // 10 minutes
+      "_Game creation timed out._",
+      600000,
     );
     if (buttonInteraction === null) {
-      const startedContentLines: string[] = [
-        "_Game creation timed out._",
-      ];
-      await Discord.updateSentItem(
-        outbound,
-        Utils.linesToString(startedContentLines),
-        {},
-      );
       return null;
-    } else {
-      switch (buttonInteraction.customId) {
-        case "joinGame":
-          // Add the user if not already in the list
-          if (startingDiscordUser.id !== buttonInteraction.user.id && !discordUserAccumulator.some(discordUser => discordUser.id === buttonInteraction.user.id)) {
-            discordUserAccumulator.push(buttonInteraction.user);
-          }
-          return this.promptNewGameMembers(
-            channelId,
-            startingDiscordUser,
-            buttonInteraction,
-            discordUserAccumulator,
-          );
-        case "startGame": {
-          const startedContentLines: string[] = [
+    }
+
+    switch (buttonInteraction.customId) {
+      case "joinGame":
+        if (startingDiscordUser.id !== buttonInteraction.user.id && !discordUserAccumulator.some(discordUser => discordUser.id === buttonInteraction.user.id)) {
+          discordUserAccumulator.push(buttonInteraction.user);
+        }
+        return this.promptNewGameMembers(
+          channelId,
+          startingDiscordUser,
+          buttonInteraction,
+          discordUserAccumulator,
+        );
+      case "startGame":
+        await Discord.updateInteractionSourceItem(
+          buttonInteraction,
+          Utils.linesToString([
             ...baseContentLines,
             "",
             "**The game has started!**",
-          ];
-          await Discord.updateInteractionSourceItem(
-            buttonInteraction,
-            Utils.linesToString(startedContentLines),
-            {},
-          );
-          return [
-            startingDiscordUser,
-            ...discordUserAccumulator,
-          ];
-        }
-        default:
-          Log.throw(
-            "Cannot resolve new game member prompt. Unknown button interaction response ID.",
-            buttonInteraction.customId,
-          );
-      }
+          ]),
+          {},
+        );
+        return [
+          startingDiscordUser,
+          ...discordUserAccumulator,
+        ];
+      default:
+        Log.throw(
+          "Cannot resolve new game member prompt. Unknown button interaction response ID.",
+          buttonInteraction.customId,
+        );
     }
   }
 
@@ -923,12 +832,8 @@ export class InteractionController {
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<DiscordButtonInteraction | null> {
     const buttonMap: Record<string, DiscordButtonBuilder> = {
-      "revealCards": new DiscordButtonBuilder()
-        .setLabel("Reveal Cards")
-        .setStyle(DiscordButtonStyle.Primary),
-      "cancel": new DiscordButtonBuilder()
-        .setLabel("Cancel")
-        .setStyle(DiscordButtonStyle.Secondary),
+      "revealCards": new DiscordButtonBuilder().setLabel("Reveal Cards").setStyle(DiscordButtonStyle.Primary),
+      "cancel": new DiscordButtonBuilder().setLabel("Cancel").setStyle(DiscordButtonStyle.Secondary),
     };
     const contentLines: string[] = [
       "### Reveal Your Cards",
@@ -940,29 +845,26 @@ export class InteractionController {
       true,
       buttonMap,
     );
-    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+    const buttonInteraction: DiscordButtonInteraction | null = await this.handleButtonInteraction(
       interactionResponse,
-      (i) => i.user.id === discordInteraction.user.id,
+      discordInteraction,
+      "_Reveal cards prompt timed out._",
     );
     if (buttonInteraction === null) {
-      await Discord.updateSentItem(
-        interactionResponse,
-        "_Reveal cards prompt timed out._",
-      );
       return null;
-    } else {
-      switch (buttonInteraction.customId) {
-        case "revealCards":
-          return buttonInteraction;
-        case "cancel":
-          await Discord.deleteSentItem(interactionResponse);
-          return null;
-        default:
-          Log.throw(
-            "Cannot resolve reveal cards prompt. Unknown button interaction response ID.",
-            buttonInteraction.customId,
-          );
-      }
+    }
+
+    switch (buttonInteraction.customId) {
+      case "revealCards":
+        return buttonInteraction;
+      case "cancel":
+        await Discord.deleteSentItem(interactionResponse);
+        return null;
+      default:
+        Log.throw(
+          "Cannot resolve reveal cards prompt. Unknown button interaction response ID.",
+          buttonInteraction.customId,
+        );
     }
   }
 
@@ -971,25 +873,15 @@ export class InteractionController {
     playerCard: PlayerCard,
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<DiscordButtonInteraction | null> {
-    if (playerCard.card.type !== CardType.IMPOSTER) {
+    if (playerCard.card.type !== CardType.IMPOSTER || playerCard.dieRollValues.length > 0) {
       Log.throw(
-        "Cannot prompt roll for imposter. Card is not an imposter card.",
-        playerCard,
-      );
-    }
-    if (playerCard.dieRollValues.length > 0) {
-      Log.throw(
-        "Cannot prompt roll for imposter. Player card already has one or more die roll values.",
+        "Cannot prompt roll for imposter. Invalid card type or die roll values.",
         playerCard,
       );
     }
     const buttonMap: Record<string, DiscordButtonBuilder> = {
-      "rollDice": new DiscordButtonBuilder()
-        .setLabel("Roll Dice")
-        .setStyle(DiscordButtonStyle.Primary),
-      "cancel": new DiscordButtonBuilder()
-        .setLabel("Cancel")
-        .setStyle(DiscordButtonStyle.Secondary),
+      "rollDice": new DiscordButtonBuilder().setLabel("Roll Dice").setStyle(DiscordButtonStyle.Primary),
+      "cancel": new DiscordButtonBuilder().setLabel("Cancel").setStyle(DiscordButtonStyle.Secondary),
     };
     const contentLines: string[] = [
       "### Roll For Imposter",
@@ -1002,30 +894,26 @@ export class InteractionController {
       true,
       buttonMap,
     );
-    const buttonInteraction: DiscordButtonInteraction | null = await Discord.getButtonInteraction(
+    const buttonInteraction: DiscordButtonInteraction | null = await this.handleButtonInteraction(
       interactionResponse,
-      (i) => i.user.id === discordInteraction.user.id,
+      discordInteraction,
+      "_Dice roll prompt timed out._",
     );
-    if (buttonInteraction === null) {
-      await Discord.updateSentItem(
-        interactionResponse,
-        "_Dice roll prompt timed out._",
-      );
+    if (buttonInteraction == null) {
       return null;
-    } else {
-      switch (buttonInteraction.customId) {
-        case "rollDice": {
-          return buttonInteraction;
-        }
-        case "cancel":
-          await Discord.deleteSentItem(interactionResponse);
-          return null;
-        default:
-          Log.throw(
-            "Cannot resolve roll for imposter prompt. Unknown button interaction response ID.",
-            buttonInteraction.customId,
-          );
-      }
+    }
+
+    switch (buttonInteraction.customId) {
+      case "rollDice":
+        return buttonInteraction;
+      case "cancel":
+        await Discord.deleteSentItem(interactionResponse);
+        return null;
+      default:
+        Log.throw(
+          "Cannot resolve roll for imposter prompt. Unknown button interaction response ID.",
+          buttonInteraction.customId,
+        );
     }
   }
 }

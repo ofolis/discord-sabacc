@@ -59,51 +59,42 @@ export class Discord {
     return this._client;
   }
 
-  private static buttonMapToActionRow(
-    buttonMap: Record<string, ButtonBuilder>,
-  ): ActionRowBuilder<ButtonBuilder> {
+  private static buttonMapToActionRow(buttonMap: Record<string, ButtonBuilder>): ActionRowBuilder<ButtonBuilder> {
     if (Object.keys(buttonMap).length === 0) {
       Log.throw("Cannot create Discord action row. Button map contained no entries.");
     }
     const buttonRow: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>();
-    for (const customId in buttonMap) {
-      const button: ButtonBuilder = buttonMap[customId];
+    Object.entries(buttonMap).forEach(([
+      customId,
+      button,
+    ]) => {
       button.setCustomId(customId);
       buttonRow.addComponents(button);
-    }
+    });
     return buttonRow;
   }
 
-  private static createComponentsValue(
-    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
-  ): (
+  private static createComponentsValue(buttonMap?: Record<string, ButtonBuilder>): (
     | JSONEncodable<APIActionRowComponent<APIMessageActionRowComponent>>
     | ActionRowData<MessageActionRowComponentData | MessageActionRowComponentBuilder>
     | APIActionRowComponent<APIMessageActionRowComponent>
   )[] | undefined {
-    if (buttonMap !== undefined) {
-      if (Object.keys(buttonMap).length > 0) {
-        return [
-          this.buttonMapToActionRow(buttonMap),
-        ];
-      } else {
-        return [
-        ];
-      }
+    if (buttonMap === undefined) {
+      return undefined;
     }
-    return undefined;
+    return Object.keys(buttonMap).length > 0 ? [
+      this.buttonMapToActionRow(buttonMap),
+    ] : [
+    ];
   }
 
-  private static async deployGlobalCommands(
-    rest: REST,
-    commandMap: Record<string, {
-      "builder": SlashCommandBuilder;
-      "command": Command;
-    }>,
-  ): Promise<void> {
+  private static async deployGlobalCommands(rest: REST, commandMap: Record<string, {
+    "builder": SlashCommandBuilder;
+    "command": Command;
+  }>): Promise<void> {
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
-      .filter((value) => value.command.isGlobal)
-      .map((value) => value.builder);
+      .filter(value => value.command.isGlobal)
+      .map(value => value.builder);
     await rest.put(
       Routes.applicationCommands(Environment.config.discordApplicationId),
       {
@@ -112,32 +103,28 @@ export class Discord {
     );
   }
 
-  private static async deployGuildCommands(
-    rest: REST,
-    commandMap: Record<string, {
-      "builder": SlashCommandBuilder;
-      "command": Command;
-    }>,
-    guildIds: string[],
-  ): Promise<void> {
+  private static async deployGuildCommands(rest: REST, commandMap: Record<string, {
+    "builder": SlashCommandBuilder;
+    "command": Command;
+  }>, guildIds: string[]): Promise<void> {
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
-      .filter((value) => value.command.isGuild)
-      .map((value) => value.builder);
-    const promises: Promise<unknown>[] = guildIds.map(async(guildId: string) => await rest.put(
-      Routes.applicationGuildCommands(
-        Environment.config.discordApplicationId,
-        guildId,
-      ),
-      {
-        "body": commandBuilders,
-      },
-    ));
-    await Promise.all(promises);
+      .filter(value => value.command.isGuild)
+      .map(value => value.builder);
+    await Promise.all(
+      guildIds.map(guildId =>
+        rest.put(
+          Routes.applicationGuildCommands(
+            Environment.config.discordApplicationId,
+            guildId,
+          ),
+          {
+            "body": commandBuilders,
+          },
+        )),
+    );
   }
 
-  private static getChannel(
-    channelId: string,
-  ): TextChannel {
+  private static getChannel(channelId: string): TextChannel {
     const channel: Channel | undefined = Discord.client.channels.cache.get(channelId);
     if (channel === undefined) {
       Log.throw(
@@ -154,16 +141,11 @@ export class Discord {
     return channel;
   }
 
-  public static async deleteSentItem(
-    sentItem: Message  | InteractionResponse,
-  ): Promise<void> {
+  public static async deleteSentItem(sentItem: Message | InteractionResponse): Promise<void> {
     await sentItem.delete();
   }
 
-  public static async deployCommands(
-    commandList: Command[],
-    guildIds: string[] | undefined = undefined,
-  ): Promise<void> {
+  public static async deployCommands(commandList: Command[], guildIds?: string[]): Promise<void> {
     const rest: REST = new REST({
       "version": "10",
     }).setToken(Environment.config.discordBotToken);
@@ -171,7 +153,7 @@ export class Discord {
       "builder": SlashCommandBuilder;
       "command": Command;
     }> = {};
-    for (const command of commandList) {
+    commandList.forEach(command => {
       if (command.name in commandMap) {
         Log.throw(
           "Cannot deploy commands. Command names are not unique.",
@@ -180,12 +162,10 @@ export class Discord {
       }
       commandMap[command.name] = {
         "builder": new SlashCommandBuilder().setName(command.name).setDescription(command.description),
-        "command": command,
+        command,
       };
-    }
-    if (guildIds === undefined) {
-      guildIds = Array.from(this.client.guilds.cache.keys());
-    }
+    });
+    guildIds = guildIds ?? Array.from(this.client.guilds.cache.keys());
     await this.deployGlobalCommands(
       rest,
       commandMap,
@@ -200,17 +180,15 @@ export class Discord {
   public static async getButtonInteraction(
     context: InteractionResponse | Message,
     filter: CollectorFilter<[MessageComponentInteraction]> | null = null,
-    timeout: number = 60000,
+    timeout = 60000,
   ): Promise<ButtonInteraction | null> {
     try {
-      const buttonInteraction: ButtonInteraction = await context.awaitMessageComponent<ComponentType.Button>({
+      return await context.awaitMessageComponent<ComponentType.Button>({
         "componentType": ComponentType.Button,
         "filter": filter ?? undefined,
         "time": timeout,
       });
-      return buttonInteraction;
     } catch (result: unknown) {
-      // There is no better way I could find to determine which errors are timeouts
       if (result instanceof Error && result.message.endsWith("reason: time")) {
         return null;
       }
@@ -221,35 +199,29 @@ export class Discord {
   public static async sendInteractionResponse(
     interaction: CommandInteraction | MessageComponentInteraction,
     content: string,
-    isPrivate: boolean = false,
-    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
+    isPrivate = false,
+    buttonMap?: Record<string, ButtonBuilder>,
   ): Promise<InteractionResponse> {
-    const interactionResponse: InteractionResponse = await interaction.reply({
+    return await interaction.reply({
       "components": this.createComponentsValue(buttonMap),
-      "content": content,
+      content,
       "ephemeral": isPrivate,
     });
-    return interactionResponse;
   }
 
-  public static async sendMessage(
-    channelId: string,
-    content: string,
-    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
-  ): Promise<Message> {
+  public static async sendMessage(channelId: string, content: string, buttonMap?: Record<string, ButtonBuilder>): Promise<Message> {
     const channel: TextChannel = this.getChannel(channelId);
-    const message: Message = await channel.send({
+    return await channel.send({
       "components": this.createComponentsValue(buttonMap),
-      "content": content,
+      content,
     });
-    return message;
   }
 
   public static async sendPersistentInteractionResponse(
     interaction: CommandInteraction | MessageComponentInteraction,
     content: string,
-    isPrivate: boolean = false,
-    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
+    isPrivate = false,
+    buttonMap?: Record<string, ButtonBuilder>,
   ): Promise<InteractionResponse> {
     if (interaction instanceof MessageComponentInteraction) {
       return await this.updateInteractionSourceItem(
@@ -270,22 +242,18 @@ export class Discord {
   public static async updateInteractionSourceItem(
     interaction: MessageComponentInteraction,
     content: string,
-    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
+    buttonMap?: Record<string, ButtonBuilder>,
   ): Promise<InteractionResponse> {
     return await interaction.update({
       "components": this.createComponentsValue(buttonMap),
-      "content": content,
+      content,
     });
   }
 
-  public static async updateSentItem(
-    sentItem: Message  | InteractionResponse,
-    content: string,
-    buttonMap: Record<string, ButtonBuilder> | undefined = undefined,
-  ): Promise<void> {
+  public static async updateSentItem(sentItem: Message | InteractionResponse, content: string, buttonMap?: Record<string, ButtonBuilder>): Promise<void> {
     await sentItem.edit({
       "components": this.createComponentsValue(buttonMap),
-      "content": content,
+      content,
     });
   }
 }

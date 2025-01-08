@@ -66,6 +66,10 @@ export default tseslint.config(
       "@stylistic/computed-property-spacing": [
         "error",
       ],
+      "@stylistic/curly-newline": [
+        "error",
+        "always",
+      ],
       "@stylistic/eol-last": [
         "error",
       ],
@@ -273,6 +277,11 @@ export default tseslint.config(
       ],
       "@typescript-eslint/strict-boolean-expressions": [
         "error",
+        {
+          "allowNullableObject": false,
+          "allowNumber": false,
+          "allowString": false,
+        },
       ],
       "@typescript-eslint/typedef": [
         "error",
@@ -282,6 +291,12 @@ export default tseslint.config(
         },
       ],
       "complexity": [
+        "error",
+      ],
+      "curly": [
+        "error",
+      ],
+      "eqeqeq": [
         "error",
       ],
       "linebreak-style": [

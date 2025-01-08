@@ -17,32 +17,34 @@ import type {
 } from "../../types";
 
 export class InfoCommand implements Command {
-  public readonly description: string = "View your hand and see game info.";
+  public readonly description = "View your hand and see game info.";
 
-  public readonly isGlobal: boolean = false;
+  public readonly isGlobal = false;
 
-  public readonly isGuild: boolean = true;
+  public readonly isGuild = true;
 
-  public readonly name: string = "info";
+  public readonly name = "info";
 
   public async execute(interaction: DiscordCommandInteraction): Promise<void> {
     const session: SessionState | null = SessionController.loadSession(interaction.channelId);
     if (session === null || session.status !== SessionStatus.ACTIVE) {
       await InteractionController.informNoGame(interaction);
-    } else {
-      const player: PlayerState | null = SessionController.getSessionPlayerById(
-        session,
-        interaction.user.id,
-      );
-      if (player === null) {
-        await InteractionController.informNotPlaying(interaction);
-      } else {
-        await InteractionController.informPlayerInfo(
-          session,
-          player,
-          interaction,
-        );
-      }
+      return;
     }
+
+    const player: PlayerState | null = SessionController.getSessionPlayerById(
+      session,
+      interaction.user.id,
+    );
+    if (player === null) {
+      await InteractionController.informNotPlaying(interaction);
+      return;
+    }
+
+    await InteractionController.informPlayerInfo(
+      session,
+      player,
+      interaction,
+    );
   }
 }

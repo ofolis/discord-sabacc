@@ -9,23 +9,23 @@ import type {
 export class Environment {
   private static _config: Config | null = null;
 
-  private static envLoaded = false;
-
-  private static getEnvVariable(
-    key: string,
-  ): string {
-    if (!this.envLoaded) {
+  private static loadEnv(): void {
+    if (this._config === null) {
       dotenv.config();
-      this.envLoaded = true;
     }
-    if (typeof process.env[key] !== "string") {
+  }
+
+  private static getEnvVariable(key: string): string {
+    this.loadEnv();
+    const value: string | undefined = process.env[key];
+    if (value === undefined) {
       Log.throw(
         "Cannot get environment variable. Requested key was not defined.",
         key,
         process.env,
       );
     }
-    return process.env[key];
+    return value;
   }
 
   public static get config(): Config {
@@ -39,8 +39,6 @@ export class Environment {
   }
 
   public static get dataPath(): string {
-    const currentDirectoryPath: string = process.cwd();
-    const dataDirectoryName: string = "data";
-    return `${currentDirectoryPath}/${dataDirectoryName}`;
+    return `${process.cwd()}/data`;
   }
 }

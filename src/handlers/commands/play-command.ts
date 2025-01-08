@@ -28,13 +28,13 @@ import type {
 } from "../../types";
 
 export class PlayCommand implements Command {
-  public readonly description: string = "Play your turn.";
+  public readonly description = "Play your turn.";
 
-  public readonly isGlobal: boolean = false;
+  public readonly isGlobal = false;
 
-  public readonly isGuild: boolean = true;
+  public readonly isGuild = true;
 
-  public readonly name: string = "play";
+  public readonly name = "play";
 
   private static async handleDrawAction(
     currentInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
@@ -48,7 +48,7 @@ export class PlayCommand implements Command {
       );
     }
     if (player.currentTurnRecord.drawnCard === null) {
-      const drawSourceResponse: [DiscordMessageComponentInteraction, Exclude<PlayerCardSource, PlayerCardSource.DEALT>] | null = await InteractionController.promptChooseDrawSource(
+      const drawSourceResponse: [DiscordButtonInteraction, Exclude<PlayerCardSource, PlayerCardSource.DEALT>] | null = await InteractionController.promptChooseDrawSource(
         session,
         player,
         currentInteraction,
@@ -60,14 +60,13 @@ export class PlayCommand implements Command {
           null,
         );
         return currentInteraction;
-      } else {
-        currentInteraction = drawSourceResponse[0];
-        GameController.drawPlayerCard(
-          session,
-          player,
-          drawSourceResponse[1],
-        );
       }
+      currentInteraction = drawSourceResponse[0];
+      GameController.drawPlayerCard(
+        session,
+        player,
+        drawSourceResponse[1],
+      );
     }
     if (player.currentTurnRecord.drawnCard === null) {
       Log.throw(
@@ -86,9 +85,7 @@ export class PlayCommand implements Command {
       player,
       currentInteraction,
     );
-    if (discardCardResponse === null) {
-      return currentInteraction;
-    } else {
+    if (discardCardResponse !== null) {
       currentInteraction = discardCardResponse[0];
       GameController.discardPlayerCard(
         session,
@@ -112,14 +109,13 @@ export class PlayCommand implements Command {
       );
       if (turnActionResponse === null) {
         return currentInteraction;
-      } else {
-        currentInteraction = turnActionResponse[0];
-        GameController.setPlayerTurnAction(
-          session,
-          player,
-          turnActionResponse[1],
-        );
       }
+      currentInteraction = turnActionResponse[0];
+      GameController.setPlayerTurnAction(
+        session,
+        player,
+        turnActionResponse[1],
+      );
     }
     if (player.currentTurnRecord === null || player.currentTurnRecord.action === TurnAction.REVEAL || player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
       Log.throw(
@@ -165,14 +161,13 @@ export class PlayCommand implements Command {
       );
       if (rollResponse === null) {
         return currentInteraction;
-      } else {
-        currentInteraction = rollResponse;
-        GameController.generatePlayerCardDieRollValues(
-          session,
-          player,
-          playerCard,
-        );
       }
+      currentInteraction = rollResponse;
+      GameController.generatePlayerCardDieRollValues(
+        session,
+        player,
+        playerCard,
+      );
     }
     if (playerCard.dieRollValues.length !== 2) {
       Log.throw(
@@ -185,9 +180,7 @@ export class PlayCommand implements Command {
       playerCard,
       currentInteraction,
     );
-    if (dieChoiceResponse === null) {
-      return currentInteraction;
-    } else {
+    if (dieChoiceResponse !== null) {
       currentInteraction = dieChoiceResponse[0];
       GameController.setPlayerCardDieRollValue(
         session,
@@ -213,19 +206,16 @@ export class PlayCommand implements Command {
     const bloodPlayerCard: PlayerCard = player.currentBloodCards[0];
     const sandPlayerCard: PlayerCard = player.currentSandCards[0];
     if (player.currentTurnRecord === null) {
-      const revealCardsResponse: DiscordButtonInteraction | null = await InteractionController.promptRevealCards(
-        currentInteraction,
-      );
+      const revealCardsResponse: DiscordButtonInteraction | null = await InteractionController.promptRevealCards(currentInteraction);
       if (revealCardsResponse === null) {
         return currentInteraction;
-      } else {
-        currentInteraction = revealCardsResponse;
-        GameController.setPlayerTurnAction(
-          session,
-          player,
-          TurnAction.REVEAL,
-        );
       }
+      currentInteraction = revealCardsResponse;
+      GameController.setPlayerTurnAction(
+        session,
+        player,
+        TurnAction.REVEAL,
+      );
     }
     if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.REVEAL || player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
       Log.throw(
@@ -280,40 +270,44 @@ export class PlayCommand implements Command {
     const session: SessionState | null = SessionController.loadSession(interaction.channelId);
     if (session === null || session.status !== SessionStatus.ACTIVE) {
       await InteractionController.informNoGame(interaction);
-    } else {
-      const player: PlayerState | null = SessionController.getSessionPlayerById(
+      return;
+    }
+
+    const player: PlayerState | null = SessionController.getSessionPlayerById(
+      session,
+      interaction.user.id,
+    );
+    if (player === null) {
+      await InteractionController.informNotPlaying(interaction);
+      return;
+    }
+
+    if (session.players[session.currentPlayerIndex].id !== interaction.user.id) {
+      await InteractionController.informNotTurn(
         session,
-        interaction.user.id,
+        interaction,
       );
-      if (player === null) {
-        await InteractionController.informNotPlaying(interaction);
-      } else {
-        if (session.players[session.currentPlayerIndex].id === interaction.user.id) {
-          let currentInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction = interaction;
-          if (session.currentRoundIndex < 3) {
-            currentInteraction = await PlayCommand.handleGameRound(
-              interaction,
-              session,
-              player,
-            );
-          } else {
-            currentInteraction = await PlayCommand.handleScoringRound(
-              interaction,
-              session,
-              player,
-            );
-          }
-          if (player.currentTurnRecord !== null && player.currentTurnRecord.status === TurnStatus.COMPLETED) {
-            await GameController.endTurn(session);
-            await InteractionController.informTurnEnded(currentInteraction);
-          }
-        } else {
-          await InteractionController.informNotTurn(
-            session,
-            interaction,
-          );
-        }
-      }
+      return;
+    }
+
+    let currentInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction = interaction;
+    if (session.currentRoundIndex < 3) {
+      currentInteraction = await PlayCommand.handleGameRound(
+        interaction,
+        session,
+        player,
+      );
+    } else {
+      currentInteraction = await PlayCommand.handleScoringRound(
+        interaction,
+        session,
+        player,
+      );
+    }
+
+    if (player.currentTurnRecord !== null && player.currentTurnRecord.status === TurnStatus.COMPLETED) {
+      await GameController.endTurn(session);
+      await InteractionController.informTurnEnded(currentInteraction);
     }
   }
 }

@@ -75,7 +75,7 @@ function initializeApp(): void {
         "channelId": interaction.channelId,
         "command": interaction.commandName,
         "createdAt": interaction.createdAt.toUTCString(),
-        "guild": interaction.guild ? {
+        "guild": interaction.guild !== null ? {
           "id": interaction.guild.id,
           "name": interaction.guild.name,
         } : null,

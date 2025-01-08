@@ -172,8 +172,12 @@ export class GameController {
     a: Pick<HandResult, "cardDifference" | "lowestCardValue">,
     b: Pick<HandResult, "cardDifference" | "lowestCardValue">,
   ): number {
-    // Sort by card difference, then by lowest card value
-    return a.cardDifference - b.cardDifference || a.lowestCardValue - b.lowestCardValue;
+    const cardDifference: number = a.cardDifference - b.cardDifference;
+    if (cardDifference !== 0) {
+      return cardDifference;
+    }
+    const valueDifference: number = a.lowestCardValue - b.lowestCardValue;
+    return valueDifference;
   }
 
   private static iterateStartingPlayer(

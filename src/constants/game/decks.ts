@@ -6,240 +6,125 @@ import {
   Card,
 } from "../../types";
 
-const bloodDeck: Card[] = [
+const createDeck: (suit: CardSuit) => Card[] = (suit: CardSuit): Card[] => [
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.SYLOP,
     "value": 0,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.IMPOSTER,
     "value": 0,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.IMPOSTER,
     "value": 0,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.IMPOSTER,
     "value": 0,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 1,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 1,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 1,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 2,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 2,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 2,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 3,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 3,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 3,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 4,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 4,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 4,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 5,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 5,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 5,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 6,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 6,
   },
   {
-    "suit": CardSuit.BLOOD,
+    suit,
     "type": CardType.NUMBER,
     "value": 6,
   },
 ];
 
-const sandDeck: Card[] = [
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.SYLOP,
-    "value": 0,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.IMPOSTER,
-    "value": 0,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.IMPOSTER,
-    "value": 0,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.IMPOSTER,
-    "value": 0,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 1,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 1,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 1,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 2,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 2,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 2,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 3,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 3,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 3,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 4,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 4,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 4,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 5,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 5,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 5,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 6,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 6,
-  },
-  {
-    "suit": CardSuit.SAND,
-    "type": CardType.NUMBER,
-    "value": 6,
-  },
-];
+const bloodDeck: Card[] = createDeck(CardSuit.BLOOD);
+const sandDeck: Card[] = createDeck(CardSuit.SAND);
 
-export function createBloodDeck(): Card[] {
-  return [
-    ...bloodDeck,
-  ]; // Return a fresh copy of the blood deck
-};
-
-export function createSandDeck(): Card[] {
-  return [
-    ...sandDeck,
-  ]; // Return a fresh copy of the sand deck
-};
+export const createBloodDeck: () => Card[] = (): Card[] => [
+  ...bloodDeck,
+]; // Return a fresh copy of the blood deck
+export const createSandDeck: () => Card[] = (): Card[] => [
+  ...sandDeck,
+]; // Return a fresh copy of the sand deck

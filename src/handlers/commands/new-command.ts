@@ -20,18 +20,19 @@ import type {
 } from "../../types";
 
 export class NewCommand implements Command {
-  public readonly description: string = "Start a new game.";
+  public readonly description = "Start a new game.";
 
-  public readonly isGlobal: boolean = false;
+  public readonly isGlobal = false;
 
-  public readonly isGuild: boolean = true;
+  public readonly isGuild = true;
 
-  public readonly name: string = "new";
+  public readonly name = "new";
 
   public async execute(interaction: DiscordCommandInteraction): Promise<void> {
     const session: SessionState | null = SessionController.loadSession(interaction.channelId);
     let currentInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction = interaction;
     let createSession: boolean = false;
+
     if (session === null || session.status === SessionStatus.COMPLETED) {
       createSession = true;
     } else {
@@ -41,6 +42,7 @@ export class NewCommand implements Command {
         createSession = true;
       }
     }
+
     if (createSession) {
       await InteractionController.informStartingGame(currentInteraction);
       const newGameMembersResponse: DiscordUser[] | null = await InteractionController.promptNewGameMembers(
@@ -48,12 +50,12 @@ export class NewCommand implements Command {
         interaction.user,
       );
       if (newGameMembersResponse !== null) {
-        const session: SessionState = SessionController.createSession(
+        const newSession: SessionState = SessionController.createSession(
           interaction.channelId,
           newGameMembersResponse,
           6,
         );
-        await GameController.startGame(session);
+        await GameController.startGame(newSession);
       }
     }
   }

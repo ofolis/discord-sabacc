@@ -1,4 +1,3 @@
-export * from "./commands";
 export * from "./game";
 export type {
   Config,
