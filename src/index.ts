@@ -23,13 +23,13 @@ const commands: Command[] = [
 ];
 
 function initializeApp(): void {
+  Log.info("Discord bot is initializing...");
   Discord.client.once(
     "ready",
     () => {
-      Log.info("Initializing Discord bot...");
       Discord.deployCommands(commands).then(
         () => {
-          Log.info("Discord bot is ready.");
+          Log.success("Discord bot is ready.");
         },
         (reason: unknown) => {
           Log.error(
@@ -43,7 +43,6 @@ function initializeApp(): void {
   Discord.client.on(
     "guildCreate",
     (guild) => {
-      Log.info(`Initializing guild ${guild.id}...`);
       Discord.deployCommands(
         commands,
         [
@@ -51,12 +50,16 @@ function initializeApp(): void {
         ],
       ).then(
         () => {
-          Log.info(`Guild ${guild.id} is ready.`);
+          Log.success(
+            "Discord bot deployed to new guild.",
+            guild,
+          );
         },
         (reason: unknown) => {
           Log.error(
-            `Failed to initialize guild ${guild.id}.`,
+            "Failed to deploy Discord bot on new guild.",
             reason,
+            guild,
           );
         },
       );
@@ -68,7 +71,7 @@ function initializeApp(): void {
       if (!interaction.isCommand()) {
         return;
       }
-      const interactionLog: Record<string, unknown> = {
+      const interactionInfo: Record<string, unknown> = {
         "channelId": interaction.channelId,
         "command": interaction.commandName,
         "createdAt": interaction.createdAt.toUTCString(),
@@ -86,23 +89,27 @@ function initializeApp(): void {
       };
       Log.info(
         `New interaction ${interaction.id}.`,
-        interactionLog,
+        interactionInfo,
       );
       try {
         const interactionCommand: Command | undefined = commands.find(command => command.name === interaction.commandName);
         if (interactionCommand === undefined) {
           Log.throw(
-            `Unknown command "${interaction.commandName}".`,
+            "Cannot handle interaction. Unknown command was provided.",
             interaction,
           );
         }
-        interactionCommand.execute(interaction).catch((reason: unknown) => {
-          Log.throw(
-            reason,
-            interaction,
-          );
-        });
-        Log.info(`Completed interaction ${interaction.id}.`);
+        interactionCommand.execute(interaction).then(
+          () => {
+            Log.success(`Completed interaction ${interaction.id}.`);
+          },
+          (reason: unknown) => {
+            Log.throw(
+              reason,
+              interaction,
+            );
+          },
+        );
       } catch (reason: unknown) {
         Log.error(
           `Failed to handle interaction ${interaction.id}.`,
@@ -114,7 +121,7 @@ function initializeApp(): void {
   );
   Discord.client.login(Environment.config.discordBotToken).catch((reason: unknown) => {
     Log.error(
-      "Failed to log in.",
+      "Failed to log into Discord.",
       reason,
     );
   });

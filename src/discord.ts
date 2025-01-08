@@ -63,7 +63,7 @@ export class Discord {
     buttonMap: Record<string, ButtonBuilder>,
   ): ActionRowBuilder<ButtonBuilder> {
     if (Object.keys(buttonMap).length === 0) {
-      Log.throw("Button map contained no entries.");
+      Log.throw("Cannot create Discord action row. Button map contained no entries.");
     }
     const buttonRow: ActionRowBuilder<ButtonBuilder> = new ActionRowBuilder<ButtonBuilder>();
     for (const customId in buttonMap) {
@@ -101,7 +101,6 @@ export class Discord {
       "command": Command;
     }>,
   ): Promise<void> {
-    Log.info("Deploying global commands...");
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
       .filter((value) => value.command.isGlobal)
       .map((value) => value.builder);
@@ -111,7 +110,6 @@ export class Discord {
         "body": commandBuilders,
       },
     );
-    Log.info("Successfully deployed global commands.");
   }
 
   private static async deployGuildCommands(
@@ -122,7 +120,6 @@ export class Discord {
     }>,
     guildIds: string[],
   ): Promise<void> {
-    Log.info("Deploying guild commands...");
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
       .filter((value) => value.command.isGuild)
       .map((value) => value.builder);
@@ -136,7 +133,6 @@ export class Discord {
       },
     ));
     await Promise.all(promises);
-    Log.info("Successfully deployed guild commands.");
   }
 
   private static getChannel(
@@ -144,11 +140,14 @@ export class Discord {
   ): TextChannel {
     const channel: Channel | undefined = Discord.client.channels.cache.get(channelId);
     if (channel === undefined) {
-      Log.throw(`Channel ${channelId} was not found in the channel cache.`);
+      Log.throw(
+        "Cannot get Discord channel. ID was not found in the channel cache.",
+        channelId,
+      );
     }
     if (channel.type !== ChannelType.GuildText) {
       Log.throw(
-        `Channel ${channelId} was not a guild text channel.`,
+        "Cannot get Discord channel. Channel at ID was not a guild text channel.",
         channel,
       );
     }
@@ -174,7 +173,10 @@ export class Discord {
     }> = {};
     for (const command of commandList) {
       if (command.name in commandMap) {
-        Log.throw("Command names are not unique.");
+        Log.throw(
+          "Cannot deploy commands. Command names are not unique.",
+          commandMap,
+        );
       }
       commandMap[command.name] = {
         "builder": new SlashCommandBuilder().setName(command.name).setDescription(command.description),

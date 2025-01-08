@@ -97,14 +97,14 @@ export class SessionController {
   ): void {
     if (!player.currentBloodCards.includes(playerCard) && !player.currentSandCards.includes(playerCard)) {
       Log.throw(
-        "Player does not contain card.",
+        "Player card validation failed. Player does not contain the card.",
         player,
         playerCard,
       );
     }
     if (playerCard.card.suit === CardSuit.BLOOD && player.currentSandCards.includes(playerCard) || playerCard.card.suit === CardSuit.SAND && player.currentBloodCards.includes(playerCard)) {
       Log.throw(
-        "Player card is in the wrong set.",
+        "Player card validation failed. The card is in the wrong set.",
         player,
         playerCard,
       );
@@ -116,20 +116,20 @@ export class SessionController {
   ): void {
     if (player.currentBloodCards.length === 0) {
       Log.throw(
-        "Player did not contain any blood cards.",
+        "Player card sets validation failed. Player did not contain any blood cards.",
         player,
       );
     }
     if (player.currentSandCards.length === 0) {
       Log.throw(
-        "Player did not contain any sand cards.",
+        "Player card sets validation failed. Player did not contain any sand cards.",
         player,
       );
     }
     for (const playerCard of player.currentBloodCards) {
       if (playerCard.card.suit !== CardSuit.BLOOD) {
         Log.throw(
-          "Player blood card set contained a non-blood card.",
+          "Player card sets validation failed. Blood card set contained a non-blood card.",
           player,
         );
       }
@@ -137,7 +137,7 @@ export class SessionController {
     for (const playerCard of player.currentSandCards) {
       if (playerCard.card.suit !== CardSuit.SAND) {
         Log.throw(
-          "Player sand card set contained a non-sand card.",
+          "Player card sets validation failed. Sand card set contained a non-sand card.",
           player,
         );
       }
@@ -150,7 +150,7 @@ export class SessionController {
   ): void {
     if (!session.players.includes(player)) {
       Log.throw(
-        "Session does not contain player.",
+        "Session player validation failed. Session does not contain the player.",
         session,
         player,
       );

@@ -41,7 +41,7 @@ export class InteractionController {
         return "🟨";
       default:
         Log.throw(
-          "Unknown card suit.",
+          "Cannot format card suit icon. Unknown card suit.",
           cardSuit,
         );
     }
@@ -69,14 +69,14 @@ export class InteractionController {
         break;
       default:
         Log.throw(
-          "Unknown card type.",
+          "Cannot format card string. Unknown card type.",
           card,
         );
     }
     if (playerCard !== null && card.type === CardType.IMPOSTER && playerCard.dieRollValues.length > 0) {
       if (playerCard.dieRollValues.length !== 1) {
         Log.throw(
-          "Imposter card did not have exactly one die roll value.",
+          "Cannot format card string. Imposter player card did not have exactly one die roll value.",
           playerCard,
         );
       }
@@ -179,14 +179,14 @@ export class InteractionController {
     const activePlayers: PlayerState[] = session.players.filter((player) => !player.isEliminated);
     if (activePlayers.length !== 1) {
       Log.throw(
-        "Game ended without exactly one remaining player.",
+        "Cannot announce game ended. There is more than one remaining player.",
         session.players,
       );
     }
     const contentLines: string[] = [
       "# Ended Game",
-      `After ${(session.currentRoundIndex + 1).toString()} rounds, the game is over!`,
-      `${this.formatPlayerNameString(activePlayers[0])} (${this.formatPlayerTagString(activePlayers[0])}) wins! 🎉`,
+      `After ${(session.currentRoundIndex + 1).toString()} round${session.currentRoundIndex === 0 ? "" : "s"}, the game is over!`,
+      `## ${this.formatPlayerNameString(activePlayers[0])} (${this.formatPlayerTagString(activePlayers[0])}) wins! 🎉`,
     ];
     await Discord.sendMessage(
       session.channelId,
@@ -208,7 +208,7 @@ export class InteractionController {
   ): Promise<void> {
     if (session.handResults.length < session.currentHandIndex + 1) {
       Log.throw(
-        "Results do not exist for current hand.",
+        "Cannot announce hand ended. Results do not exist for the current hand.",
         session,
       );
     }
@@ -298,7 +298,7 @@ export class InteractionController {
     const player: PlayerState = session.players[(session.currentPlayerIndex === 0 ? session.players.length : session.currentPlayerIndex) - 1];
     if (player.currentTurnRecord === null) {
       Log.throw(
-        "Player did not contain a turn record.",
+        "Cannot announce turn ended. Player did not contain a turn record.",
         player,
       );
     }
@@ -308,13 +308,13 @@ export class InteractionController {
       case TurnAction.DRAW:
         if (player.currentTurnRecord.drawnCard === null) {
           Log.throw(
-            "Player turn record did not contain a drawn card.",
+            "Cannot announce turn ended. Player turn record did not contain a drawn card.",
             player.currentTurnRecord,
           );
         }
         if (player.currentTurnRecord.discardedCard === null) {
           Log.throw(
-            "Player turn record did not contain a discarded card.",
+            "Cannot announce turn ended. Player turn record did not contain a discarded card.",
             player.currentTurnRecord,
           );
         }
@@ -325,7 +325,7 @@ export class InteractionController {
           contentLines.push(`\`${this.formatCardString(player.currentTurnRecord.drawnCard.card)}\` was drawn from the \`${this.formatCardSuitIcon(player.currentTurnRecord.drawnCard.card.suit)}\` discard and \`${this.formatCardString(player.currentTurnRecord.discardedCard.card)}\` was discarded.`);
         } else {
           Log.throw(
-            "Unknown draw source.",
+            "Cannot announce turn ended. Unknown draw source.",
             player.currentTurnRecord.drawnCard.source,
           );
         }
@@ -345,7 +345,7 @@ export class InteractionController {
         break;
       default:
         Log.throw(
-          "Unknown turn action.",
+          "Cannot announce turn ended. Unknown turn action.",
           player.currentTurnRecord,
         );
     }
@@ -499,7 +499,7 @@ export class InteractionController {
       playerCardSet = player.currentSandCards;
     } else {
       Log.throw(
-        "Player does not require a discard.",
+        "Cannot prompt choose discard card. Player does not require a discard.",
         player,
       );
     }
@@ -531,7 +531,7 @@ export class InteractionController {
     } else {
       if (!(buttonInteraction.customId in discardMap)) {
         Log.throw(
-          "Requested discard was not mapped correctly.",
+          "Cannot prompt choose discard card. Requested discard was not mapped correctly.",
           buttonInteraction.customId,
           discardMap,
         );
@@ -634,7 +634,7 @@ export class InteractionController {
           return null;
         default:
           Log.throw(
-            "Unknown response ID.",
+            "Cannot resolve choose draw source prompt. Unknown button interaction response ID.",
             buttonInteraction.customId,
           );
       }
@@ -642,14 +642,15 @@ export class InteractionController {
   }
 
   public static async promptChooseImposterDie(
+    player: PlayerState,
     playerCard: PlayerCard,
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<[DiscordButtonInteraction, number] | null> {
     if (playerCard.card.type !== CardType.IMPOSTER) {
-      Log.throw("Attempted set die value on a non-imposter card.");
+      Log.throw("Cannot prompt choose imposter die. Card is not an imposter card.");
     }
     if (playerCard.dieRollValues.length !== 2) {
-      Log.throw("Imposter player card does not contain exactly two die roll values.");
+      Log.throw("Cannot prompt choose imposter die. Imposter player card does not contain exactly two die roll values.");
     }
     const buttonMap: Record<string, DiscordButtonBuilder> = {
       "firstDie": new DiscordButtonBuilder()
@@ -662,6 +663,7 @@ export class InteractionController {
     const contentLines: string[] = [
       "### Choose Die Result",
       `Choose the die value that you want to use for your \`${this.formatCardString(playerCard.card)}\` card.`,
+      `## \`${this.formatCardString(player.currentSandCards[0])}\` \`${this.formatCardString(player.currentBloodCards[0])}\``,
     ];
     const interactionResponse: DiscordInteractionResponse = await Discord.sendPersistentInteractionResponse(
       discordInteraction,
@@ -694,7 +696,7 @@ export class InteractionController {
           ];
         default:
           Log.throw(
-            "Unknown response ID.",
+            "Cannot resolve choose imposter die prompt. Unknown button interaction response ID.",
             buttonInteraction.customId,
           );
       }
@@ -771,7 +773,7 @@ export class InteractionController {
           return null;
         default:
           Log.throw(
-            "Unknown response ID.",
+            "Cannot resolve choose turn action prompt. Unknown button interaction response ID.",
             buttonInteraction.customId,
           );
       }
@@ -818,7 +820,7 @@ export class InteractionController {
           return null;
         default:
           Log.throw(
-            "Unknown response ID.",
+            "Cannot resolve end current game prompt. Unknown button interaction response ID.",
             buttonInteraction.customId,
           );
       }
@@ -847,7 +849,7 @@ export class InteractionController {
     };
     const baseContentLines: string[] = [
       "# New Game",
-      `${this.formatChannelTagString()} a new game was started by ${this.formatPlayerNameString(startingDiscordUser)}.`,
+      `Hey ${this.formatChannelTagString()}! A new game was started by ${this.formatPlayerNameString(startingDiscordUser)}.`,
       "### Players",
       discordUserList.map(discordUser => `- ${this.formatPlayerNameString(discordUser)} (${this.formatPlayerTagString(discordUser)})`).join("\n"),
     ];
@@ -916,7 +918,7 @@ export class InteractionController {
         }
         default:
           Log.throw(
-            "Unknown response ID.",
+            "Cannot resolve new game member prompt. Unknown button interaction response ID.",
             buttonInteraction.customId,
           );
       }
@@ -963,7 +965,7 @@ export class InteractionController {
           return null;
         default:
           Log.throw(
-            "Unknown response ID.",
+            "Cannot resolve reveal cards prompt. Unknown button interaction response ID.",
             buttonInteraction.customId,
           );
       }
@@ -971,18 +973,19 @@ export class InteractionController {
   }
 
   public static async promptRollForImposter(
+    player: PlayerState,
     playerCard: PlayerCard,
     discordInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction,
   ): Promise<DiscordButtonInteraction | null> {
     if (playerCard.card.type !== CardType.IMPOSTER) {
       Log.throw(
-        "Attempted to roll for a non-imposter card.",
+        "Cannot prompt roll for imposter. Card is not an imposter card.",
         playerCard,
       );
     }
     if (playerCard.dieRollValues.length > 0) {
       Log.throw(
-        "Imposter player card already has one or more die roll values.",
+        "Cannot prompt roll for imposter. Player card already has one or more die roll values.",
         playerCard,
       );
     }
@@ -997,6 +1000,7 @@ export class InteractionController {
     const contentLines: string[] = [
       "### Roll For Imposter",
       `Roll the dice to get a value for your \`${this.formatCardString(playerCard.card)}\` card.`,
+      `## \`${this.formatCardString(player.currentSandCards[0])}\` \`${this.formatCardString(player.currentBloodCards[0])}\``,
     ];
     const interactionResponse: DiscordInteractionResponse = await Discord.sendPersistentInteractionResponse(
       discordInteraction,
@@ -1024,7 +1028,7 @@ export class InteractionController {
           return null;
         default:
           Log.throw(
-            "Unknown response ID.",
+            "Cannot resolve roll for imposter prompt. Unknown button interaction response ID.",
             buttonInteraction.customId,
           );
       }

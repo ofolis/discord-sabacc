@@ -17,9 +17,9 @@ export class Utils {
   }
 
   public static linesToString(
-    lines: string[],
+    lines: (string | null)[],
   ): string {
-    return lines.join("\n");
+    return lines.filter(x => x !== null).join("\n");
   }
 
   public static removeTopArrayItem<T>(
@@ -27,7 +27,7 @@ export class Utils {
   ): T {
     const topItem: T | undefined = array.shift();
     if (topItem === undefined) {
-      Log.throw("Cannot remove item from empty array.");
+      Log.throw("Cannot remove an item from an empty array.");
     }
     return topItem;
   }

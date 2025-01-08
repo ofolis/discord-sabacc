@@ -46,15 +46,9 @@ export class GameController {
     for (const player of session.players) {
       if (!player.isEliminated) {
         SessionController.validatePlayerCardSets(player);
-        if (player.currentBloodCards.length > 1) {
+        if (player.currentBloodCards.length > 1 || player.currentSandCards.length > 1) {
           Log.throw(
-            "Player ended the round with more than one blood card.",
-            player,
-          );
-        }
-        if (player.currentSandCards.length > 1) {
-          Log.throw(
-            "Player ended the round with more than one sand card.",
+            "Cannot end hand. A player ended the round without exactly one card from each suit.",
             player,
           );
         }
@@ -167,18 +161,13 @@ export class GameController {
 
   private static getFinalCardValue(
     primaryPlayerCard: PlayerCard,
-    secondaryPlayerCard: PlayerCard,
+    secondaryPlayerCard: PlayerCard | null = null,
   ): number {
     switch (primaryPlayerCard.card.type) {
       case CardType.IMPOSTER:
-        if (primaryPlayerCard.dieRollValues.length === 0) {
+        if (primaryPlayerCard.dieRollValues.length !== 1) {
           Log.throw(
-            "Primary imposter player card does not contain any die roll values.",
-            primaryPlayerCard,
-          );
-        } else if (primaryPlayerCard.dieRollValues.length > 1) {
-          Log.throw(
-            "Primary imposter player card contains more than one die roll value.",
+            "Cannot get final card value. Imposter player card does not contain exactly one die roll value.",
             primaryPlayerCard,
           );
         }
@@ -186,35 +175,14 @@ export class GameController {
       case CardType.NUMBER:
         return primaryPlayerCard.card.value;
       case CardType.SYLOP:
-        switch (secondaryPlayerCard.card.type) {
-          case CardType.IMPOSTER:
-            if (secondaryPlayerCard.dieRollValues.length === 0) {
-              Log.throw(
-                "Secondary imposter player card does not contain any die roll values.",
-                secondaryPlayerCard,
-              );
-            } else if (secondaryPlayerCard.dieRollValues.length > 1) {
-              Log.throw(
-                "Secondary imposter player card contains more than one die roll value.",
-                secondaryPlayerCard,
-              );
-            }
-            return secondaryPlayerCard.dieRollValues[0];
-          case CardType.NUMBER:
-            return secondaryPlayerCard.card.value;
-          case CardType.SYLOP:
-            return 0;
-          default:
-            Log.throw(
-              "Unknown secondary player card type.",
-              secondaryPlayerCard,
-            );
+        if (secondaryPlayerCard === null) {
+          return 0;
+        } else {
+          return this.getFinalCardValue(secondaryPlayerCard);
         }
-      // TODO: fix this, why is it flagging this?
-      // eslint-disable-next-line no-fallthrough
       default:
         Log.throw(
-          "Unknown primary player card type.",
+          "Cannot get final card value. Unknown player card type.",
           primaryPlayerCard,
         );
     }
@@ -303,59 +271,33 @@ export class GameController {
       player,
       playerCard,
     );
-    if (player.currentTurnRecord === null) {
+    if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.DRAW || player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
       Log.throw(
-        "Player turn record does not exist.",
-        player,
-      );
-    }
-    if (player.currentTurnRecord.action !== TurnAction.DRAW) {
-      Log.throw(
-        "Player turn action is not draw.",
-        player.currentTurnRecord,
-      );
-    }
-    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
-      Log.throw(
-        "Player turn record is not active.",
+        "Cannot discard player card. Player turn record is invalid.",
         player.currentTurnRecord,
       );
     }
     if (player.currentTurnRecord.discardedCard !== null) {
       Log.throw(
-        "Player already had a discarded card.",
+        "Cannot discard player card. Player turn record already contains a discarded card.",
         player.currentTurnRecord,
       );
     }
-    const bloodDiscardIsValid: boolean = player.currentBloodCards.length > 1;
-    const sandDiscardIsValid: boolean = player.currentSandCards.length > 1;
-    if (!bloodDiscardIsValid && !sandDiscardIsValid) {
+    const playerCardSet: PlayerCard[] = playerCard.card.suit === CardSuit.BLOOD ? player.currentBloodCards : player.currentSandCards;
+    if (playerCardSet.length <= 1) {
       Log.throw(
-        "Player does not have a pending discard.",
+        "Cannot discard player card. Associated player card set does not contain enough cards.",
         player,
       );
     }
-    if (playerCard.card.suit === CardSuit.BLOOD && !bloodDiscardIsValid) {
-      Log.throw(
-        "Player blood discard is invalid.",
-        playerCard,
-      );
-    }
-    if (playerCard.card.suit === CardSuit.SAND && !sandDiscardIsValid) {
-      Log.throw(
-        "Player sand discard is invalid.",
-        playerCard,
-      );
-    }
-    const playerCardSet: PlayerCard[] = playerCard.card.suit === CardSuit.BLOOD ? player.currentBloodCards : player.currentSandCards;
-    const discardSet: Card[] = playerCard.card.suit === CardSuit.BLOOD ? session.bloodDiscard : session.sandDiscard;
     const playerCardIndex: number = playerCardSet.indexOf(playerCard);
     if (playerCardIndex === -1) {
       Log.throw(
-        "Player card was validated but did not exist in set.",
+        "Cannot discard player card. Player card does not exist in associated player card set.",
         playerCard,
       );
     }
+    const discardSet: Card[] = playerCard.card.suit === CardSuit.BLOOD ? session.bloodDiscard : session.sandDiscard;
     playerCardSet.splice(
       playerCardIndex,
       1,
@@ -375,33 +317,21 @@ export class GameController {
       session,
       player,
     );
-    if (player.currentTurnRecord === null) {
+    if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.DRAW || player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
       Log.throw(
-        "Player turn record does not exist.",
-        player,
-      );
-    }
-    if (player.currentTurnRecord.action !== TurnAction.DRAW) {
-      Log.throw(
-        "Player turn action is not draw.",
-        player.currentTurnRecord,
-      );
-    }
-    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
-      Log.throw(
-        "Player turn record is not active.",
+        "Cannot draw player card. Player turn record is invalid.",
         player.currentTurnRecord,
       );
     }
     if (player.currentTurnRecord.drawnCard !== null) {
       Log.throw(
-        "Player already had a drawn card.",
+        "Cannot draw player card. Player turn record already contains a drawn card.",
         player.currentTurnRecord,
       );
     }
     if (player.currentSpentTokenTotal >= player.currentTokenTotal) {
       Log.throw(
-        "Player does not have tokens to spend.",
+        "Cannot draw player card. Player does not have tokens to spend.",
         player.currentTurnRecord,
       );
     }
@@ -410,50 +340,33 @@ export class GameController {
     let playerCardSet: PlayerCard[];
     switch (drawSource) {
       case PlayerCardSource.BLOOD_DECK:
-        if (session.bloodDeck.length === 0) {
-          Log.throw(
-            "Cannot draw from empty blood deck.",
-            session,
-          );
-        }
         drawSourceSet = session.bloodDeck;
         playerCardSet = player.currentBloodCards;
         break;
       case PlayerCardSource.BLOOD_DISCARD:
-        if (session.bloodDiscard.length === 0) {
-          Log.throw(
-            "Cannot draw from empty blood discard.",
-            session,
-          );
-        }
         drawSourceSet = session.bloodDiscard;
         playerCardSet = player.currentBloodCards;
         break;
       case PlayerCardSource.SAND_DECK:
-        if (session.sandDeck.length === 0) {
-          Log.throw(
-            "Cannot draw from empty sand deck.",
-            session,
-          );
-        }
         drawSourceSet = session.sandDeck;
         playerCardSet = player.currentSandCards;
         break;
       case PlayerCardSource.SAND_DISCARD:
-        if (session.sandDiscard.length === 0) {
-          Log.throw(
-            "Cannot draw from empty sand discard.",
-            session,
-          );
-        }
         drawSourceSet = session.sandDiscard;
         playerCardSet = player.currentSandCards;
         break;
       default:
         Log.throw(
-          "Unknown draw source.",
+          "Cannot draw player card. Unknown draw source.",
           drawSource,
         );
+    }
+    if (drawSourceSet.length === 0) {
+      Log.throw(
+        "Cannot draw player card. Draw source was empty.",
+        drawSource,
+        session,
+      );
     }
     const card: Card = Utils.removeTopArrayItem(drawSourceSet);
     const playerCard: PlayerCard = {
@@ -471,15 +384,9 @@ export class GameController {
     session: SessionState,
   ): Promise<void> {
     const currentPlayer: PlayerState = session.players[session.currentPlayerIndex];
-    if (currentPlayer.currentTurnRecord === null) {
+    if (currentPlayer.currentTurnRecord === null || currentPlayer.currentTurnRecord.status !== TurnStatus.COMPLETED) {
       Log.throw(
-        "Player turn record does not exist.",
-        session,
-      );
-    }
-    if (currentPlayer.currentTurnRecord.status !== TurnStatus.COMPLETED) {
-      Log.throw(
-        "Player turn record is not completed.",
+        "Cannot end turn. Current player turn record is invalid.",
         currentPlayer.currentTurnRecord,
       );
     }
@@ -499,6 +406,24 @@ export class GameController {
     }
   }
 
+  public static finalizePlayerCards(
+    session: SessionState,
+    player: PlayerState,
+  ): void {
+    SessionController.validateSessionPlayer(
+      session,
+      player,
+    );
+    if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.REVEAL || player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
+      Log.throw(
+        "Cannot finalize player cards. Player turn record is invalid.",
+        player.currentTurnRecord,
+      );
+    }
+    player.currentTurnRecord.status = TurnStatus.COMPLETED;
+    SessionController.saveSession(session);
+  }
+
   public static generatePlayerCardDieRollValues(
     session: SessionState,
     player: PlayerState,
@@ -514,7 +439,7 @@ export class GameController {
     );
     if (playerCard.dieRollValues.length !== 0) {
       Log.throw(
-        "Die roll values already exist on player card.",
+        "Cannot generate player card die roll values. Values already exist on player card.",
         playerCard,
       );
     }
@@ -540,7 +465,7 @@ export class GameController {
     );
     if (!playerCard.dieRollValues.includes(dieValue)) {
       Log.throw(
-        "Die roll value does not exist on player card.",
+        "Cannot set player card die roll value. Value does not exist in player card value set.",
         playerCard,
       );
     }
@@ -584,7 +509,7 @@ export class GameController {
         break;
       default:
         Log.throw(
-          "Unknown turn action.",
+          "Cannot set player turn action. Unknown turn action.",
           turnAction,
         );
     }
@@ -599,21 +524,9 @@ export class GameController {
       session,
       player,
     );
-    if (player.currentTurnRecord === null) {
+    if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.STAND || player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
       Log.throw(
-        "Player turn record does not exist.",
-        player,
-      );
-    }
-    if (player.currentTurnRecord.action !== TurnAction.STAND) {
-      Log.throw(
-        "Player turn action is not stand.",
-        player.currentTurnRecord,
-      );
-    }
-    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
-      Log.throw(
-        "Player turn record is not active.",
+        "Cannot stand player. Player turn record is invalid.",
         player.currentTurnRecord,
       );
     }
@@ -627,13 +540,13 @@ export class GameController {
     const random: Random = new Random();
     if (session.status !== SessionStatus.PENDING) {
       Log.throw(
-        "Cannot start game on non-pending session.",
+        "Cannot start game. Session is not currently pending.",
         session,
       );
     }
     if (session.players.length <= 1) {
       Log.throw(
-        "Game did not have enough players to start.",
+        "Cannot start game. Player count is too low.",
         session,
       );
     }
@@ -643,35 +556,5 @@ export class GameController {
     this.shuffleAndDealCards(session);
     SessionController.saveSession(session);
     await this.startTurn(session);
-  }
-
-  public static submitCards(
-    session: SessionState,
-    player: PlayerState,
-  ): void {
-    SessionController.validateSessionPlayer(
-      session,
-      player,
-    );
-    if (player.currentTurnRecord === null) {
-      Log.throw(
-        "Player turn record does not exist.",
-        player,
-      );
-    }
-    if (player.currentTurnRecord.action !== TurnAction.REVEAL) {
-      Log.throw(
-        "Player turn action is not reveal.",
-        player.currentTurnRecord,
-      );
-    }
-    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
-      Log.throw(
-        "Player turn record is not active.",
-        player.currentTurnRecord,
-      );
-    }
-    player.currentTurnRecord.status = TurnStatus.COMPLETED;
-    SessionController.saveSession(session);
   }
 }

@@ -43,7 +43,7 @@ export class PlayCommand implements Command {
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
     if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.DRAW) {
       Log.throw(
-        "There is no draw action current turn record.",
+        "Cannot handle draw action. Player turn record is invalid.",
         player.currentTurnRecord,
       );
     }
@@ -71,13 +71,13 @@ export class PlayCommand implements Command {
     }
     if (player.currentTurnRecord.drawnCard === null) {
       Log.throw(
-        "Current turn record does not contain a drawn card.",
+        "Cannot handle draw action. Player turn record does not contain a drawn card.",
         player.currentTurnRecord,
       );
     }
     if (player.currentTurnRecord.discardedCard !== null) {
       Log.throw(
-        "Current turn record already contains a discarded card.",
+        "Cannot handle draw action. Player turn record already contains a discarded card.",
         player.currentTurnRecord,
       );
     }
@@ -121,22 +121,9 @@ export class PlayCommand implements Command {
         );
       }
     }
-    if (player.currentTurnRecord === null) {
+    if (player.currentTurnRecord === null || player.currentTurnRecord.action === TurnAction.REVEAL || player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
       Log.throw(
-        "There is no current turn record.",
-        player,
-      );
-    }
-    if (player.currentTurnRecord.action === TurnAction.REVEAL) {
-      Log.throw(
-        "Reveal action is not valid in game rounds.",
-        player.currentTurnRecord,
-      );
-    }
-    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
-      // TODO: rewrite/standardize error messages to format "This failed. The reason is this."
-      Log.throw(
-        "Turn actions can only occur on active turns.",
+        "Cannot handle game round. Player turn record is invalid.",
         player.currentTurnRecord,
       );
     }
@@ -157,7 +144,7 @@ export class PlayCommand implements Command {
         break;
       default:
         Log.throw(
-          "Unknown turn action.",
+          "Cannot handle game round. Unknown turn action.",
           player.currentTurnRecord,
         );
     }
@@ -172,6 +159,7 @@ export class PlayCommand implements Command {
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
     if (playerCard.dieRollValues.length === 0) {
       const rollResponse: DiscordButtonInteraction | null = await InteractionController.promptRollForImposter(
+        player,
         playerCard,
         currentInteraction,
       );
@@ -186,19 +174,14 @@ export class PlayCommand implements Command {
         );
       }
     }
-    if (playerCard.dieRollValues.length === 0) {
+    if (playerCard.dieRollValues.length !== 2) {
       Log.throw(
-        "Imposter die roll values have not been generated.",
-        playerCard,
-      );
-    }
-    if (playerCard.dieRollValues.length === 1) {
-      Log.throw(
-        "Imposter die roll values have already been resolved.",
+        "Cannot handle imposter card. Imposter player card does not contain exactly two die roll values.",
         playerCard,
       );
     }
     const dieChoiceResponse: [DiscordButtonInteraction, number] | null = await InteractionController.promptChooseImposterDie(
+      player,
       playerCard,
       currentInteraction,
     );
@@ -223,7 +206,7 @@ export class PlayCommand implements Command {
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
     if (player.currentBloodCards.length !== 1 || player.currentSandCards.length !== 1) {
       Log.throw(
-        "Player does not contain exactly one card of each suit.",
+        "Cannot handle scoring round. Player does not contain exactly one card of each suit.",
         player,
       );
     }
@@ -244,21 +227,9 @@ export class PlayCommand implements Command {
         );
       }
     }
-    if (player.currentTurnRecord === null) {
+    if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.REVEAL || player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
       Log.throw(
-        "There is no current turn record.",
-        player,
-      );
-    }
-    if (player.currentTurnRecord.action !== TurnAction.REVEAL) {
-      Log.throw(
-        "Only reveal actions are allowed in reveal rounds.",
-        player.currentTurnRecord,
-      );
-    }
-    if (player.currentTurnRecord.status !== TurnStatus.ACTIVE) {
-      Log.throw(
-        "Turn actions can only occur on active turns.",
+        "Cannot handle scoring round. Player turn record is invalid.",
         player.currentTurnRecord,
       );
     }
@@ -279,7 +250,7 @@ export class PlayCommand implements Command {
       );
     }
     if ((bloodPlayerCard.card.type !== CardType.IMPOSTER || bloodPlayerCard.dieRollValues.length === 1) && (sandPlayerCard.card.type !== CardType.IMPOSTER || sandPlayerCard.dieRollValues.length === 1)) {
-      GameController.submitCards(
+      GameController.finalizePlayerCards(
         session,
         player,
       );
@@ -294,8 +265,8 @@ export class PlayCommand implements Command {
   ): DiscordCommandInteraction | DiscordMessageComponentInteraction {
     if (player.currentTurnRecord === null || player.currentTurnRecord.action !== TurnAction.STAND) {
       Log.throw(
-        "There is no stand action current turn record.",
-        player,
+        "Cannot handle stand action. Player turn record is invalid.",
+        player.currentTurnRecord,
       );
     }
     GameController.standPlayer(

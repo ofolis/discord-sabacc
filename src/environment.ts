@@ -20,7 +20,8 @@ export class Environment {
     }
     if (typeof process.env[key] !== "string") {
       Log.throw(
-        `Environment variable "${key}" is not defined.`,
+        "Cannot get environment variable. Requested key was not defined.",
+        key,
         process.env,
       );
     }
