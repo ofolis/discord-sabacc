@@ -235,7 +235,7 @@ export class InteractionController {
         }
       }
       const contentLines: string[] = [
-        `- \`#${(handResult.rankIndex + 1).toString()}\` ${player.isEliminated ? `~~**${this.formatPlayerNameString(player)}**~~ \`ELIMINATED\`` : `**${this.formatPlayerNameString(player)}**`}`,
+        `- \`#${(handResult.rankIndex + 1).toString()}\` ${player.isEliminated ? `~~**${this.formatPlayerNameString(player)}**~~ 💀` : `**${this.formatPlayerNameString(player)}**`}`,
         `  - Cards: \`${this.formatCardString(handResult.sandCard)}\` \`${this.formatCardString(handResult.bloodCard)}\`${handResult.cardDifference === 0 ? " _Sabacc!_" : ""}`,
         `  - Tokens: \`${"⚪".repeat(player.currentTokenTotal)}${"🔴".repeat(handResult.tokenLossTotal)}\` (${tokenDetailStrings.join("+")})`,
       ];
@@ -250,7 +250,7 @@ export class InteractionController {
         continue;
       }
       const contentLines: string[] = [
-        `~~${this.formatPlayerNameString(player)}~~ \`ELIMINATED\``,
+        `~~${this.formatPlayerNameString(player)}~~ 💀`,
       ];
       messageLineGroups.push(contentLines);
     }
