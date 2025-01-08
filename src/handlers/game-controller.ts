@@ -90,7 +90,7 @@ export class GameController {
         currentRankIndex++;
       }
       const tokenPenaltyTotal: number = currentRankIndex === 0 ? 0 : isSabacc ? 1 : partialHandResult.cardDifference;
-      const tokenLossTotal: number = partialHandResult.spentTokenTotal + tokenPenaltyTotal;
+      const tokenLossTotal: number = currentRankIndex === 0 ? 0 : partialHandResult.spentTokenTotal + tokenPenaltyTotal;
       return {
         ...partialHandResult,
         "rankIndex": currentRankIndex,
