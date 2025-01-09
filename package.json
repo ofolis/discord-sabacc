@@ -23,6 +23,7 @@
   },
   "main": "dist/index.js",
   "name": "discord-sabacc",
+  "private": true,
   "scripts": {
     "build": "tsup src/index.ts --minify",
     "dev": "tsx watch src/index.ts",
