@@ -19,5 +19,5 @@
     "target": "ESNext",
     "useUnknownInCatchVariables": true
   },
-  "include": ["src/**/*", "eslint.config.mjs"]
+  "include": ["src/**/*", "commitlint.config.js", "eslint.config.mjs"]
 }
