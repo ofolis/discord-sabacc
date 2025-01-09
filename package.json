@@ -21,7 +21,6 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.17.0"
   },
-  "license": "ISC",
   "main": "dist/index.js",
   "name": "discord-sabacc",
   "scripts": {
