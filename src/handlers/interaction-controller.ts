@@ -191,7 +191,7 @@ export class InteractionController {
     }
     const contentLines: string[] = [
       "# Ended Game",
-      `After ${(session.currentRoundIndex + 1).toString()} round${session.currentRoundIndex === 0 ? "" : "s"}, the game is over!`,
+      `After ${(session.currentHandIndex + 1).toString()} hand${session.currentHandIndex === 0 ? "" : "s"}, the game is over!`,
       `## ${this.formatPlayerNameString(activePlayers[0])} (${this.formatPlayerTagString(activePlayers[0])}) wins! 🎉`,
     ];
     await Discord.sendMessage(
