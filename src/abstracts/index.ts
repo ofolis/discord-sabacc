@@ -1,3 +1,1 @@
-export {
-  Command,
-} from "./command";
+export { Command } from "./command";

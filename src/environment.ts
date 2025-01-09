@@ -1,19 +1,9 @@
 import dotenv from "dotenv";
-import {
-  Log,
-} from "./log";
-import type {
-  Config,
-} from "./types";
+import { Log } from "./log";
+import type { Config } from "./types";
 
 export class Environment {
   private static _config: Config | null = null;
-
-  private static loadEnv(): void {
-    if (this._config === null) {
-      dotenv.config();
-    }
-  }
 
   private static getEnvVariable(key: string): string {
     this.loadEnv();
@@ -28,11 +18,17 @@ export class Environment {
     return value;
   }
 
+  private static loadEnv(): void {
+    if (this._config === null) {
+      dotenv.config();
+    }
+  }
+
   public static get config(): Config {
     if (this._config === null) {
       this._config = {
-        "discordApplicationId": this.getEnvVariable("DISCORD_APPLICATION_ID"),
-        "discordBotToken": this.getEnvVariable("DISCORD_BOT_TOKEN"),
+        discordApplicationId: this.getEnvVariable("DISCORD_APPLICATION_ID"),
+        discordBotToken: this.getEnvVariable("DISCORD_BOT_TOKEN"),
       };
     }
     return this._config;

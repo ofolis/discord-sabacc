@@ -1,7 +1,1 @@
-{
-  "overrides": [
-    {
-      "files": "*.json"
-    }
-  ]
-}
+{}

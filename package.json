@@ -7,11 +7,10 @@
   },
   "description": "A Discord bot that allows users to play Kessel Sabacc.",
   "devDependencies": {
-    "@stylistic/eslint-plugin": "^2.11.0",
     "@types/node": "^22.10.1",
     "eslint": "^9.16.0",
-    "eslint-plugin-module-bindings-newline": "^1.0.1",
-    "prettier": "^3.4.1",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "3.4.2",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
@@ -23,8 +22,8 @@
   "scripts": {
     "build": "tsup src/index.ts --minify",
     "dev": "tsx watch src/index.ts",
-    "format": "prettier --write \"**/*.json\"",
-    "lint": "eslint  --fix",
+    "format": "prettier . --write",
+    "lint": "eslint",
     "start": "node ."
   },
   "version": "1.0.0"

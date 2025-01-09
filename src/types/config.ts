@@ -1,4 +1,4 @@
 export type Config = {
-  "discordApplicationId": string;
-  "discordBotToken": string;
+  discordApplicationId: string;
+  discordBotToken: string;
 };

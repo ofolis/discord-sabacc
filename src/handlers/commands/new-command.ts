@@ -1,23 +1,13 @@
-import {
-  GameController,
-  InteractionController,
-  SessionController,
-} from "..";
-import {
-  Command,
-} from "../../abstracts";
+import { GameController, InteractionController, SessionController } from "..";
+import { Command } from "../../abstracts";
 import {
   DiscordButtonInteraction,
   DiscordCommandInteraction,
   DiscordMessageComponentInteraction,
   DiscordUser,
 } from "../../discord";
-import {
-  SessionStatus,
-} from "../../enums";
-import type {
-  SessionState,
-} from "../../types";
+import { SessionStatus } from "../../enums";
+import type { SessionState } from "../../types";
 
 export class NewCommand implements Command {
   public readonly description = "Start a new game.";
@@ -29,14 +19,19 @@ export class NewCommand implements Command {
   public readonly name = "new";
 
   public async execute(interaction: DiscordCommandInteraction): Promise<void> {
-    const session: SessionState | null = SessionController.loadSession(interaction.channelId);
-    let currentInteraction: DiscordCommandInteraction | DiscordMessageComponentInteraction = interaction;
+    const session: SessionState | null = SessionController.loadSession(
+      interaction.channelId,
+    );
+    let currentInteraction:
+      | DiscordCommandInteraction
+      | DiscordMessageComponentInteraction = interaction;
     let createSession: boolean = false;
 
     if (session === null || session.status === SessionStatus.COMPLETED) {
       createSession = true;
     } else {
-      const endCurrentGameResponse: DiscordButtonInteraction | null = await InteractionController.promptEndCurrentGame(interaction);
+      const endCurrentGameResponse: DiscordButtonInteraction | null =
+        await InteractionController.promptEndCurrentGame(interaction);
       if (endCurrentGameResponse !== null) {
         currentInteraction = endCurrentGameResponse;
         createSession = true;
@@ -45,10 +40,11 @@ export class NewCommand implements Command {
 
     if (createSession) {
       await InteractionController.informStartingGame(currentInteraction);
-      const newGameMembersResponse: DiscordUser[] | null = await InteractionController.promptNewGameMembers(
-        interaction.channelId,
-        interaction.user,
-      );
+      const newGameMembersResponse: DiscordUser[] | null =
+        await InteractionController.promptNewGameMembers(
+          interaction.channelId,
+          interaction.user,
+        );
       if (newGameMembersResponse !== null) {
         const newSession: SessionState = SessionController.createSession(
           interaction.channelId,

@@ -13,7 +13,7 @@ export class Log {
       `\x1b[2m${this.formatPrefix()}\x1b[0m ${color}%s\x1b[0m`,
       context,
     );
-    data.forEach(item => {
+    data.forEach((item) => {
       if (item !== "_NOT_SET_") {
         console[method](item);
       }
@@ -21,34 +21,19 @@ export class Log {
   }
 
   public static error(context: unknown, ...data: unknown[]): void {
-    this.logMessage(
-      "error",
-      "\x1b[31m",
-      context,
-      ...data,
-    );
+    this.logMessage("error", "\x1b[31m", context, ...data);
   }
 
   public static info(context: unknown, ...data: unknown[]): void {
-    this.logMessage(
-      "log",
-      "",
-      context,
-      ...data,
-    );
+    this.logMessage("log", "", context, ...data);
   }
 
   public static success(context: unknown, ...data: unknown[]): void {
-    this.logMessage(
-      "log",
-      "\x1b[32m",
-      context,
-      ...data,
-    );
+    this.logMessage("log", "\x1b[32m", context, ...data);
   }
 
   public static throw(context: unknown, ...data: unknown[]): never {
-    data.reverse().forEach(item => {
+    data.reverse().forEach((item) => {
       if (item !== "_NOT_SET_") {
         console.error(item);
       }

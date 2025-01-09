@@ -4,4 +4,4 @@ export enum PlayerCardSource {
   "DEALT",
   "SAND_DECK",
   "SAND_DISCARD",
-};
+}

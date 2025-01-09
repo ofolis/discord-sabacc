@@ -1,10 +1,6 @@
 import * as fs from "fs";
-import {
-  Environment,
-} from "./environment";
-import {
-  Saveable,
-} from "./types";
+import { Environment } from "./environment";
+import { Saveable } from "./types";
 
 export class IO {
   private static getFilePath(id: string): string {
@@ -16,10 +12,7 @@ export class IO {
     if (!fs.existsSync(filePath)) {
       return null;
     }
-    const jsonString: string = fs.readFileSync(
-      filePath,
-      "utf8",
-    );
+    const jsonString: string = fs.readFileSync(filePath, "utf8");
     return JSON.parse(jsonString) as Saveable;
   }
 
@@ -28,12 +21,8 @@ export class IO {
       fs.mkdirSync(Environment.dataPath);
     }
     const jsonString: string = JSON.stringify(data);
-    fs.writeFileSync(
-      this.getFilePath(id),
-      jsonString,
-      {
-        "encoding": "utf8",
-      },
-    );
+    fs.writeFileSync(this.getFilePath(id), jsonString, {
+      encoding: "utf8",
+    });
   }
 }
