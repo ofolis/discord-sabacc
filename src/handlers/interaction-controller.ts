@@ -158,6 +158,7 @@ export class InteractionController {
       await Discord.updateSentItem(
         interactionResponse,
         timeoutMessage,
+        {},
       );
     }
     return buttonInteraction;
@@ -899,7 +900,7 @@ export class InteractionController {
       discordInteraction,
       "_Dice roll prompt timed out._",
     );
-    if (buttonInteraction == null) {
+    if (buttonInteraction === null) {
       return null;
     }
 
