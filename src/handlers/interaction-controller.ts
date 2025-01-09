@@ -11,7 +11,13 @@ import {
 } from "../discord";
 import { CardSuit, CardType, PlayerCardSource, TurnAction } from "../enums";
 import { Log } from "../log";
-import { Card, PlayerCard, PlayerState, SessionState } from "../types";
+import {
+  Card,
+  HandResult,
+  PlayerCard,
+  PlayerState,
+  SessionState,
+} from "../types";
 import { Utils } from "../utils";
 
 export class InteractionController {
@@ -120,6 +126,20 @@ export class InteractionController {
     return tokenString.length === 0 ? "None" : tokenString;
   }
 
+  private static formatHandResultMessage(handResult: HandResult): string {
+    if (handResult.cardDifference > 0) {
+      return "";
+    }
+    switch (handResult.lowestCardValue) {
+      case 0:
+        return "Sylop Sabacc!";
+      case 1:
+        return "Prime Sabacc!";
+      default:
+        return "Sabacc!";
+    }
+  }
+
   private static formatTableDiscardMessage(session: SessionState): string {
     const bloodDiscardString: string =
       session.bloodDiscard.length > 0
@@ -217,7 +237,7 @@ export class InteractionController {
       }
       contentLines.push(
         `- \`#${(handResult.rankIndex + 1).toString()}\` ${player.isEliminated ? `~~**${this.formatPlayerNameString(player)}**~~ 💀` : `**${this.formatPlayerNameString(player)}**`}`,
-        `  - Cards: \`${this.formatCardString(handResult.sandCard)}\` \`${this.formatCardString(handResult.bloodCard)}\`${handResult.cardDifference === 0 ? " _Sabacc!_" : ""}`,
+        `  - Cards: \`${this.formatCardString(handResult.sandCard)}\` \`${this.formatCardString(handResult.bloodCard)}\`${this.formatHandResultMessage(handResult)}`,
         `  - Tokens: \`${"⚪".repeat(player.currentTokenTotal)}${"🔴".repeat(handResult.tokenLossTotal)}\` (${tokenDetailStrings.join("+")})`,
       );
       usedPlayerIndexes.push(handResult.playerIndex);
