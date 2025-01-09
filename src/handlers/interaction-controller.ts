@@ -235,9 +235,11 @@ export class InteractionController {
           );
         }
       }
+      const handResultMessage: string =
+        this.formatHandResultMessage(handResult);
       contentLines.push(
         `- \`#${(handResult.rankIndex + 1).toString()}\` ${player.isEliminated ? `~~**${this.formatPlayerNameString(player)}**~~ 💀` : `**${this.formatPlayerNameString(player)}**`}`,
-        `  - Cards: \`${this.formatCardString(handResult.sandCard)}\` \`${this.formatCardString(handResult.bloodCard)}\`${this.formatHandResultMessage(handResult)}`,
+        `  - Cards: \`${this.formatCardString(handResult.sandCard)}\` \`${this.formatCardString(handResult.bloodCard)}\`${handResultMessage.length > 0 ? ` _${handResultMessage}_` : ""}`,
         `  - Tokens: \`${"⚪".repeat(player.currentTokenTotal)}${"🔴".repeat(handResult.tokenLossTotal)}\` (${tokenDetailStrings.join("+")})`,
       );
       usedPlayerIndexes.push(handResult.playerIndex);
