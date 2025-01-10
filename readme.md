@@ -34,32 +34,33 @@ A Discord bot that allows users to play [Kessel Sabacc](https://starwars.fandom.
 ### Local Machine
 
 1. Clone this repository.
-2. Install Node.js (if you have not already).<br>**RECOMMENDED APPROACH:**
+2. Install Node.js (if you have not already).
+3. Run `npm install`.
+4. Create a `.env` file in the project root (you can rename the example included in the files).
+   1. Add the `DISCORD_APPLICATION_ID` value noted earlier.
+   2. Add the `DISCORD_BOT_TOKEN` value noted earlier.
+
+### Local Machine Cont. (for development only)
+
+1. Install the project's version of Node.js.
    1. [Install Node Version Manager.](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
    2. Run `nvm use` in the project directory.
-3. Run `npm install` in the project directory.
-4. Create a `.env` file in the project root (you can rename the example included in the files).
-5. Add the `DISCORD_APPLICATION_ID` value noted earlier.
-6. Add the `DISCORD_BOT_TOKEN` value noted earlier.
-
-### VS Code (for development)
-
-1. Install required VSCode plugins:
-   - **ESLint**
-   - **Prettier**
-2. Install optional VSCode plugins:
-   - **commitlint**
-   - **Markdown All in One**
-   - **npm Intellisense**
-   - **Sort JSON objects**
+2. Set up VSCode (if applicable).
+   1. Install required plugins:
+      - **ESLint**
+      - **Prettier**
+   2. Install optional plugins:
+      - **commitlint**
+      - **Markdown All in One**
+      - **npm Intellisense**
+      - **Sort JSON objects**
 
 ## Usage
 
 ### Local Machine
 
 1. In the project directory:
-   1. Run `npm run build`.
-   2. Run `npm start`.
+   1. Run `npm start`.
 
 ## Playing Sabacc
 
