@@ -2,7 +2,9 @@
 
 # discord-sabacc
 
-A Discord bot that allows users to play Kessel Sabacc. This is the version of Sabacc played in the Star Wars Outlaws videogame.
+A Discord bot that allows users to play [Kessel Sabacc](https://starwars.fandom.com/wiki/Kessel_Sabacc). This is the version of Sabacc played in the Star Wars Outlaws videogame.
+
+**PLEASE NOTE:** Version 1 does not have shift tokens. Obviously it's still fully playable, but that mechanic isn't implemented yet.
 
 ## Setup
 
@@ -40,7 +42,7 @@ A Discord bot that allows users to play Kessel Sabacc. This is the version of Sa
 5. Add the `DISCORD_APPLICATION_ID` value noted earlier.
 6. Add the `DISCORD_BOT_TOKEN` value noted earlier.
 
-### VS Code (optional)
+### VS Code (for development)
 
 1. Install required VSCode plugins:
    - **ESLint**
@@ -51,10 +53,17 @@ A Discord bot that allows users to play Kessel Sabacc. This is the version of Sa
    - **npm Intellisense**
    - **Sort JSON objects**
 
-## Run
+## Usage
 
 ### Local Machine
 
 1. In the project directory:
    1. Run `npm run build`.
    2. Run `npm start`.
+
+## Playing Sabacc
+
+Here are some resources to teach you how to play:
+
+- [Hyperspace Props' Sabacc Rules](https://hyperspaceprops.com/wp-content/uploads/2024/09/Kessel-Sabacc-Rules-v4.pdf)
+- [Wookieepedia's Article](https://starwars.fandom.com/wiki/Kessel_Sabacc)
