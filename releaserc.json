@@ -6,22 +6,11 @@
         "preset": "conventionalcommits"
       }
     ],
+    "@semantic-release/github",
     [
       "@semantic-release/release-notes-generator",
       {
         "preset": "conventionalcommits"
-      }
-    ],
-    [
-      "@semantic-release/changelog",
-      {
-        "changelogFile": "CHANGELOG.md"
-      }
-    ],
-    [
-      "@semantic-release/git",
-      {
-        "assets": ["CHANGELOG.md"]
       }
     ]
   ]

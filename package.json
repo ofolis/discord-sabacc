@@ -31,6 +31,5 @@
     "lint": "prettier . --list-different && eslint",
     "start": "node .",
     "prepare": "husky"
-  },
-  "version": "1.0.0"
+  }
 }
