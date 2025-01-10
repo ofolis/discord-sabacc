@@ -1,6 +1,6 @@
-# discord-sabacc
-
 ![alt text](https://github.com/ofolis/discord-sabacc/raw/main/images/sabacc-logo.png "Sabacc Logo")
+
+# discord-sabacc
 
 A Discord bot that allows users to play Kessel Sabacc. This is the version of Sabacc played in the Star Wars Outlaws videogame.
 
