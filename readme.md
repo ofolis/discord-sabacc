@@ -41,10 +41,10 @@ A Discord bot that allows users to play Kessel Sabacc. This is the version of Sa
 ### VS Code (optional)
 
 1. Install required VSCode plugins:
-   - **commitlint**
    - **ESLint**
    - **Prettier**
 2. Install optional VSCode plugins:
+   - **commitlint**
    - **Markdown All in One**
    - **npm Intellisense**
    - **Sort JSON objects**
