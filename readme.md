@@ -1,5 +1,7 @@
 # discord-sabacc
 
+![alt text](https://github.com/ofolis/discord-sabacc/raw/main/images/sabacc-logo.png "Sabacc Logo")
+
 A Discord bot that allows users to play Kessel Sabacc. This is the version of Sabacc played in the Star Wars Outlaws videogame.
 
 ## Setup
@@ -50,6 +52,8 @@ A Discord bot that allows users to play Kessel Sabacc. This is the version of Sa
    - **Sort JSON objects**
 
 ## Run
+
+### Local Machine
 
 1. In the project directory:
    1. Run `npm run build`.
