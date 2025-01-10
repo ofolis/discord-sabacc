@@ -72,8 +72,6 @@ Discord server members can create a Sabacc game in any channel where the bot is 
       - **Sort JSON objects**
 7. Run `npm run build`.
 
-> Note
-
 ## Usage
 
 ### 1. Start The Bot
