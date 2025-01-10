@@ -4,7 +4,7 @@
 
 A Discord bot that allows users to play [Kessel Sabacc](https://starwars.fandom.com/wiki/Kessel_Sabacc). This is the version of Sabacc played in the Star Wars Outlaws videogame.
 
-**PLEASE NOTE:** Version 1 does not have shift tokens. Obviously it's still fully playable, but that mechanic isn't implemented yet.
+Discord server members can create a Sabacc game in any channel where the bot is present (one active game per channel). Gameplay utilizes Discord messaging (not activities) so that players are able to play asynchronously.
 
 ## Setup
 
@@ -33,19 +33,31 @@ A Discord bot that allows users to play [Kessel Sabacc](https://starwars.fandom.
 
 ### Local Machine
 
-1. Clone this repository.
-2. Install Node.js (if you have not already).
-3. Run `npm install`.
-4. Create a `.env` file in the project root (you can rename the example included in the files).
+**Option 1 - For Usage Only**
+
+1. Install [Node.js](https://nodejs.org).
+2. Download [this project's latest release](https://github.com/ofolis/discord-sabacc/releases/latest).
+3. Extract the folder somewhere on your machine.
+4. Modify the `.env.example` file.
    1. Add the `DISCORD_APPLICATION_ID` value noted earlier.
    2. Add the `DISCORD_BOT_TOKEN` value noted earlier.
+5. Rename the `.env.example` file to `.env`.
+6. In the command line:
+   1. Open the extracted folder.
+   2. Run `npm install`.
 
-### Local Machine Cont. (for development only)
+**Option 2 - For Development & Usage**
 
-1. Install the project's version of Node.js.
+1. Clone this repository.
+2. Install the project's version of Node.js.
    1. [Install Node Version Manager.](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
-   2. Run `nvm use` in the project directory.
-2. Set up VSCode (if applicable).
+   2. Run `nvm use`.
+3. Run `npm install`.
+4. Modify the `.env.example` file.
+   1. Add the `DISCORD_APPLICATION_ID` value noted earlier.
+   2. Add the `DISCORD_BOT_TOKEN` value noted earlier.
+5. Rename the `.env.example` file to `.env`.
+6. Set up VSCode (if applicable).
    1. Install required plugins:
       - **ESLint**
       - **Prettier**
@@ -54,17 +66,37 @@ A Discord bot that allows users to play [Kessel Sabacc](https://starwars.fandom.
       - **Markdown All in One**
       - **npm Intellisense**
       - **Sort JSON objects**
+7. Run `npm run build`.
 
 ## Usage
 
 ### Local Machine
 
-1. In the project directory:
-   1. Run `npm start`.
+1. Run `npm start` in the project directory.
 
-## Playing Sabacc
+### Discord
 
-Here are some resources to teach you how to play:
+1. In your Discord server channel, execute the bot's commands.
+   - `/new` - create a new game in the channel, optionally ending any active game.
+   - `/info` - privately view the current game info, including your current items.
+   - `/play` - complete any actions required for your turn.
+
+## Sabacc Rules
+
+Here are some resources to teach you how to play Kessel Sabacc:
 
 - [Hyperspace Props' Sabacc Rules](https://hyperspaceprops.com/wp-content/uploads/2024/09/Kessel-Sabacc-Rules-v4.pdf)
 - [Wookieepedia's Article](https://starwars.fandom.com/wiki/Kessel_Sabacc)
+
+## Project Roadmap
+
+This is simply to give you an idea of what is implemented and what is on my mind for the future. I have no specific timeline for these items.
+
+| Status | Feature                                                       |
+| ------ | ------------------------------------------------------------- |
+| ✅     | Play the core game against human players. (MVP)               |
+| 🔳     | Specify game player token total.                              |
+| 🔳     | Use shift tokens.                                             |
+| 🔳     | Play against AI players.                                      |
+| 🔳     | See win/loss history & rankings.                              |
+| 🔳     | Use a money mechanic (per-user credits, buyin, payout, etc.). |
