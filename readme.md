@@ -8,16 +8,18 @@ Discord server members can create a Sabacc game in any channel where the bot is 
 
 ## Setup
 
-### Discord
+### 1. Create The Discord Bot
 
 1. Open your [Discord developer portal](https://discord.com/developers/applications).
 2. Create a new application.
-3. Set any desired aesthetic items in the **General Information** section.
-4. In the **General Information** section:
-   1. **Save the application ID value for later.**
-      In the **Installation** section:
-   2. Ensure that **Guild Install** is the only context method.
-   3. Disable the install link.
+3. In the **General Information** section:
+   1. Set **Name** to `Sabacc` (or whatever you want it to appear in your server as).
+   2. Optionally, upload an **App Icon**.
+      - Use the `sabacc-logo.png` included in this project's `images` directory if you'd like.
+   3. **Save the application ID value for later.**
+4. In the **Installation** section:
+   1. Ensure that **Guild Install** is the only context method.
+   2. Disable the install link.
 5. In the **OAuth2** section:
    1. Disable **Public Client**.
 6. In the **Bot** section:
@@ -31,7 +33,9 @@ Discord server members can create a Sabacc game in any channel where the bot is 
    1. Create a guild install OAuth2 URL with only the `bot` scope.
 8. Open the generated URL and install the bot in your Discord server.
 
-### Local Machine
+### 2. Set Up The Application
+
+> **NOTE:** these step-by-step instructions are for local setup/usage. Since this is a Node.js app, you can also run the bot on a remote server, but I'm not including those specific steps in this readme.
 
 **Option 1 - For Usage Only**
 
@@ -68,13 +72,15 @@ Discord server members can create a Sabacc game in any channel where the bot is 
       - **Sort JSON objects**
 7. Run `npm run build`.
 
+> Note
+
 ## Usage
 
-### Local Machine
+### 1. Start The Bot
 
-1. Run `npm start` in the project directory.
+1. Run `npm start` in the local project directory.
 
-### Discord
+### 2. Use The Bot
 
 1. In your Discord server channel, execute the bot's commands.
    - `/new` - create a new game in the channel, optionally ending any active game.
