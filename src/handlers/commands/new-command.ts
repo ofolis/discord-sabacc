@@ -39,7 +39,7 @@ export class NewCommand implements Command {
     }
 
     if (createSession) {
-      await InteractionController.informStartingGame(currentInteraction);
+      await InteractionController.informStartedGame(currentInteraction);
       const newGameMembersResponse: DiscordUser[] | null =
         await InteractionController.promptNewGameMembers(
           interaction.channelId,

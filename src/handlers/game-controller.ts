@@ -132,7 +132,6 @@ export class GameController {
       this.iterateStartingPlayer(session);
       this.shuffleAndDealCards(session);
       SessionController.saveSession(session);
-      await InteractionController.announceHandStarted(session);
     }
   }
 
@@ -385,13 +384,13 @@ export class GameController {
       );
     }
 
+    await InteractionController.announceTurnEnded(session);
     const isLastPlayer: boolean =
       session.currentPlayerIndex === session.players.length - 1;
     session.currentPlayerIndex = isLastPlayer
       ? 0
       : session.currentPlayerIndex + 1;
     SessionController.saveSession(session);
-    await InteractionController.announceTurnEnded(session);
 
     if (isLastPlayer) {
       await this.endRound(session);

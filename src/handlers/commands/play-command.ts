@@ -210,7 +210,10 @@ export class PlayCommand implements Command {
     const sandPlayerCard: PlayerCard = player.currentSandCards[0];
     if (player.currentTurnRecord === null) {
       const revealCardsResponse: DiscordButtonInteraction | null =
-        await InteractionController.promptRevealCards(currentInteraction);
+        await InteractionController.promptRevealCards(
+          player,
+          currentInteraction,
+        );
       if (revealCardsResponse === null) {
         return currentInteraction;
       }
