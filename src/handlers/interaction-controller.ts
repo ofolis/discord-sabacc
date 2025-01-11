@@ -135,6 +135,8 @@ export class InteractionController {
         return "Sylop Sabacc!";
       case 1:
         return "Prime Sabacc!";
+      case 6:
+        return "Cheap Sabacc!";
       default:
         return "Sabacc!";
     }
