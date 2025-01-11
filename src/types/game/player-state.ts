@@ -1,6 +1,7 @@
 import { HandResult, PlayerCard, TurnRecord } from ".";
 
 export type PlayerState = {
+  avatarId: string | null;
   currentBloodCards: PlayerCard[];
   currentSandCards: PlayerCard[];
   currentSpentTokenTotal: number;

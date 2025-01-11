@@ -74,6 +74,13 @@ export class InteractionController {
     return `**Hand:** \`${(session.currentHandIndex + 1).toString()}\`  |  **Round:** \`${session.currentRoundIndex < 3 ? `${(session.currentRoundIndex + 1).toString()}/3` : "REVEAL"}\``;
   }
 
+  private static formatPlayerAvatarUrl(player: PlayerState): string | null {
+    if (player.avatarId === null) {
+      return null;
+    }
+    return `https://cdn.discordapp.com/avatars/${player.id}/${player.avatarId}.webp?size=240`;
+  }
+
   private static formatPlayerItemsMessage(player: PlayerState): string {
     const cardStrings: string[] = [];
     player.currentSandCards.forEach((playerCard) => {
@@ -189,8 +196,13 @@ export class InteractionController {
       "# The Game Is Over!",
       `After ${(session.currentHandIndex + 1).toString()} hand${session.currentHandIndex === 0 ? "" : "s"}, the winner is...`,
       `## ${this.formatPlayerNameString(activePlayers[0])} (${this.formatPlayerTagString(activePlayers[0])}) 🎉`,
-      // TODO: Add profile picture
     ];
+    const avatarUrl: string | null = this.formatPlayerAvatarUrl(
+      activePlayers[0],
+    );
+    if (avatarUrl !== null) {
+      contentLines.push(avatarUrl);
+    }
     await Discord.sendMessage(
       session.channelId,
       Utils.linesToString(contentLines),
@@ -308,7 +320,7 @@ export class InteractionController {
       case TurnAction.REVEAL: {
         contentLines.push(
           `## ${this.formatPlayerNameString(player)} Completed Their Hand`,
-          "Here's their final cards...",
+          "Here are their final cards...",
           `# ${this.formatCardString(player.currentSandCards[0])} ${this.formatCardString(player.currentBloodCards[0])}`,
         );
         const handResult: HandResult =

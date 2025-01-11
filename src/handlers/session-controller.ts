@@ -12,6 +12,7 @@ export class SessionController {
     startingTokenTotal: number,
   ): SessionState {
     const players: PlayerState[] = discordUsers.map((discordUser) => ({
+      avatarId: discordUser.avatar,
       currentBloodCards: [],
       currentSandCards: [],
       currentSpentTokenTotal: 0,
