@@ -11,8 +11,9 @@
       {
         "assets": [
           {
-            "path": "dist/** images/** .env.example LICENSE package-lock.json package.json readme.md",
-            "label": "Distribution"
+            "label": "The files needed to run the bot.",
+            "name": "discord-sabacc.zip",
+            "path": "dist/** images/** .env.example LICENSE package-lock.json package.json readme.md"
           }
         ]
       }
