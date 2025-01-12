@@ -209,15 +209,6 @@ export class PlayCommand implements Command {
     const bloodPlayerCard: PlayerCard = player.currentBloodCards[0];
     const sandPlayerCard: PlayerCard = player.currentSandCards[0];
     if (player.currentTurnRecord === null) {
-      const revealCardsResponse: DiscordButtonInteraction | null =
-        await InteractionController.promptRevealCards(
-          player,
-          currentInteraction,
-        );
-      if (revealCardsResponse === null) {
-        return currentInteraction;
-      }
-      currentInteraction = revealCardsResponse;
       GameController.setPlayerTurnAction(session, player, TurnAction.REVEAL);
     }
     if (
@@ -260,6 +251,15 @@ export class PlayCommand implements Command {
       (sandPlayerCard.card.type !== CardType.IMPOSTER ||
         sandPlayerCard.dieRollValues.length === 1)
     ) {
+      const revealCardsResponse: DiscordButtonInteraction | null =
+        await InteractionController.promptRevealCards(
+          player,
+          currentInteraction,
+        );
+      if (revealCardsResponse === null) {
+        return currentInteraction;
+      }
+      currentInteraction = revealCardsResponse;
       GameController.finalizePlayerCards(session, player);
     }
     return currentInteraction;
