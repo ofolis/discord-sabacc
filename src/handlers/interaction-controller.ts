@@ -843,7 +843,7 @@ export class InteractionController {
       discordUserList
         .map(
           (discordUser) =>
-            `- ${this.formatPlayerNameString(discordUser)} (${this.formatPlayerTagString(discordUser)})`,
+            `- **${this.formatPlayerNameString(discordUser)}** (${this.formatPlayerTagString(discordUser)})`,
         )
         .join("\n"),
     ];
