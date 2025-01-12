@@ -6,7 +6,17 @@
         "preset": "conventionalcommits"
       }
     ],
-    "@semantic-release/github",
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          {
+            "path": "dist/** images/** .env.example LICENSE package-lock.json package.json readme.md",
+            "label": "Distribution"
+          }
+        ]
+      }
+    ],
     [
       "@semantic-release/release-notes-generator",
       {
