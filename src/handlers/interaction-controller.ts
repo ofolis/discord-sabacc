@@ -189,17 +189,21 @@ export class InteractionController {
     const contentLines: string[] = [
       "# The Game Is Over!",
       `After ${(session.currentHandIndex + 1).toString()} hand${session.currentHandIndex === 0 ? "" : "s"}, the winner is...`,
-      `## ${this.formatPlayerNameString(activePlayers[0])} (${this.formatPlayerTagString(activePlayers[0])}) 🎉`,
+      `## ${this.formatPlayerTagString(activePlayers[0])} 🎉`,
     ];
     const avatarUrl: string | null = this.formatPlayerAvatarUrl(
       activePlayers[0],
     );
-    if (avatarUrl !== null) {
-      contentLines.push(avatarUrl);
-    }
     await Discord.sendMessage(
       session.channelId,
       Utils.linesToString(contentLines),
+      undefined,
+      avatarUrl !== null
+        ? {
+            attachment: avatarUrl,
+            name: "avatar.webp",
+          }
+        : undefined,
     );
   }
 
@@ -217,15 +221,21 @@ export class InteractionController {
     const usedPlayerIndexes: number[] = [];
     session.handResults[session.currentHandIndex].forEach((handResult) => {
       const player: PlayerState = session.players[handResult.playerIndex];
-      const tokenDetailStrings: string[] = [
-        handResult.tokenLossTotal === 0 ? "Full Refund" : null,
-        handResult.spentTokenTotal > 0
-          ? `\`${handResult.spentTokenTotal.toString()}\` Spent`
-          : null,
-        handResult.tokenPenaltyTotal > 0
-          ? `\`${handResult.tokenPenaltyTotal.toString()}\` Penalty`
-          : null,
-      ].filter((tokenDetailString) => tokenDetailString !== null);
+      const tokenDetailStrings: string[] = [];
+      if (handResult.tokenLossTotal === 0) {
+        tokenDetailStrings.push("Full Refund");
+      } else {
+        if (handResult.spentTokenTotal > 0) {
+          tokenDetailStrings.push(
+            `\`${handResult.spentTokenTotal.toString()}\` Spent`,
+          );
+        }
+        if (handResult.tokenPenaltyTotal > 0) {
+          tokenDetailStrings.push(
+            `\`${handResult.tokenPenaltyTotal.toString()}\` Penalty`,
+          );
+        }
+      }
       contentLines.push(
         `- \`#${(handResult.rankIndex + 1).toString()}\` ${player.isEliminated ? `~~**${this.formatPlayerNameString(player)}**~~ 💀` : `**${this.formatPlayerNameString(player)}**`}`,
         `  - Cards: ${this.formatCardString(handResult.sandCard)} ${this.formatCardString(handResult.bloodCard)}`,
