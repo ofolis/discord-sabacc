@@ -223,7 +223,7 @@ export class InteractionController {
       const player: PlayerState = session.players[handResult.playerIndex];
       const tokenDetailStrings: string[] = [];
       if (handResult.tokenLossTotal === 0) {
-        tokenDetailStrings.push("Full Refund");
+        tokenDetailStrings.push("Full Refund!");
       } else {
         if (handResult.spentTokenTotal > 0) {
           tokenDetailStrings.push(
