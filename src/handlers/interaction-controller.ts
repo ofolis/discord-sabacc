@@ -91,7 +91,7 @@ export class InteractionController {
     const contentLines: string[] = [
       "### Your Items",
       `Cards: ${cardStrings.join(" ")}`,
-      `Tokens: ${this.formatTokenString(player.currentTokenTotal, player.currentSpentTokenTotal)}`,
+      `Tokens: ${this.formatTokenString(player.currentTokenTotal, -player.currentSpentTokenTotal)}`,
     ];
     return Utils.linesToString(contentLines);
   }
@@ -101,7 +101,7 @@ export class InteractionController {
     session.players.forEach((player, index) =>
       contentLines.push(
         `- **${this.formatPlayerNameString(player)}**${index === session.currentPlayerIndex ? " 👤" : ""}`,
-        `  - Tokens: ${this.formatTokenString(player.currentTokenTotal, player.currentSpentTokenTotal)}`,
+        `  - Tokens: ${this.formatTokenString(player.currentTokenTotal, -player.currentSpentTokenTotal)}`,
       ),
     );
     return Utils.linesToString(contentLines);
@@ -143,19 +143,19 @@ export class InteractionController {
 
   private static formatTokenString(
     baseTotal: number,
-    reductionTotal: number,
+    adjustmentTotal: number,
     useLossIcon: boolean = false,
   ): string {
     if (baseTotal === 0) {
       return "`None`";
     }
-    const remainingTokens: string = "⚪".repeat(
-      Math.max(baseTotal - reductionTotal, 0),
+    const baseTokenString: string = "⚪".repeat(
+      Math.max(baseTotal + (adjustmentTotal <= 0 ? adjustmentTotal : 0), 0),
     );
-    const reducedTokens: string = (useLossIcon ? "🔴" : "⚫").repeat(
-      reductionTotal,
+    const reductionTokenString: string = (useLossIcon ? "🔴" : "⚫").repeat(
+      Math.abs(adjustmentTotal),
     );
-    return `\`${remainingTokens}${reducedTokens}\``;
+    return `\`${baseTokenString}${reductionTokenString}\``;
   }
 
   private static async handleButtonInteraction(
