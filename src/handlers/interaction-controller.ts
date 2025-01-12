@@ -60,10 +60,9 @@ export class InteractionController {
     ) {
       typeLabel = `${playerCard.dieRollValues[0].toString()} (${typeLabel})`;
     }
-    if (includeCodeQuotes) {
-      typeLabel = `\`${typeLabel}\``;
-    }
-    return `${suitIcon}${typeLabel}`;
+    return includeCodeQuotes
+      ? `\`${suitIcon}${typeLabel}\``
+      : `${suitIcon}${typeLabel}`;
   }
 
   private static formatChannelTagString(): string {
