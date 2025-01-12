@@ -141,7 +141,7 @@ export class InteractionController {
     adjustmentTotal: number,
     useLossIcon: boolean = false,
   ): string {
-    if (baseTotal === 0) {
+    if (baseTotal === 0 && adjustmentTotal <= 0) {
       return "`None`";
     }
     const baseTokenString: string = "⚪".repeat(
