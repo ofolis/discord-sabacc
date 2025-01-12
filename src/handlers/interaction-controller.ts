@@ -11,14 +11,9 @@ import {
 } from "../discord";
 import { CardSuit, CardType, PlayerCardSource, TurnAction } from "../enums";
 import { Log } from "../log";
-import {
-  Card,
-  HandResult,
-  PlayerCard,
-  PlayerState,
-  SessionState,
-} from "../types";
+import { Card, PlayerCard, PlayerState, SessionState } from "../types";
 import { Utils } from "../utils";
+import { GameController } from "./game-controller";
 
 export class InteractionController {
   private static formatCardSuitIcon(cardSuit: CardSuit): string {
@@ -322,12 +317,16 @@ export class InteractionController {
           "Here are their final cards...",
           `# ${this.formatCardString(player.currentSandCards[0])} ${this.formatCardString(player.currentBloodCards[0])}`,
         );
-        const handResult: HandResult =
-          session.handResults[session.currentHandIndex][
-            session.currentPlayerIndex
-          ];
-        if (handResult.cardDifference === 0) {
-          switch (handResult.lowestCardValue) {
+        const bloodCardValue: number = GameController.getFinalCardValue(
+          player.currentBloodCards[0],
+          player.currentSandCards[0],
+        );
+        const sandCardValue: number = GameController.getFinalCardValue(
+          player.currentSandCards[0],
+          player.currentBloodCards[0],
+        );
+        if (bloodCardValue === sandCardValue) {
+          switch (bloodCardValue) {
             case 0:
               contentLines.push("## *Sylop Sabacc!* ✨");
               break;

@@ -147,33 +147,6 @@ export class GameController {
     }
   }
 
-  private static getFinalCardValue(
-    primaryPlayerCard: PlayerCard,
-    secondaryPlayerCard: PlayerCard | null = null,
-  ): number {
-    switch (primaryPlayerCard.card.type) {
-      case CardType.IMPOSTER:
-        if (primaryPlayerCard.dieRollValues.length !== 1) {
-          Log.throw(
-            "Cannot get final card value. Imposter player card does not contain exactly one die roll value.",
-            primaryPlayerCard,
-          );
-        }
-        return primaryPlayerCard.dieRollValues[0];
-      case CardType.NUMBER:
-        return primaryPlayerCard.card.value;
-      case CardType.SYLOP:
-        return secondaryPlayerCard !== null
-          ? this.getFinalCardValue(secondaryPlayerCard)
-          : 0;
-      default:
-        Log.throw(
-          "Cannot get final card value. Unknown player card type.",
-          primaryPlayerCard,
-        );
-    }
-  }
-
   private static handResultSort(
     a: Pick<HandResult, "cardDifference" | "lowestCardValue">,
     b: Pick<HandResult, "cardDifference" | "lowestCardValue">,
@@ -439,6 +412,33 @@ export class GameController {
     const random: Random = new Random();
     playerCard.dieRollValues.push(random.die(6), random.die(6));
     SessionController.saveSession(session);
+  }
+
+  public static getFinalCardValue(
+    primaryPlayerCard: PlayerCard,
+    secondaryPlayerCard: PlayerCard | null = null,
+  ): number {
+    switch (primaryPlayerCard.card.type) {
+      case CardType.IMPOSTER:
+        if (primaryPlayerCard.dieRollValues.length !== 1) {
+          Log.throw(
+            "Cannot get final card value. Imposter player card does not contain exactly one die roll value.",
+            primaryPlayerCard,
+          );
+        }
+        return primaryPlayerCard.dieRollValues[0];
+      case CardType.NUMBER:
+        return primaryPlayerCard.card.value;
+      case CardType.SYLOP:
+        return secondaryPlayerCard !== null
+          ? this.getFinalCardValue(secondaryPlayerCard)
+          : 0;
+      default:
+        Log.throw(
+          "Cannot get final card value. Unknown player card type.",
+          primaryPlayerCard,
+        );
+    }
   }
 
   public static setPlayerCardDieRollValue(
