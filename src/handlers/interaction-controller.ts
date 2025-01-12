@@ -65,7 +65,7 @@ export class InteractionController {
   }
 
   private static formatHandRoundMessage(session: SessionState): string {
-    return `**Hand:** \`${(session.currentHandIndex + 1).toString()}\`  |  **Round:** \`${session.currentRoundIndex < 3 ? `${(session.currentRoundIndex + 1).toString()}/3` : "REVEAL"}\``;
+    return `> **Hand:** \`${(session.currentHandIndex + 1).toString()}\`  |  **Round:** \`${session.currentRoundIndex < 3 ? `${(session.currentRoundIndex + 1).toString()}/3` : "REVEAL"}\``;
   }
 
   private static formatPlayerAvatarUrl(player: PlayerState): string | null {
@@ -84,19 +84,19 @@ export class InteractionController {
       cardStrings.push(this.formatCardString(playerCard));
     });
     const contentLines: string[] = [
-      "### Your Items",
-      `Cards: ${cardStrings.join(" ")}`,
-      `Tokens: ${this.formatTokenString(player.currentTokenTotal, -player.currentSpentTokenTotal)}`,
+      "> ### Your Items",
+      `> Cards: ${cardStrings.join(" ")}`,
+      `> Tokens: ${this.formatTokenString(player.currentTokenTotal, -player.currentSpentTokenTotal)}`,
     ];
     return Utils.linesToString(contentLines);
   }
 
   private static formatPlayerListMessage(session: SessionState): string {
-    const contentLines: string[] = ["### Players"];
+    const contentLines: string[] = ["> ### Players"];
     session.players.forEach((player, index) =>
       contentLines.push(
-        `- **${this.formatPlayerNameString(player)}**${index === session.currentPlayerIndex ? " 👤" : ""}`,
-        `  - Tokens: ${this.formatTokenString(player.currentTokenTotal, -player.currentSpentTokenTotal)}`,
+        `> - **${this.formatPlayerNameString(player)}**${index === session.currentPlayerIndex ? " 👤" : ""}`,
+        `>   - Tokens: ${this.formatTokenString(player.currentTokenTotal, -player.currentSpentTokenTotal)}`,
       ),
     );
     return Utils.linesToString(contentLines);
@@ -123,15 +123,15 @@ export class InteractionController {
       discardCardStrings.push(this.formatCardString(session.bloodDiscard[0]));
     }
     const contentLines: string[] = [
-      "### Discard",
-      discardCardStrings.join(" "),
+      "> ### Discard",
+      `> ${discardCardStrings.join(" ")}`,
     ];
     if (session.bloodDiscard.length === 0 && session.sandDiscard.length === 0) {
-      contentLines.push("-# 🟨 and 🟥 discard are both empty.");
+      contentLines.push("> -# 🟨 and 🟥 discard are both empty.");
     } else if (session.bloodDiscard.length === 0) {
-      contentLines.push("-# 🟥 discard is empty.");
+      contentLines.push("> -# 🟥 discard is empty.");
     } else if (session.sandDiscard.length === 0) {
-      contentLines.push("-# 🟨 discard is empty.");
+      contentLines.push("> -# 🟨 discard is empty.");
     }
     return Utils.linesToString(contentLines);
   }
@@ -215,7 +215,7 @@ export class InteractionController {
       );
     }
     const contentLines: string[] = [
-      `## Ended Hand ${(session.currentHandIndex + 1).toString()}`,
+      `## ✅ Ended Hand ${(session.currentHandIndex + 1).toString()}`,
       "Here are the results...",
     ];
     const usedPlayerIndexes: number[] = [];
@@ -262,19 +262,17 @@ export class InteractionController {
     switch (session.currentRoundIndex) {
       case 0:
         contentLines.push(
-          session.currentHandIndex === 0
-            ? "## Starting The Game"
-            : `## Starting Hand ${(session.currentHandIndex + 1).toString()}`,
+          `## ❇️ Starting Hand ${(session.currentHandIndex + 1).toString()}`,
         );
         break;
       case 1:
       case 2:
         contentLines.push(
-          `## Starting Round ${(session.currentRoundIndex + 1).toString()}`,
+          `## ❇️ Starting Round ${(session.currentRoundIndex + 1).toString()}`,
         );
         break;
       default:
-        contentLines.push("## Starting Reveal Round");
+        contentLines.push("## ❇️ Starting Reveal Round");
     }
     contentLines.push(this.formatHandRoundMessage(session));
     await Discord.sendMessage(
@@ -323,7 +321,7 @@ export class InteractionController {
         break;
       case TurnAction.REVEAL: {
         contentLines.push(
-          `## ${this.formatPlayerNameString(player)} Completed Their Hand`,
+          `## ☑️ ${this.formatPlayerNameString(player)} Completed Their Hand`,
           "Here are their final cards...",
           `# ${this.formatCardString(player.currentSandCards[0])} ${this.formatCardString(player.currentBloodCards[0])}`,
         );
@@ -375,7 +373,7 @@ export class InteractionController {
     session: SessionState,
   ): Promise<void> {
     const contentLines: string[] = [
-      `## ${this.formatPlayerNameString(session.players[session.currentPlayerIndex])}'s Turn`,
+      `## 🆙 ${this.formatPlayerNameString(session.players[session.currentPlayerIndex])}'s Turn`,
       `${this.formatPlayerTagString(session.players[session.currentPlayerIndex])} use the **/play** command to take your turn.`,
       this.formatPlayerListMessage(session),
     ];
