@@ -537,6 +537,7 @@ export class GameController {
     new Random().shuffle(session.players);
     this.shuffleAndDealCards(session);
     SessionController.saveSession(session);
+    await InteractionController.announceRoundStarted(session);
     await this.startTurn(session);
   }
 }
