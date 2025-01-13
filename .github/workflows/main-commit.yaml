@@ -17,6 +17,10 @@ jobs:
         run: npm run lint
       - name: Run build processes
         run: npm run build
+      - name: Create release ZIP
+        run: |
+          mkdir -p release
+          zip -r release/artifact.zip dist images .env.example LICENSE package-lock.json package.json readme.md
       - env:
           GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
         id: semantic
