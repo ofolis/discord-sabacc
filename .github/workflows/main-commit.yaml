@@ -34,8 +34,10 @@ jobs:
       - if: steps.semantic.outputs.new_release_published == 'true'
         name: Create release asset
         run: |
+          FILENAME="${GITHUB_REPOSITORY#*/}-${{ steps.semantic.outputs.new_release_version }}.zip"
           mkdir -p release
-          zip -r release/artifact.zip dist images .env.example LICENSE package-lock.json package.json readme.md
+          zip -r "release/${FILENAME}" dist images .env.example LICENSE package-lock.json package.json readme.md
+          echo "asset_filename=${FILENAME}" >> $GITHUB_ENV
       - env:
           GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
         if: steps.semantic.outputs.new_release_published == 'true'
@@ -52,7 +54,7 @@ jobs:
         with:
           upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ env.release_id }}/assets{?name,label}
           asset_path: release/artifact.zip
-          asset_name: ${{ github.repository | split('/')[-1] }}-${{ steps.semantic.outputs.new_release_version }}.zip
+          asset_name: ${{ env.asset_filename }}.zip
           asset_content_type: application/zip
 name: Main Commit
 on:
