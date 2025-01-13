@@ -239,7 +239,7 @@ export class InteractionController {
       contentLines.push(
         `- \`#${(handResult.rankIndex + 1).toString()}\` ${player.isEliminated ? `~~**${this.formatPlayerNameString(player)}**~~ 💀` : `**${this.formatPlayerNameString(player)}**`}`,
         `  - Cards: ${this.formatCardString(handResult.sandCard)} ${this.formatCardString(handResult.bloodCard)}`,
-        `  - Tokens: \`${this.formatTokenString(player.currentTokenTotal, handResult.tokenLossTotal, true)}\``,
+        `  - Tokens: \`${this.formatTokenString(player.currentTokenTotal, handResult.tokenLossTotal, true)}\` `,
         `    -# ${tokenDetailStrings.join(" + ")}`,
       );
       usedPlayerIndexes.push(handResult.playerIndex);
