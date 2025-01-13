@@ -29,14 +29,13 @@ jobs:
             ]
           extra_plugins: |
             @semantic-release/commit-analyzer@13.0.1
-            @semantic-release/changelog@6.0.3
             @semantic-release/github@11.0.1
             @semantic-release/release-notes-generator@14.0.3
       - if: steps.semantic.outputs.new_release_published == 'true'
         name: Create release asset
         run: |
           mkdir -p release
-          zip -r release/artifact.zip dist images .env.example CHANGELOG.md LICENSE package-lock.json package.json readme.md
+          zip -r release/artifact.zip dist images .env.example LICENSE package-lock.json package.json readme.md
       - env:
           GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
         if: steps.semantic.outputs.new_release_published == 'true'

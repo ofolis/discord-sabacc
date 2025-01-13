@@ -1,12 +1,6 @@
 {
   "plugins": [
     [
-      "@semantic-release/changelog",
-      {
-        "changelogFile": "CHANGELOG.md"
-      }
-    ],
-    [
       "@semantic-release/commit-analyzer",
       {
         "preset": "conventionalcommits"
