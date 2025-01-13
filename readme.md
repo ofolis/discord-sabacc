@@ -55,10 +55,10 @@ Discord server members can create a Sabacc game in any channel where the bot is 
    1. [Install Node Version Manager.](https://github.com/nvm-sh/nvm?tab=readme-ov-file#installing-and-updating)
    2. Run `nvm use`.
 3. Run `npm install`.
-4. Modify the `.env.example` file.
-   1. Add the `DISCORD_APPLICATION_ID` value noted earlier.
-   2. Add the `DISCORD_BOT_TOKEN` value noted earlier.
-5. Rename the `.env.example` file to `.env`.
+4. Rename the `.env.example` file to `.env`.
+5. Modify the `.env` file.
+   1. Replace the `?` after `DISCORD_APPLICATION_ID=` with the value noted earlier.
+   2. Replace the `?` after `DISCORD_BOT_TOKEN=` with the value noted earlier.
 6. Set up VSCode (if applicable).
    1. Install required plugins:
       - **ESLint**
