@@ -20,7 +20,7 @@ jobs:
       - name: Create release ZIP
         run: |
           mkdir -p release
-          zip -r release/artifact.zip dist images .env.example LICENSE package-lock.json package.json readme.md
+          zip -r release/${GITHUB_REPOSITORY#*/}.zip dist images .env.example CHANGELOG.md LICENSE package-lock.json package.json readme.md
       - env:
           GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
         id: semantic
@@ -33,8 +33,16 @@ jobs:
             ]
           extra_plugins: |
             @semantic-release/commit-analyzer@13.0.1
+            @semantic-release/changelog@6.0.3
             @semantic-release/github@11.0.1
             @semantic-release/release-notes-generator@14.0.3
+      - name: Upload release asset
+        if: steps.semantic.outputs.new_release_published == 'true'
+        uses: softprops/action-gh-release@v2.2.1
+        with:
+          files: release/${GITHUB_REPOSITORY#*/}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
 name: Main Commit
 on:
   push:

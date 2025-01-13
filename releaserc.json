@@ -1,22 +1,13 @@
 {
   "plugins": [
+    "@semantic-release/changelog",
     [
       "@semantic-release/commit-analyzer",
       {
         "preset": "conventionalcommits"
       }
     ],
-    [
-      "@semantic-release/github",
-      {
-        "assets": [
-          {
-            "label": "The files needed to run the bot.",
-            "path": "release/artifact.zip"
-          }
-        ]
-      }
-    ],
+    "@semantic-release/github",
     [
       "@semantic-release/release-notes-generator",
       {
