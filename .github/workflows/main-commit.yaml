@@ -17,10 +17,6 @@ jobs:
         run: npm run lint
       - name: Run build processes
         run: npm run build
-      - name: Create release ZIP
-        run: |
-          mkdir -p release
-          zip -r release/${GITHUB_REPOSITORY#*/}.zip dist images .env.example CHANGELOG.md LICENSE package-lock.json package.json readme.md
       - env:
           GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
         id: semantic
@@ -36,13 +32,29 @@ jobs:
             @semantic-release/changelog@6.0.3
             @semantic-release/github@11.0.1
             @semantic-release/release-notes-generator@14.0.3
-      - name: Upload release asset
-        if: steps.semantic.outputs.new_release_published == 'true'
-        uses: softprops/action-gh-release@v2.2.1
-        with:
-          files: release/${GITHUB_REPOSITORY#*/}.zip
-        env:
+      - if: steps.semantic.outputs.new_release_published == 'true'
+        name: Create release asset
+        run: |
+          mkdir -p release
+          zip -r release/artifact.zip dist images .env.example CHANGELOG.md LICENSE package-lock.json package.json readme.md
+      - env:
           GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
+        if: steps.semantic.outputs.new_release_published == 'true'
+        name: Get release ID
+        run: |
+          RELEASE_TAG=${{ steps.semantic.outputs.new_release_git_tag }}
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/$RELEASE_TAG --jq '.id')
+          echo "release_id=$RELEASE_ID" >> $GITHUB_ENV
+      - env:
+          GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
+        if: steps.semantic.outputs.new_release_published == 'true'
+        name: Upload release asset
+        uses: actions/upload-release-asset
+        with:
+          upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ env.release_id }}/assets{?name,label}
+          asset_path: release/artifact.zip
+          asset_name: ${{ github.repository }}-${{ steps.semantic.outputs.new_release_version }}.zip
+          asset_content_type: application/zip
 name: Main Commit
 on:
   push:
