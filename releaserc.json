@@ -12,7 +12,6 @@
         "assets": [
           {
             "label": "The files needed to run the bot.",
-            "name": "artifact.zip",
             "path": "release/artifact.zip"
           }
         ]
