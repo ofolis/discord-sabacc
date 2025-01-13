@@ -46,9 +46,7 @@ Discord server members can create a Sabacc game in any channel where the bot is 
 5. Modify the `.env` file.
    1. Replace the `?` after `DISCORD_APPLICATION_ID=` with the value noted earlier.
    2. Replace the `?` after `DISCORD_BOT_TOKEN=` with the value noted earlier.
-6. In the command line:
-   1. Open the extracted folder.
-   2. Run `npm install --ignore-scripts --omit=dev`.
+6. Run `npm install --ignore-scripts --omit=dev` (using the command line).
 
 **Option 2 - For Development & Usage**
 
