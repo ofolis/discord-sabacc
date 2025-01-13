@@ -838,6 +838,7 @@ export class InteractionController {
     const baseContentLines: string[] = [
       "# New Game",
       `Hey ${this.formatChannelTagString()}! A new game was started by ${this.formatPlayerNameString(startingDiscordUser)}.`,
+      "### Players",
       discordUserList
         .map(
           (discordUser) =>
