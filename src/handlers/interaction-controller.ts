@@ -65,7 +65,7 @@ export class InteractionController {
   }
 
   private static formatHandRoundMessage(session: SessionState): string {
-    return `> **Hand:** \`${(session.currentHandIndex + 1).toString()}\`  |  **Round:** \`${session.currentRoundIndex < 3 ? `${(session.currentRoundIndex + 1).toString()}/3` : "REVEAL"}\``;
+    return `> ### Hand: \`${(session.currentHandIndex + 1).toString()}\`  |  Round: \`${session.currentRoundIndex < 3 ? `${(session.currentRoundIndex + 1).toString()}/3` : "REVEAL"}\``;
   }
 
   private static formatPlayerAvatarUrl(player: PlayerState): string | null {
@@ -373,8 +373,8 @@ export class InteractionController {
   ): Promise<void> {
     const contentLines: string[] = [
       `## 🆙 ${this.formatPlayerNameString(session.players[session.currentPlayerIndex])}'s Turn`,
-      this.formatHandRoundMessage(session),
       `${this.formatPlayerTagString(session.players[session.currentPlayerIndex])} use the **/play** command to take your turn.`,
+      this.formatHandRoundMessage(session),
       this.formatPlayerListMessage(session),
     ];
     await Discord.sendMessage(
