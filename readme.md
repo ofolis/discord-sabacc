@@ -42,13 +42,13 @@ Discord server members can create a Sabacc game in any channel where the bot is 
 1. Install [Node.js](https://nodejs.org).
 2. Download the build ZIP file in [this project's latest release](https://github.com/ofolis/discord-sabacc/releases/latest) (not the source code).
 3. Extract the folder somewhere on your machine.
-4. Modify the `.env.example` file.
-   1. Add the `DISCORD_APPLICATION_ID` value noted earlier.
-   2. Add the `DISCORD_BOT_TOKEN` value noted earlier.
-5. Rename the `.env.example` file to `.env`.
+4. Rename the `.env.example` file to `.env`.
+5. Modify the `.env` file.
+   1. Replace the `?` after `DISCORD_APPLICATION_ID=` with the value noted earlier.
+   2. Replace the `?` after `DISCORD_BOT_TOKEN=` with the value noted earlier.
 6. In the command line:
    1. Open the extracted folder.
-   2. Run `npm install`.
+   2. Run `npm install --ignore-scripts --omit=dev`.
 
 **Option 2 - For Development & Usage**
 
