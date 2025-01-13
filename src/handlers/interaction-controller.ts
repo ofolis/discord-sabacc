@@ -199,10 +199,12 @@ export class InteractionController {
       Utils.linesToString(contentLines),
       undefined,
       avatarUrl !== null
-        ? {
-            attachment: avatarUrl,
-            name: "avatar.webp",
-          }
+        ? [
+            {
+              attachment: avatarUrl,
+              name: "avatar.webp",
+            },
+          ]
         : undefined,
     );
   }

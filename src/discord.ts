@@ -228,16 +228,16 @@ export class Discord {
     channelId: string,
     content: string,
     buttonMap?: Record<string, ButtonBuilder>,
-    attachment?: {
+    attachments?: {
       attachment: string;
       name: string;
-    },
+    }[],
   ): Promise<Message> {
     const channel: TextChannel = this.getChannel(channelId);
     return await channel.send({
       components: this.createComponentsValue(buttonMap),
       content,
-      files: attachment !== undefined ? [attachment] : undefined,
+      files: attachments,
     });
   }
 
