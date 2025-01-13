@@ -274,7 +274,6 @@ export class InteractionController {
       default:
         contentLines.push("## ❇️ Starting Reveal Round");
     }
-    contentLines.push(this.formatHandRoundMessage(session));
     await Discord.sendMessage(
       session.channelId,
       Utils.linesToString(contentLines),
@@ -374,6 +373,7 @@ export class InteractionController {
   ): Promise<void> {
     const contentLines: string[] = [
       `## 🆙 ${this.formatPlayerNameString(session.players[session.currentPlayerIndex])}'s Turn`,
+      this.formatHandRoundMessage(session),
       `${this.formatPlayerTagString(session.players[session.currentPlayerIndex])} use the **/play** command to take your turn.`,
       this.formatPlayerListMessage(session),
     ];
