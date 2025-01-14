@@ -137,7 +137,7 @@ export class Discord {
 
   private static getChannel(channelId: string): TextChannel {
     const channel: Channel | undefined =
-      Discord.client.channels.cache.get(channelId);
+      this.client.channels.cache.get(channelId);
     if (channel === undefined) {
       Log.throw(
         "Cannot get Discord channel. ID was not found in the channel cache.",
