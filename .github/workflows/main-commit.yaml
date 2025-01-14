@@ -15,8 +15,6 @@ jobs:
         run: npm ci
       - name: Run linting processes
         run: npm run lint
-      - name: Run build processes
-        run: npm run build
       - env:
           GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
         id: semantic
@@ -31,6 +29,9 @@ jobs:
             @semantic-release/commit-analyzer@13.0.1
             @semantic-release/github@11.0.1
             @semantic-release/release-notes-generator@14.0.3
+      - if: steps.semantic.outputs.new_release_published == 'true'
+        name: Run build processes
+        run: npm run build
       - if: steps.semantic.outputs.new_release_published == 'true'
         name: Create release asset
         run: |
@@ -65,11 +66,31 @@ jobs:
       - env:
           GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
         if: steps.semantic.outputs.new_release_published == 'true'
-        name: Upload release asset
+        name: Upload Linux release asset
         uses: actions/upload-release-asset@v1
         with:
           upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ env.release_id }}/assets{?name,label}
-          asset_path: release/${{ env.asset_filename }}
+          asset_path: release/${{ env.asset_filename }}-linux.zip
+          asset_name: ${{ env.asset_filename }}
+          asset_content_type: application/zip
+      - env:
+          GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
+        if: steps.semantic.outputs.new_release_published == 'true'
+        name: Upload MacOS release asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ env.release_id }}/assets{?name,label}
+          asset_path: release/${{ env.asset_filename }}-macos.zip
+          asset_name: ${{ env.asset_filename }}
+          asset_content_type: application/zip
+      - env:
+          GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}
+        if: steps.semantic.outputs.new_release_published == 'true'
+        name: Upload Windows release asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ env.release_id }}/assets{?name,label}
+          asset_path: release/${{ env.asset_filename }}-win.zip
           asset_name: ${{ env.asset_filename }}
           asset_content_type: application/zip
 name: Main Commit
