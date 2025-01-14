@@ -46,7 +46,6 @@ Discord server members can create a Sabacc game in any channel where the bot is 
 5. Modify the `.env` file.
    1. Replace the `?` after `DISCORD_APPLICATION_ID=` with the value noted earlier.
    2. Replace the `?` after `DISCORD_BOT_TOKEN=` with the value noted earlier.
-6. Run the executable file.
 
 **Option 2 - For Development & Usage**
 
@@ -72,13 +71,10 @@ Discord server members can create a Sabacc game in any channel where the bot is 
 
 ## Usage
 
-### 1. Start The Bot
-
-1. Run `npm start` in the local project directory.
-
-### 2. Use The Bot
-
-1. In your Discord server channel, execute the bot's commands.
+1. Start the application.
+   - If you downloaded the build, run the executable file.
+   - If you cloned the repository, run `npm start`.
+2. In your Discord server channel, execute the bot's commands.
    - `/new` - create a new game in the channel, optionally ending any active game.
    - `/info` - privately view the current game info, including your current items.
    - `/play` - complete any actions required for your turn.
