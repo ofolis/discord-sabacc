@@ -1,10 +1,12 @@
 import dotenv from "dotenv";
 import { Log } from "./log";
-import type { Config } from "./types";
+import type { Config, PackageContext } from "./types";
 import * as packageJson from "../package.json";
 
 export class Environment {
   private static _config: Config | null = null;
+
+  private static _packageContext: PackageContext | null = null;
 
   private static getEnvVariable(key: string, required: boolean): string {
     const value: string | undefined = process.env[key];
@@ -21,6 +23,25 @@ export class Environment {
       );
     }
     return value;
+  }
+
+  private static getPackageJsonProperty(
+    key: string,
+    required: boolean,
+  ): unknown {
+    if (key in packageJson) {
+      return (packageJson as Record<string, unknown>)[key];
+    }
+    if (required) {
+      Log.throw(
+        `Cannot get package.json property. Requested key was not defined.`,
+        {
+          packageJson,
+          key,
+        },
+      );
+    }
+    return undefined;
   }
 
   public static get config(): Config {
@@ -43,19 +64,15 @@ export class Environment {
     return `${process.cwd()}/data`;
   }
 
-  public static get packageName(): string {
-    if ("name" in packageJson) {
-      return packageJson.name;
+  public static get packageContext(): PackageContext {
+    if (this._packageContext === null) {
+      this._packageContext = {
+        name: this.getPackageJsonProperty("name", true) as string,
+        version: this.getPackageJsonProperty("version", false) as
+          | string
+          | undefined,
+      };
     }
-    Log.throw(
-      "Cannot get package name. Package name is not defined in package.json.",
-    );
-  }
-
-  public static get packageVersion(): string | null {
-    if ("version" in packageJson) {
-      return packageJson.version as string;
-    }
-    return null;
+    return this._packageContext;
   }
 }

@@ -11,12 +11,11 @@ const commands: Command[] = [
 ];
 
 function initializeApp(): void {
-  const version: string | null = Environment.packageVersion;
   if (Environment.config.devMode) {
     Log.info("Running in development mode.");
   }
   Log.info(
-    `Initializing ${Environment.packageName} (${version ?? "NO VERSION"})...`,
+    `Initializing ${Environment.packageContext.name} (${Environment.packageContext.version ?? "NO VERSION"})...`,
   );
   Discord.client.once("ready", () => {
     Discord.deployCommands(commands).then(
