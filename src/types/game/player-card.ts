@@ -1,5 +1,5 @@
-import { PlayerCardSource } from "../../enums";
 import { Card } from ".";
+import { PlayerCardSource } from "../../enums";
 
 export type PlayerCard = {
   card: Card;

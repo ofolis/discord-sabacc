@@ -1,9 +1,8 @@
-import { createBloodDeck, createSandDeck } from "../constants/game/decks";
-import { DiscordUser } from "../discord";
-import { CardSuit, SessionStatus } from "../enums";
-import { IO } from "../io";
-import { Log } from "../log";
-import { PlayerCard, PlayerState, SessionState } from "../types";
+import { createBloodDeck, createSandDeck } from "../../constants";
+import { IO, Log } from "../../core";
+import { DiscordUser } from "../../core/discord";
+import { CardSuit, SessionStatus } from "../../enums";
+import { PlayerCard, PlayerState, SessionState } from "../../types";
 
 export class SessionController {
   public static createSession(

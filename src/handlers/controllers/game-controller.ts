@@ -1,5 +1,6 @@
 import { Random } from "random-js";
-import { InteractionController, SessionController } from ".";
+import { InteractionController, SessionController } from "..";
+import { Log, Utils } from "../../core";
 import {
   CardSuit,
   CardType,
@@ -7,16 +8,14 @@ import {
   SessionStatus,
   TurnAction,
   TurnStatus,
-} from "../enums";
-import { Log } from "../log";
+} from "../../enums";
 import {
   Card,
   HandResult,
   PlayerCard,
   PlayerState,
   SessionState,
-} from "../types";
-import { Utils } from "../utils";
+} from "../../types";
 
 export class GameController {
   private static async endGame(session: SessionState): Promise<void> {

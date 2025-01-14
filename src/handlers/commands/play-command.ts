@@ -1,10 +1,10 @@
 import { GameController, InteractionController, SessionController } from "..";
-import { Command } from "../../abstracts";
+import { Command, Log } from "../../core";
 import {
   DiscordButtonInteraction,
   DiscordCommandInteraction,
   DiscordMessageComponentInteraction,
-} from "../../discord";
+} from "../../core/discord";
 import {
   CardType,
   PlayerCardSource,
@@ -12,7 +12,6 @@ import {
   TurnAction,
   TurnStatus,
 } from "../../enums";
-import { Log } from "../../log";
 import type { PlayerCard, PlayerState, SessionState } from "../../types";
 
 export class PlayCommand implements Command {

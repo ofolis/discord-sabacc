@@ -1,4 +1,4 @@
-import { DiscordCommandInteraction } from "../discord";
+import { DiscordCommandInteraction } from "./discord";
 
 export abstract class Command {
   abstract description: string;

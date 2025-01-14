@@ -1,6 +1,6 @@
 import * as fs from "fs";
+import { Saveable } from "../types";
 import { Environment } from "./environment";
-import { Saveable } from "./types";
 import { Log } from "./log";
 
 export class IO {

@@ -1,4 +1,4 @@
-import { Log } from "./log";
+import { Log } from "../core";
 
 export class Utils {
   public static emptyArray(array: unknown[]): void {

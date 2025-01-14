@@ -1,6 +1,6 @@
 import { InteractionController, SessionController } from "..";
-import { Command } from "../../abstracts";
-import type { DiscordCommandInteraction } from "../../discord";
+import { Command } from "../../core";
+import type { DiscordCommandInteraction } from "../../core/discord";
 import { SessionStatus } from "../../enums";
 import type { PlayerState, SessionState } from "../../types";
 

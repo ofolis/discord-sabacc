@@ -1,8 +1,5 @@
-import { Command } from "./abstracts";
-import { Environment } from "./environment";
-import { Discord } from "./discord";
-import { InfoCommand, NewCommand, PlayCommand } from "./handlers/commands";
-import { Log } from "./log";
+import { Command, Discord, Environment, Log } from "./core";
+import { InfoCommand, NewCommand, PlayCommand } from "./handlers";
 
 const commands: Command[] = [
   new InfoCommand(),

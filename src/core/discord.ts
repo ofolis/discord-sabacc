@@ -22,9 +22,8 @@ import {
   SlashCommandBuilder,
   TextChannel,
 } from "discord.js";
-import { Command } from "./abstracts";
-import { Environment } from "./environment";
-import { Log } from "./log";
+import { Environment, Log } from ".";
+import { Command } from "../core";
 
 export {
   ButtonBuilder as DiscordButtonBuilder,
