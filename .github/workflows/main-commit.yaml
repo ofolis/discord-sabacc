@@ -59,7 +59,7 @@ jobs:
               dest_file="${PROJECT_NAME}"
             fi
             cp "$src_file" "$dest_file"
-            zip "release/${FILENAME}-${platform}.zip" "$dest_file" images .env.example LICENSE readme.md
+            zip -r "release/${FILENAME}-${platform}.zip" "$dest_file" images .env.example LICENSE readme.md
             rm "$dest_file"
           done
           echo "asset_filename=${FILENAME}" >> $GITHUB_ENV
