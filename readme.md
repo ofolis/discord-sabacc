@@ -13,7 +13,7 @@ Discord server members can create a Sabacc game in any channel where the bot is 
 1. Open your [Discord developer portal](https://discord.com/developers/applications).
 2. Create a new application.
 3. In the **General Information** section:
-   1. Set **Name** to `Sabacc` (or whatever you want it to appear in your server as).
+   1. Set **Name** to `Sabacc` (or whatever name you want the bot to have in your server).
    2. Optionally, upload an **App Icon**.
       - Use the `sabacc-logo.png` included in this project's `images` directory if you'd like.
    3. **Save the application ID value for later.**
@@ -35,7 +35,8 @@ Discord server members can create a Sabacc game in any channel where the bot is 
 
 ### 2. Set Up The Application
 
-> **NOTE:** these step-by-step instructions are for local setup/usage. Since this is a Node.js app, you can also run the bot on a remote server, but I'm not including those specific steps in this readme.
+> [!NOTE]
+> These step-by-step instructions are for local setup/usage. Since this is a Node.js app, you can also run the bot on a remote server, but I'm not including those specific steps in this readme.
 
 **Option 1 - For Usage Only**
 
@@ -98,3 +99,7 @@ This is simply to give you an idea of what is implemented and what is on my mind
 | 🔳     | See win/loss history & rankings.                              |
 | 🔳     | Use a money mechanic (per-user credits, buyin, payout, etc.). |
 | 🔳     | No longer see old/unnecessary bot output in the channel feed. |
+
+---
+
+_This project uses my [Discord bot template](https://github.com/ofolis/discord-template)._
