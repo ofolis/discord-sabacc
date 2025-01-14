@@ -34,9 +34,25 @@ jobs:
       - if: steps.semantic.outputs.new_release_published == 'true'
         name: Create release asset
         run: |
-          FILENAME="${GITHUB_REPOSITORY#*/}-${{ steps.semantic.outputs.new_release_version }}.zip"
+          PROJECT_NAME="${GITHUB_REPOSITORY#*/}"
+          FILENAME="${PROJECT_NAME}-${{ steps.semantic.outputs.new_release_version }}"
           mkdir -p release
-          zip -r "release/${FILENAME}" dist images .env.example LICENSE package-lock.json package.json readme.md
+          declare -A platforms=(
+            [linux]="index-linux"
+            [macos]="index-macos"
+            [win]="index-win.exe"
+          )
+          for platform in "${!platforms[@]}"; do
+            src_file="build/${platforms[$platform]}"
+            if [[ "$platform" == "win" ]]; then
+              dest_file="build/${PROJECT_NAME}.exe"
+            else
+              dest_file="build/${PROJECT_NAME}"
+            fi
+            mv "$src_file" "$dest_file"
+            zip -r "release/${FILENAME}-${platform}.zip" "$dest_file" images .env.example LICENSE readme.md
+            rm "$dest_file"
+          done
           echo "asset_filename=${FILENAME}" >> $GITHUB_ENV
       - env:
           GITHUB_TOKEN: ${{ secrets.CI_ACCESS_TOKEN }}

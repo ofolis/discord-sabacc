@@ -3,12 +3,12 @@ import { Environment } from "./environment";
 import { Saveable } from "./types";
 
 export class IO {
-  private static getFilePath(id: string): string {
+  private static getDataFilePath(id: string): string {
     return `${Environment.dataPath}/${id}.json`;
   }
 
   public static loadData(id: string): Saveable | null {
-    const filePath: string = this.getFilePath(id);
+    const filePath: string = this.getDataFilePath(id);
     if (!fs.existsSync(filePath)) {
       return null;
     }
@@ -21,7 +21,7 @@ export class IO {
       fs.mkdirSync(Environment.dataPath);
     }
     const jsonString: string = JSON.stringify(data);
-    fs.writeFileSync(this.getFilePath(id), jsonString, {
+    fs.writeFileSync(this.getDataFilePath(id), jsonString, {
       encoding: "utf8",
     });
   }

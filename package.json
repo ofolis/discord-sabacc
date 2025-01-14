@@ -10,6 +10,7 @@
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
     "@types/node": "^22.10.1",
+    "@yao-pkg/pkg": "^6.2.0",
     "commitizen": "^4.3.1",
     "cz-conventional-changelog": "^3.3.0",
     "eslint": "^9.16.0",
@@ -25,7 +26,7 @@
   "name": "discord-sabacc",
   "private": true,
   "scripts": {
-    "build": "tsup src/index.ts --minify",
+    "build": "tsup src/index.ts --minify && pkg dist/index.js --targets node20-linux,node20-macos,node20-win --out-path build",
     "dev": "tsx watch src/index.ts",
     "format": "prettier . --write",
     "lint": "prettier . --list-different && eslint",

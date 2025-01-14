@@ -11,7 +11,10 @@ const commands: Command[] = [
 ];
 
 function initializeApp(): void {
-  Log.info("Discord bot is initializing...");
+  const version: string | null = Environment.packageVersion;
+  Log.info(
+    `Initializing ${Environment.packageName} (${version ?? "NO VERSION"})...`,
+  );
   Discord.client.once("ready", () => {
     Discord.deployCommands(commands).then(
       () => {
