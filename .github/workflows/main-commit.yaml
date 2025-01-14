@@ -54,12 +54,12 @@ jobs:
           for platform in "${!platforms[@]}"; do
             src_file="build/${platforms[$platform]}"
             if [[ "$platform" == "win" ]]; then
-              dest_file="build/${PROJECT_NAME}.exe"
+              dest_file="${PROJECT_NAME}.exe"
             else
-              dest_file="build/${PROJECT_NAME}"
+              dest_file="${PROJECT_NAME}"
             fi
-            mv "$src_file" "$dest_file"
-            zip -r "release/${FILENAME}-${platform}.zip" "$dest_file" images .env.example LICENSE readme.md
+            cp "$src_file" "$dest_file"
+            zip -j "release/${FILENAME}-${platform}.zip" "$dest_file" images .env.example LICENSE readme.md
             rm "$dest_file"
           done
           echo "asset_filename=${FILENAME}" >> $GITHUB_ENV
