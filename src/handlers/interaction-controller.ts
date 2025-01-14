@@ -23,7 +23,9 @@ export class InteractionController {
       case CardSuit.SAND:
         return "🟨";
       default:
-        Log.throw("Cannot format card suit icon. Unknown card suit.", cardSuit);
+        Log.throw("Cannot format card suit icon. Unknown card suit.", {
+          cardSuit,
+        });
     }
   }
 
@@ -545,7 +547,7 @@ export class InteractionController {
     if (!(buttonInteraction.customId in discardMap)) {
       Log.throw(
         "Cannot prompt choose discard card. Unknown button interaction response ID.",
-        buttonInteraction.customId,
+        buttonInteraction,
         discardMap,
       );
     }
@@ -636,7 +638,7 @@ export class InteractionController {
       default:
         Log.throw(
           "Cannot resolve choose draw source prompt. Unknown button interaction response ID.",
-          buttonInteraction.customId,
+          buttonInteraction,
         );
     }
   }
@@ -695,7 +697,7 @@ export class InteractionController {
       default:
         Log.throw(
           "Cannot resolve choose imposter die prompt. Unknown button interaction response ID.",
-          buttonInteraction.customId,
+          buttonInteraction,
         );
     }
   }
@@ -765,7 +767,7 @@ export class InteractionController {
       default:
         Log.throw(
           "Cannot resolve choose turn action prompt. Unknown button interaction response ID.",
-          buttonInteraction.customId,
+          buttonInteraction,
         );
     }
   }
@@ -813,7 +815,7 @@ export class InteractionController {
       default:
         Log.throw(
           "Cannot resolve end current game prompt. Unknown button interaction response ID.",
-          buttonInteraction.customId,
+          buttonInteraction,
         );
     }
   }
@@ -904,7 +906,7 @@ export class InteractionController {
       default:
         Log.throw(
           "Cannot resolve new game member prompt. Unknown button interaction response ID.",
-          buttonInteraction.customId,
+          buttonInteraction,
         );
     }
   }
@@ -954,7 +956,7 @@ export class InteractionController {
       default:
         Log.throw(
           "Cannot resolve reveal cards prompt. Unknown button interaction response ID.",
-          buttonInteraction.customId,
+          buttonInteraction,
         );
     }
   }
@@ -1014,7 +1016,7 @@ export class InteractionController {
       default:
         Log.throw(
           "Cannot resolve roll for imposter prompt. Unknown button interaction response ID.",
-          buttonInteraction.customId,
+          buttonInteraction,
         );
     }
   }

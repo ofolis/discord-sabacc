@@ -6,13 +6,18 @@ import * as packageJson from "../package.json";
 export class Environment {
   private static _config: Config | null = null;
 
-  private static getEnvVariable(key: string): string {
+  private static getEnvVariable(key: string, required: boolean): string {
     const value: string | undefined = process.env[key];
     if (value === undefined) {
+      if (!required) {
+        return "";
+      }
       Log.throw(
         "Cannot get environment variable. Requested key was not defined.",
-        key,
-        process.env,
+        {
+          env: process.env,
+          key,
+        },
       );
     }
     return value;
@@ -22,8 +27,13 @@ export class Environment {
     if (this._config === null) {
       dotenv.config();
       this._config = {
-        discordApplicationId: this.getEnvVariable("DISCORD_APPLICATION_ID"),
-        discordBotToken: this.getEnvVariable("DISCORD_BOT_TOKEN"),
+        devMode:
+          this.getEnvVariable("DEV_MODE", false).toUpperCase() === "TRUE",
+        discordApplicationId: this.getEnvVariable(
+          "DISCORD_APPLICATION_ID",
+          true,
+        ),
+        discordBotToken: this.getEnvVariable("DISCORD_BOT_TOKEN", true),
       };
     }
     return this._config;
@@ -37,7 +47,9 @@ export class Environment {
     if ("name" in packageJson) {
       return packageJson.name;
     }
-    Log.throw("Cannot get package name. Package name is not defined.");
+    Log.throw(
+      "Cannot get package name. Package name is not defined in package.json.",
+    );
   }
 
   public static get packageVersion(): string | null {

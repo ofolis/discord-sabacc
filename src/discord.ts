@@ -42,8 +42,12 @@ export class Discord {
 
   public static get client(): Client {
     if (this._client === null) {
+      Log.debug("Creating Discord client...");
       this._client = new Client({
         intents: ["DirectMessages", "Guilds", "GuildMessages"],
+      });
+      Log.debug("Discord client created successfully.", {
+        client: this._client,
       });
     }
     return this._client;
@@ -95,6 +99,7 @@ export class Discord {
       }
     >,
   ): Promise<void> {
+    Log.debug("Deploying Discord global commands...", { commandMap });
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
       .filter((value) => value.command.isGlobal)
       .map((value) => value.builder);
@@ -104,6 +109,7 @@ export class Discord {
         body: commandBuilders,
       },
     );
+    Log.debug("Discord global commands deployed successfully.");
   }
 
   private static async deployGuildCommands(
@@ -117,6 +123,7 @@ export class Discord {
     >,
     guildIds: string[],
   ): Promise<void> {
+    Log.debug("Deploying Discord guild commands...", { commandMap, guildIds });
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
       .filter((value) => value.command.isGuild)
       .map((value) => value.builder);
@@ -133,9 +140,11 @@ export class Discord {
         ),
       ),
     );
+    Log.debug("Discord guild commands deployed successfully.");
   }
 
   private static getChannel(channelId: string): TextChannel {
+    Log.debug("Retrieving Discord channel...", { channelId });
     const channel: Channel | undefined =
       this.client.channels.cache.get(channelId);
     if (channel === undefined) {
@@ -150,19 +159,23 @@ export class Discord {
         channel,
       );
     }
+    Log.debug("Discord channel retrieved successfully.", channel);
     return channel;
   }
 
   public static async deleteSentItem(
     sentItem: Message | InteractionResponse,
   ): Promise<void> {
+    Log.debug("Deleting Discord sent item...", { sentItem });
     await sentItem.delete();
+    Log.debug("Discord sent item deleted successfully.");
   }
 
   public static async deployCommands(
     commandList: Command[],
     guildIds?: string[],
   ): Promise<void> {
+    Log.debug("Deploying Discord commands...", { commandList, guildIds });
     const rest: REST = new REST({
       version: "10",
     }).setToken(Environment.config.discordBotToken);
@@ -190,6 +203,7 @@ export class Discord {
     guildIds = guildIds ?? Array.from(this.client.guilds.cache.keys());
     await this.deployGlobalCommands(rest, commandMap);
     await this.deployGuildCommands(rest, commandMap, guildIds);
+    Log.debug("Discord commands deployed successfully.");
   }
 
   public static async getButtonInteraction(
@@ -197,12 +211,23 @@ export class Discord {
     filter: CollectorFilter<[MessageComponentInteraction]> | null = null,
     timeout = 60000,
   ): Promise<ButtonInteraction | null> {
+    Log.debug("Retrieving Discord button interaction...", {
+      context,
+      filter,
+      timeout,
+    });
     try {
-      return await context.awaitMessageComponent<ComponentType.Button>({
-        componentType: ComponentType.Button,
-        filter: filter ?? undefined,
-        time: timeout,
-      });
+      const buttonInteraction: ButtonInteraction =
+        await context.awaitMessageComponent<ComponentType.Button>({
+          componentType: ComponentType.Button,
+          filter: filter ?? undefined,
+          time: timeout,
+        });
+      Log.debug(
+        "Discord button interaction retrieved successfully.",
+        buttonInteraction,
+      );
+      return buttonInteraction;
     } catch (result: unknown) {
       if (result instanceof Error && result.message.endsWith("reason: time")) {
         return null;
@@ -217,11 +242,22 @@ export class Discord {
     isPrivate = false,
     buttonMap?: Record<string, ButtonBuilder>,
   ): Promise<InteractionResponse> {
-    return await interaction.reply({
+    Log.debug("Sending Discord interaction response...", {
+      interaction,
+      content,
+      isPrivate,
+      buttonMap,
+    });
+    const interactionResponse: InteractionResponse = await interaction.reply({
       components: this.createComponentsValue(buttonMap),
       content,
       ephemeral: isPrivate,
     });
+    Log.debug(
+      "Discord interaction response sent successfully.",
+      interactionResponse,
+    );
+    return interactionResponse;
   }
 
   public static async sendMessage(
@@ -233,12 +269,20 @@ export class Discord {
       name: string;
     }[],
   ): Promise<Message> {
+    Log.debug("Sending Discord message...", {
+      channelId,
+      content,
+      buttonMap,
+      attachments,
+    });
     const channel: TextChannel = this.getChannel(channelId);
-    return await channel.send({
+    const message: Message = await channel.send({
       components: this.createComponentsValue(buttonMap),
       content,
       files: attachments,
     });
+    Log.debug("Discord message sent successfully.", message);
+    return message;
   }
 
   public static async sendPersistentInteractionResponse(
@@ -247,20 +291,30 @@ export class Discord {
     isPrivate = false,
     buttonMap?: Record<string, ButtonBuilder>,
   ): Promise<InteractionResponse> {
+    Log.debug("Sending Discord persistent interaction response...");
+    let interactionResponse: InteractionResponse;
     if (interaction instanceof MessageComponentInteraction) {
-      return await this.updateInteractionSourceItem(
+      Log.debug(
+        "Handling persistent interaction response as a MessageComponentInteraction.",
+      );
+      interactionResponse = await this.updateInteractionSourceItem(
         interaction,
         content,
         buttonMap,
       );
     } else {
-      return await this.sendInteractionResponse(
+      Log.debug(
+        "Handling persistent interaction response as a CommandInteraction.",
+      );
+      interactionResponse = await this.sendInteractionResponse(
         interaction,
         content,
         isPrivate,
         buttonMap,
       );
     }
+    Log.debug("Discord persistent interaction response sent successfully.");
+    return interactionResponse;
   }
 
   public static async updateInteractionSourceItem(
@@ -268,10 +322,20 @@ export class Discord {
     content: string,
     buttonMap?: Record<string, ButtonBuilder>,
   ): Promise<InteractionResponse> {
-    return await interaction.update({
+    Log.debug("Updating Discord interaction source item...", {
+      interaction,
+      content,
+      buttonMap,
+    });
+    const interactionResponse: InteractionResponse = await interaction.update({
       components: this.createComponentsValue(buttonMap),
       content,
     });
+    Log.debug(
+      "Discord interaction source item updated successfully.",
+      interactionResponse,
+    );
+    return interactionResponse;
   }
 
   public static async updateSentItem(
@@ -279,9 +343,15 @@ export class Discord {
     content: string,
     buttonMap?: Record<string, ButtonBuilder>,
   ): Promise<void> {
-    await sentItem.edit({
+    Log.debug("Updating Discord sent item...", {
+      sentItem,
+      content,
+      buttonMap,
+    });
+    const message: Message = await sentItem.edit({
       components: this.createComponentsValue(buttonMap),
       content,
     });
+    Log.debug("Discord sent item updated successfully.", message);
   }
 }

@@ -494,10 +494,9 @@ export class GameController {
         player.currentTurnRecord = null;
         break;
       default:
-        Log.throw(
-          "Cannot set player turn action. Unknown turn action.",
+        Log.throw("Cannot set player turn action. Unknown turn action.", {
           turnAction,
-        );
+        });
     }
 
     SessionController.saveSession(session);

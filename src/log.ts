@@ -1,3 +1,5 @@
+import { Environment } from "./environment";
+
 export class Log {
   private static formatPrefix(): string {
     return `[${Date.now().toString()}]`;
@@ -18,6 +20,12 @@ export class Log {
         console[method](item);
       }
     });
+  }
+
+  public static debug(context: unknown, ...data: unknown[]): void {
+    if (Environment.config.devMode) {
+      this.logMessage("log", "\x1b[2m", context, ...data);
+    }
   }
 
   public static error(context: unknown, ...data: unknown[]): void {

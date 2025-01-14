@@ -12,6 +12,9 @@ const commands: Command[] = [
 
 function initializeApp(): void {
   const version: string | null = Environment.packageVersion;
+  if (Environment.config.devMode) {
+    Log.info("Running in development mode.");
+  }
   Log.info(
     `Initializing ${Environment.packageName} (${version ?? "NO VERSION"})...`,
   );
@@ -28,10 +31,12 @@ function initializeApp(): void {
   Discord.client.on("guildCreate", (guild) => {
     Discord.deployCommands(commands, [guild.id]).then(
       () => {
-        Log.success("Discord bot deployed to new guild.", guild);
+        Log.success("Discord bot deployed to new guild.", { guild });
       },
       (reason: unknown) => {
-        Log.error("Failed to deploy Discord bot on new guild.", reason, guild);
+        Log.error("Failed to deploy Discord bot on new guild.", reason, {
+          guild,
+        });
       },
     );
   });

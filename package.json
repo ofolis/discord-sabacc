@@ -27,7 +27,7 @@
   "private": true,
   "scripts": {
     "build": "tsup src/index.ts --minify && pkg dist/index.js --targets node20-linux,node20-macos,node20-win --out-path build",
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/index.ts 2>&1 | tee console.log",
     "format": "prettier . --write",
     "lint": "prettier . --list-different && eslint",
     "start": "node .",
