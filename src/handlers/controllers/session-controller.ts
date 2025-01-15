@@ -39,7 +39,6 @@ export class SessionController {
       status: SessionStatus.PENDING,
     };
 
-    this.saveSession(session);
     return session;
   }
 
