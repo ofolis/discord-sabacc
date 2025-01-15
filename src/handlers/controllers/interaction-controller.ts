@@ -128,11 +128,11 @@ export class InteractionController {
       `> ${discardCardStrings.join(" ")}`,
     ];
     if (session.bloodDiscard.length === 0 && session.sandDiscard.length === 0) {
-      contentLines.push("> -# 🟨 and 🟥 discard are both empty.");
+      contentLines.push("> -# `🟨` and `🟥` discard are both empty.");
     } else if (session.bloodDiscard.length === 0) {
-      contentLines.push("> -# 🟥 discard is empty.");
+      contentLines.push("> -# `🟥` discard is empty.");
     } else if (session.sandDiscard.length === 0) {
-      contentLines.push("> -# 🟨 discard is empty.");
+      contentLines.push("> -# `🟨` discard is empty.");
     }
     return Utils.linesToString(contentLines);
   }
