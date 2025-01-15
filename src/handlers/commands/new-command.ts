@@ -52,6 +52,7 @@ export class NewCommand implements Command {
           6,
         );
         await GameController.startGame(newSession);
+        SessionController.saveSession(newSession);
       }
     }
   }

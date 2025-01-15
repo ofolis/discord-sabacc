@@ -333,5 +333,7 @@ export class PlayCommand implements Command {
       await GameController.endTurn(session);
       await InteractionController.informTurnEnded(currentInteraction);
     }
+
+    SessionController.saveSession(session);
   }
 }

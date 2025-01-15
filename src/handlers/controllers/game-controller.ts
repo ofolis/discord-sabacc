@@ -20,7 +20,6 @@ import {
 export class GameController {
   private static async endGame(session: SessionState): Promise<void> {
     session.status = SessionStatus.COMPLETED;
-    SessionController.saveSession(session);
     await InteractionController.announceGameEnded(session);
   }
 
@@ -121,7 +120,6 @@ export class GameController {
     });
 
     session.handResults.push(handResults);
-    SessionController.saveSession(session);
     await InteractionController.announceHandEnded(session);
 
     if (remainingPlayerTotal <= 1) {
@@ -130,14 +128,12 @@ export class GameController {
       session.currentHandIndex++;
       this.iterateStartingPlayer(session);
       this.shuffleAndDealCards(session);
-      SessionController.saveSession(session);
     }
   }
 
   private static async endRound(session: SessionState): Promise<void> {
     const isGameRound: boolean = session.currentRoundIndex < 3;
     session.currentRoundIndex = isGameRound ? session.currentRoundIndex + 1 : 0;
-    SessionController.saveSession(session);
     if (!isGameRound) {
       await this.endHand(session);
     }
@@ -209,7 +205,6 @@ export class GameController {
 
   private static async startTurn(session: SessionState): Promise<void> {
     session.players.forEach((player) => (player.currentTurnRecord = null));
-    SessionController.saveSession(session);
     await InteractionController.announceTurnStarted(session);
   }
 
@@ -266,7 +261,6 @@ export class GameController {
     discardSet.unshift(playerCard.card);
     player.currentTurnRecord.discardedCard = playerCard;
     player.currentTurnRecord.status = TurnStatus.COMPLETED;
-    SessionController.saveSession(session);
   }
 
   public static drawPlayerCard(
@@ -340,7 +334,6 @@ export class GameController {
     };
     playerCardSet.push(playerCard);
     player.currentTurnRecord.drawnCard = playerCard;
-    SessionController.saveSession(session);
   }
 
   public static async endTurn(session: SessionState): Promise<void> {
@@ -362,7 +355,6 @@ export class GameController {
     session.currentPlayerIndex = isLastPlayer
       ? 0
       : session.currentPlayerIndex + 1;
-    SessionController.saveSession(session);
 
     if (isLastPlayer) {
       await this.endRound(session);
@@ -390,7 +382,6 @@ export class GameController {
     }
 
     player.currentTurnRecord.status = TurnStatus.COMPLETED;
-    SessionController.saveSession(session);
   }
 
   public static generatePlayerCardDieRollValues(
@@ -410,7 +401,6 @@ export class GameController {
 
     const random: Random = new Random();
     playerCard.dieRollValues.push(random.die(6), random.die(6));
-    SessionController.saveSession(session);
   }
 
   public static getFinalCardValue(
@@ -458,7 +448,6 @@ export class GameController {
 
     Utils.emptyArray(playerCard.dieRollValues);
     playerCard.dieRollValues.push(dieValue);
-    SessionController.saveSession(session);
   }
 
   public static setPlayerTurnAction(
@@ -497,8 +486,6 @@ export class GameController {
           turnAction,
         });
     }
-
-    SessionController.saveSession(session);
   }
 
   public static standPlayer(session: SessionState, player: PlayerState): void {
@@ -516,7 +503,6 @@ export class GameController {
     }
 
     player.currentTurnRecord.status = TurnStatus.COMPLETED;
-    SessionController.saveSession(session);
   }
 
   public static async startGame(session: SessionState): Promise<void> {
@@ -534,7 +520,6 @@ export class GameController {
     session.status = SessionStatus.ACTIVE;
     new Random().shuffle(session.players);
     this.shuffleAndDealCards(session);
-    SessionController.saveSession(session);
     await InteractionController.announceRoundStarted(session);
     await this.startTurn(session);
   }
