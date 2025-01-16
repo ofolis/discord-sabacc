@@ -1,5 +1,5 @@
 import { Random } from "random-js";
-import { InteractionController, SessionController } from "..";
+import { DataController, InteractionController } from "..";
 import { Log, Utils } from "../../core";
 import {
   CardSuit,
@@ -9,21 +9,15 @@ import {
   TurnAction,
   TurnStatus,
 } from "../../enums";
-import {
-  Card,
-  HandResult,
-  PlayerCard,
-  PlayerState,
-  SessionState,
-} from "../../types";
+import { Card, HandResult, Player, PlayerCard, Session } from "../../types";
 
 export class GameController {
-  private static async endGame(session: SessionState): Promise<void> {
+  private static async endGame(session: Session): Promise<void> {
     session.status = SessionStatus.COMPLETED;
     await InteractionController.announceGameEnded(session);
   }
 
-  private static async endHand(session: SessionState): Promise<void> {
+  private static async endHand(session: Session): Promise<void> {
     const partialHandResults: Pick<
       HandResult,
       | "bloodCard"
@@ -37,7 +31,7 @@ export class GameController {
     >[] = session.players
       .filter((player) => !player.isEliminated)
       .map((player) => {
-        SessionController.validatePlayerCardSets(player);
+        DataController.validatePlayerCardSets(player);
         if (
           player.currentBloodCards.length > 1 ||
           player.currentSandCards.length > 1
@@ -106,7 +100,7 @@ export class GameController {
 
     let remainingPlayerTotal: number = 0;
     handResults.forEach((handResult) => {
-      const player: PlayerState = session.players[handResult.playerIndex];
+      const player: Player = session.players[handResult.playerIndex];
       if (handResult.tokenLossTotal >= player.currentTokenTotal) {
         handResult.tokenLossTotal = player.currentTokenTotal;
         player.currentTokenTotal = 0;
@@ -131,7 +125,7 @@ export class GameController {
     }
   }
 
-  private static async endRound(session: SessionState): Promise<void> {
+  private static async endRound(session: Session): Promise<void> {
     const isGameRound: boolean = session.currentRoundIndex < 3;
     session.currentRoundIndex = isGameRound ? session.currentRoundIndex + 1 : 0;
     if (!isGameRound) {
@@ -154,8 +148,8 @@ export class GameController {
     return valueDifference;
   }
 
-  private static iterateStartingPlayer(session: SessionState): void {
-    const currentFirstPlayer: PlayerState | undefined = session.players.shift();
+  private static iterateStartingPlayer(session: Session): void {
+    const currentFirstPlayer: Player | undefined = session.players.shift();
     if (currentFirstPlayer === undefined) {
       Log.throw(
         "Cannot iterate starting player. Session player list is empty.",
@@ -165,7 +159,7 @@ export class GameController {
     session.players.push(currentFirstPlayer);
   }
 
-  private static shuffleAndDealCards(session: SessionState): void {
+  private static shuffleAndDealCards(session: Session): void {
     const random: Random = new Random();
     session.bloodDeck.push(...session.bloodDiscard);
     Utils.emptyArray(session.bloodDiscard);
@@ -203,19 +197,19 @@ export class GameController {
     session.sandDiscard.push(Utils.removeTopArrayItem(session.sandDeck));
   }
 
-  private static async startTurn(session: SessionState): Promise<void> {
+  private static async startTurn(session: Session): Promise<void> {
     session.players.forEach((player) => (player.currentTurnRecord = null));
     await InteractionController.announceTurnStarted(session);
   }
 
   public static discardPlayerCard(
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
     playerCard: PlayerCard,
   ): void {
-    SessionController.validateSessionPlayer(session, player);
-    SessionController.validatePlayerCardSets(player);
-    SessionController.validatePlayerCard(player, playerCard);
+    DataController.validateSessionPlayer(session, player);
+    DataController.validatePlayerCardSets(player);
+    DataController.validatePlayerCard(player, playerCard);
 
     if (
       player.currentTurnRecord === null ||
@@ -264,11 +258,11 @@ export class GameController {
   }
 
   public static drawPlayerCard(
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
     drawSource: Exclude<PlayerCardSource, PlayerCardSource.DEALT>,
   ): void {
-    SessionController.validateSessionPlayer(session, player);
+    DataController.validateSessionPlayer(session, player);
 
     if (
       player.currentTurnRecord === null ||
@@ -336,9 +330,8 @@ export class GameController {
     player.currentTurnRecord.drawnCard = playerCard;
   }
 
-  public static async endTurn(session: SessionState): Promise<void> {
-    const currentPlayer: PlayerState =
-      session.players[session.currentPlayerIndex];
+  public static async endTurn(session: Session): Promise<void> {
+    const currentPlayer: Player = session.players[session.currentPlayerIndex];
     if (
       currentPlayer.currentTurnRecord === null ||
       currentPlayer.currentTurnRecord.status !== TurnStatus.COMPLETED
@@ -364,11 +357,8 @@ export class GameController {
     }
   }
 
-  public static finalizePlayerCards(
-    session: SessionState,
-    player: PlayerState,
-  ): void {
-    SessionController.validateSessionPlayer(session, player);
+  public static finalizePlayerCards(session: Session, player: Player): void {
+    DataController.validateSessionPlayer(session, player);
 
     if (
       player.currentTurnRecord === null ||
@@ -385,12 +375,12 @@ export class GameController {
   }
 
   public static generatePlayerCardDieRollValues(
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
     playerCard: PlayerCard,
   ): void {
-    SessionController.validateSessionPlayer(session, player);
-    SessionController.validatePlayerCard(player, playerCard);
+    DataController.validateSessionPlayer(session, player);
+    DataController.validatePlayerCard(player, playerCard);
 
     if (playerCard.dieRollValues.length !== 0) {
       Log.throw(
@@ -431,13 +421,13 @@ export class GameController {
   }
 
   public static setPlayerCardDieRollValue(
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
     playerCard: PlayerCard,
     dieValue: number,
   ): void {
-    SessionController.validateSessionPlayer(session, player);
-    SessionController.validatePlayerCard(player, playerCard);
+    DataController.validateSessionPlayer(session, player);
+    DataController.validatePlayerCard(player, playerCard);
 
     if (!playerCard.dieRollValues.includes(dieValue)) {
       Log.throw(
@@ -451,11 +441,11 @@ export class GameController {
   }
 
   public static setPlayerTurnAction(
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
     turnAction: TurnAction | null,
   ): void {
-    SessionController.validateSessionPlayer(session, player);
+    DataController.validateSessionPlayer(session, player);
 
     switch (turnAction) {
       case TurnAction.DRAW:
@@ -488,8 +478,8 @@ export class GameController {
     }
   }
 
-  public static standPlayer(session: SessionState, player: PlayerState): void {
-    SessionController.validateSessionPlayer(session, player);
+  public static standPlayer(session: Session, player: Player): void {
+    DataController.validateSessionPlayer(session, player);
 
     if (
       player.currentTurnRecord === null ||
@@ -505,7 +495,7 @@ export class GameController {
     player.currentTurnRecord.status = TurnStatus.COMPLETED;
   }
 
-  public static async startGame(session: SessionState): Promise<void> {
+  public static async startGame(session: Session): Promise<void> {
     if (session.status !== SessionStatus.PENDING) {
       Log.throw(
         "Cannot start game. Session is not currently pending.",

@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import * as packageJson from "../../package.json";
 import { Log } from "../core";
-import type { Config, PackageContext } from "../types";
+import type { Config, PackageContext } from "./types";
 
 export class Environment {
   private static _config: Config | null = null;

@@ -1,4 +1,4 @@
-import { GameController, InteractionController, SessionController } from "..";
+import { DataController, GameController, InteractionController } from "..";
 import { Command, Log } from "../../core";
 import {
   DiscordButtonInteraction,
@@ -12,7 +12,7 @@ import {
   TurnAction,
   TurnStatus,
 } from "../../enums";
-import type { PlayerCard, PlayerState, SessionState } from "../../types";
+import type { ChannelState, Player, PlayerCard, Session } from "../../types";
 
 export class PlayCommand implements Command {
   public readonly description = "Play your turn.";
@@ -27,8 +27,8 @@ export class PlayCommand implements Command {
     currentInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
     if (
       player.currentTurnRecord === null ||
@@ -86,8 +86,8 @@ export class PlayCommand implements Command {
     currentInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
     if (player.currentTurnRecord === null) {
       const turnActionResponse: [DiscordButtonInteraction, TurnAction] | null =
@@ -144,8 +144,8 @@ export class PlayCommand implements Command {
     currentInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
     playerCard: PlayerCard,
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
     if (playerCard.dieRollValues.length === 0) {
@@ -193,8 +193,8 @@ export class PlayCommand implements Command {
     currentInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
     if (
       player.currentBloodCards.length !== 1 ||
@@ -268,8 +268,8 @@ export class PlayCommand implements Command {
     currentInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
   ): DiscordCommandInteraction | DiscordMessageComponentInteraction {
     if (
       player.currentTurnRecord === null ||
@@ -285,16 +285,19 @@ export class PlayCommand implements Command {
   }
 
   public async execute(interaction: DiscordCommandInteraction): Promise<void> {
-    const session: SessionState | null = SessionController.loadSession(
+    const channelState: ChannelState | null = DataController.loadChannelState(
       interaction.channelId,
     );
-    if (session === null || session.status !== SessionStatus.ACTIVE) {
+    if (
+      channelState === null ||
+      channelState.session.status !== SessionStatus.ACTIVE
+    ) {
       await InteractionController.informNoGame(interaction);
       return;
     }
 
-    const player: PlayerState | null = SessionController.getSessionPlayerById(
-      session,
+    const player: Player | null = DataController.getSessionPlayerById(
+      channelState.session,
       interaction.user.id,
     );
     if (player === null) {
@@ -303,25 +306,29 @@ export class PlayCommand implements Command {
     }
 
     if (
-      session.players[session.currentPlayerIndex].id !== interaction.user.id
+      channelState.session.players[channelState.session.currentPlayerIndex]
+        .id !== interaction.user.id
     ) {
-      await InteractionController.informNotTurn(session, interaction);
+      await InteractionController.informNotTurn(
+        channelState.session,
+        interaction,
+      );
       return;
     }
 
     let currentInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction = interaction;
-    if (session.currentRoundIndex < 3) {
+    if (channelState.session.currentRoundIndex < 3) {
       currentInteraction = await PlayCommand.handleGameRound(
         interaction,
-        session,
+        channelState.session,
         player,
       );
     } else {
       currentInteraction = await PlayCommand.handleScoringRound(
         interaction,
-        session,
+        channelState.session,
         player,
       );
     }
@@ -330,10 +337,10 @@ export class PlayCommand implements Command {
       player.currentTurnRecord !== null &&
       player.currentTurnRecord.status === TurnStatus.COMPLETED
     ) {
-      await GameController.endTurn(session);
+      await GameController.endTurn(channelState.session);
       await InteractionController.informTurnEnded(currentInteraction);
     }
 
-    SessionController.saveSession(session);
+    DataController.saveChannelState(channelState);
   }
 }

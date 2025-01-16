@@ -1,7 +1,7 @@
-import { Card, HandResult, PlayerState } from "..";
+import { Card, HandResult, Player } from "..";
 import { SessionStatus } from "../../enums";
 
-export type SessionState = {
+export type Session = {
   bloodDeck: Card[];
   bloodDiscard: Card[];
   channelId: string;
@@ -9,10 +9,11 @@ export type SessionState = {
   currentPlayerIndex: number;
   currentRoundIndex: number;
   handResults: HandResult[][];
-  players: PlayerState[];
+  players: Player[];
   sandDeck: Card[];
   sandDiscard: Card[];
   startedAt?: number;
+  startingPlayer: Player;
   startingTokenTotal: number;
   status: SessionStatus;
 };

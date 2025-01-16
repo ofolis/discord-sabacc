@@ -1,8 +1,8 @@
-import { InteractionController, SessionController } from "..";
+import { DataController, InteractionController } from "..";
 import { Command } from "../../core";
 import type { DiscordCommandInteraction } from "../../core/discord";
 import { SessionStatus } from "../../enums";
-import type { PlayerState, SessionState } from "../../types";
+import type { ChannelState, Player } from "../../types";
 
 export class InfoCommand implements Command {
   public readonly description = "View your hand and see game info.";
@@ -14,16 +14,19 @@ export class InfoCommand implements Command {
   public readonly name = "info";
 
   public async execute(interaction: DiscordCommandInteraction): Promise<void> {
-    const session: SessionState | null = SessionController.loadSession(
+    const channelState: ChannelState | null = DataController.loadChannelState(
       interaction.channelId,
     );
-    if (session === null || session.status !== SessionStatus.ACTIVE) {
+    if (
+      channelState === null ||
+      channelState.session.status !== SessionStatus.ACTIVE
+    ) {
       await InteractionController.informNoGame(interaction);
       return;
     }
 
-    const player: PlayerState | null = SessionController.getSessionPlayerById(
-      session,
+    const player: Player | null = DataController.getSessionPlayerById(
+      channelState.session,
       interaction.user.id,
     );
     if (player === null) {
@@ -31,6 +34,10 @@ export class InfoCommand implements Command {
       return;
     }
 
-    await InteractionController.informPlayerInfo(session, player, interaction);
+    await InteractionController.informPlayerInfo(
+      channelState.session,
+      player,
+      interaction,
+    );
   }
 }

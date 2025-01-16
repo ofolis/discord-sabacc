@@ -2,29 +2,65 @@ import { createBloodDeck, createSandDeck } from "../../constants";
 import { IO, Log } from "../../core";
 import { DiscordUser } from "../../core/discord";
 import { CardSuit, SessionStatus } from "../../enums";
-import { PlayerCard, PlayerState, SessionState } from "../../types";
+import { ChannelState, Player, PlayerCard, Session } from "../../types";
 
-export class SessionController {
+export class DataController {
+  public static addSessionPlayers(
+    session: Session,
+    discordUsers: DiscordUser[],
+  ): void {
+    const players: Player[] = discordUsers.map((discordUser) => {
+      return {
+        avatarId: discordUser.avatar,
+        currentBloodCards: [],
+        currentSandCards: [],
+        currentSpentTokenTotal: 0,
+        currentTokenTotal: session.startingTokenTotal,
+        currentTurnRecord: null,
+        id: discordUser.id,
+        isEliminated: false,
+        globalName: discordUser.globalName,
+        handResults: [],
+        username: discordUser.username,
+      };
+    });
+    session.players.push(...players);
+  }
+
+  public static createChannelState(
+    channelId: string,
+    session: Session,
+  ): ChannelState {
+    return {
+      channelId,
+      latestGameCompletedAt: null,
+      latestGameStartedAt: null,
+      session,
+      totalGamesCompleted: 0,
+      totalGamesStarted: 0,
+    };
+  }
+
   public static createSession(
     channelId: string,
-    discordUsers: DiscordUser[],
+    startingDiscordUser: DiscordUser,
     startingTokenTotal: number,
-  ): SessionState {
-    const players: PlayerState[] = discordUsers.map((discordUser) => ({
-      avatarId: discordUser.avatar,
+  ): Session {
+    const startingPlayer: Player = {
+      avatarId: startingDiscordUser.avatar,
       currentBloodCards: [],
       currentSandCards: [],
       currentSpentTokenTotal: 0,
       currentTokenTotal: startingTokenTotal,
       currentTurnRecord: null,
-      id: discordUser.id,
+      id: startingDiscordUser.id,
       isEliminated: false,
-      globalName: discordUser.globalName,
+      globalName: startingDiscordUser.globalName,
       handResults: [],
-      username: discordUser.username,
-    }));
+      username: startingDiscordUser.username,
+    };
 
-    const session: SessionState = {
+    const session: Session = {
       bloodDeck: createBloodDeck(),
       bloodDiscard: [],
       channelId,
@@ -32,9 +68,10 @@ export class SessionController {
       currentPlayerIndex: 0,
       currentRoundIndex: 0,
       handResults: [],
-      players,
+      players: [startingPlayer],
       sandDeck: createSandDeck(),
       sandDiscard: [],
+      startingPlayer,
       startingTokenTotal,
       status: SessionStatus.PENDING,
     };
@@ -43,22 +80,22 @@ export class SessionController {
   }
 
   public static getSessionPlayerById(
-    session: SessionState,
+    session: Session,
     playerId: string,
-  ): PlayerState | null {
+  ): Player | null {
     return session.players.find((player) => player.id === playerId) ?? null;
   }
 
-  public static loadSession(channelId: string): SessionState | null {
-    return IO.loadData(channelId) as SessionState | null;
+  public static loadChannelState(channelId: string): ChannelState | null {
+    return IO.loadData(channelId) as ChannelState | null;
   }
 
-  public static saveSession(session: SessionState): void {
-    IO.saveData(session.channelId, session);
+  public static saveChannelState(channelState: ChannelState): void {
+    IO.saveData(channelState.channelId, channelState);
   }
 
   public static validatePlayerCard(
-    player: PlayerState,
+    player: Player,
     playerCard: PlayerCard,
   ): void {
     const cardInWrongSet: boolean =
@@ -80,7 +117,7 @@ export class SessionController {
     }
   }
 
-  public static validatePlayerCardSets(player: PlayerState): void {
+  public static validatePlayerCardSets(player: Player): void {
     if (
       player.currentBloodCards.length === 0 ||
       player.currentSandCards.length === 0
@@ -110,10 +147,7 @@ export class SessionController {
     });
   }
 
-  public static validateSessionPlayer(
-    session: SessionState,
-    player: PlayerState,
-  ): void {
+  public static validateSessionPlayer(session: Session, player: Player): void {
     if (!session.players.includes(player)) {
       Log.throw(
         "Session player validation failed. Session does not contain the player.",

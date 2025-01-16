@@ -1,4 +1,2 @@
-export type { Config } from "./config";
+export type { ChannelState } from "./channel-state";
 export * from "./game";
-export type { PackageContext } from "./package-context";
-export type { Saveable } from "./saveable";

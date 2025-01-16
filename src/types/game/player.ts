@@ -1,6 +1,6 @@
 import { HandResult, PlayerCard, TurnRecord } from ".";
 
-export type PlayerState = {
+export type Player = {
   avatarId: string | null;
   currentBloodCards: PlayerCard[];
   currentSandCards: PlayerCard[];

@@ -11,7 +11,7 @@ import {
   DiscordUser,
 } from "../../core/discord";
 import { CardSuit, CardType, PlayerCardSource, TurnAction } from "../../enums";
-import { Card, PlayerCard, PlayerState, SessionState } from "../../types";
+import { Card, Player, PlayerCard, Session } from "../../types";
 import { GameController } from "./game-controller";
 
 export class InteractionController {
@@ -65,18 +65,18 @@ export class InteractionController {
     return "@everyone";
   }
 
-  private static formatHandRoundMessage(session: SessionState): string {
+  private static formatHandRoundMessage(session: Session): string {
     return `> ### Hand: \`${(session.currentHandIndex + 1).toString()}\`  |  Round: \`${session.currentRoundIndex < 3 ? `${(session.currentRoundIndex + 1).toString()}/3` : "REVEAL"}\``;
   }
 
-  private static formatPlayerAvatarUrl(player: PlayerState): string | null {
+  private static formatPlayerAvatarUrl(player: Player): string | null {
     if (player.avatarId === null) {
       return null;
     }
     return `https://cdn.discordapp.com/avatars/${player.id}/${player.avatarId}.webp?size=240`;
   }
 
-  private static formatPlayerItemsMessage(player: PlayerState): string {
+  private static formatPlayerItemsMessage(player: Player): string {
     const cardStrings: string[] = [];
     player.currentSandCards.forEach((playerCard) => {
       cardStrings.push(this.formatCardString(playerCard));
@@ -92,7 +92,7 @@ export class InteractionController {
     return Utils.linesToString(contentLines);
   }
 
-  private static formatPlayerListMessage(session: SessionState): string {
+  private static formatPlayerListMessage(session: Session): string {
     const contentLines: string[] = ["> ### Players"];
     session.players.forEach((player, index) =>
       contentLines.push(
@@ -103,19 +103,15 @@ export class InteractionController {
     return Utils.linesToString(contentLines);
   }
 
-  private static formatPlayerNameString(
-    player: PlayerState | DiscordUser,
-  ): string {
+  private static formatPlayerNameString(player: Player | DiscordUser): string {
     return (player.globalName ?? player.username).toUpperCase();
   }
 
-  private static formatPlayerTagString(
-    player: PlayerState | DiscordUser,
-  ): string {
+  private static formatPlayerTagString(player: Player | DiscordUser): string {
     return `<@${player.id}>`;
   }
 
-  private static formatTableDiscardMessage(session: SessionState): string {
+  private static formatTableDiscardMessage(session: Session): string {
     const discardCardStrings: string[] = [];
     if (session.sandDiscard.length > 0) {
       discardCardStrings.push(this.formatCardString(session.sandDiscard[0]));
@@ -177,8 +173,8 @@ export class InteractionController {
     return buttonInteraction;
   }
 
-  public static async announceGameEnded(session: SessionState): Promise<void> {
-    const activePlayers: PlayerState[] = session.players.filter(
+  public static async announceGameEnded(session: Session): Promise<void> {
+    const activePlayers: Player[] = session.players.filter(
       (player) => !player.isEliminated,
     );
     if (activePlayers.length !== 1) {
@@ -210,7 +206,7 @@ export class InteractionController {
     );
   }
 
-  public static async announceHandEnded(session: SessionState): Promise<void> {
+  public static async announceHandEnded(session: Session): Promise<void> {
     if (session.handResults.length < session.currentHandIndex + 1) {
       Log.throw(
         "Cannot announce hand ended. Results do not exist for the current hand.",
@@ -223,7 +219,7 @@ export class InteractionController {
     ];
     const usedPlayerIndexes: number[] = [];
     session.handResults[session.currentHandIndex].forEach((handResult) => {
-      const player: PlayerState = session.players[handResult.playerIndex];
+      const player: Player = session.players[handResult.playerIndex];
       const tokenDetailStrings: string[] = [];
       if (handResult.tokenLossTotal === 0) {
         tokenDetailStrings.push("Full Refund!");
@@ -258,9 +254,7 @@ export class InteractionController {
     );
   }
 
-  public static async announceRoundStarted(
-    session: SessionState,
-  ): Promise<void> {
+  public static async announceRoundStarted(session: Session): Promise<void> {
     const contentLines: string[] = [];
     switch (session.currentRoundIndex) {
       case 0:
@@ -283,8 +277,8 @@ export class InteractionController {
     );
   }
 
-  public static async announceTurnEnded(session: SessionState): Promise<void> {
-    const player: PlayerState = session.players[session.currentPlayerIndex];
+  public static async announceTurnEnded(session: Session): Promise<void> {
+    const player: Player = session.players[session.currentPlayerIndex];
     if (player.currentTurnRecord === null) {
       Log.throw(
         "Cannot announce turn ended. Player did not contain a turn record.",
@@ -371,9 +365,7 @@ export class InteractionController {
     );
   }
 
-  public static async announceTurnStarted(
-    session: SessionState,
-  ): Promise<void> {
+  public static async announceTurnStarted(session: Session): Promise<void> {
     const contentLines: string[] = [
       `## 🆙 ${this.formatPlayerNameString(session.players[session.currentPlayerIndex])}'s Turn`,
       `${this.formatPlayerTagString(session.players[session.currentPlayerIndex])} use the **/play** command to take your turn.`,
@@ -422,13 +414,12 @@ export class InteractionController {
   }
 
   public static async informNotTurn(
-    session: SessionState,
+    session: Session,
     discordInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
   ): Promise<void> {
-    const currentPlayer: PlayerState =
-      session.players[session.currentPlayerIndex];
+    const currentPlayer: Player = session.players[session.currentPlayerIndex];
     const contentLines: string[] = [
       "## Not Your Turn",
       `It is currently ${this.formatPlayerNameString(currentPlayer)}'s turn.`,
@@ -443,8 +434,8 @@ export class InteractionController {
   }
 
   public static async informPlayerInfo(
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
     discordInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
@@ -490,8 +481,8 @@ export class InteractionController {
   }
 
   public static async promptChooseDiscardCard(
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
     discordInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
@@ -554,8 +545,8 @@ export class InteractionController {
   }
 
   public static async promptChooseDrawSource(
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
     discordInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
@@ -643,7 +634,7 @@ export class InteractionController {
   }
 
   public static async promptChooseImposterDie(
-    player: PlayerState,
+    player: Player,
     playerCard: PlayerCard,
     discordInteraction:
       | DiscordCommandInteraction
@@ -702,8 +693,8 @@ export class InteractionController {
   }
 
   public static async promptChooseTurnAction(
-    session: SessionState,
-    player: PlayerState,
+    session: Session,
+    player: Player,
     discordInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
@@ -820,13 +811,12 @@ export class InteractionController {
   }
 
   public static async promptNewGameMembers(
-    channelId: string,
-    startingDiscordUser: DiscordUser,
+    session: Session,
     discordInteraction: DiscordMessageComponentInteraction | null = null,
     discordUserAccumulator: DiscordUser[] = [],
   ): Promise<DiscordUser[] | null> {
-    const discordUserList: DiscordUser[] = [
-      startingDiscordUser,
+    const joinerList: (Player | DiscordUser)[] = [
+      ...session.players,
       ...discordUserAccumulator,
     ];
     const buttonMap: Record<string, DiscordButtonBuilder> = {
@@ -836,16 +826,16 @@ export class InteractionController {
       startGame: new DiscordButtonBuilder()
         .setLabel("Start Game")
         .setStyle(DiscordButtonStyle.Success)
-        .setDisabled(discordUserList.length <= 1),
+        .setDisabled(joinerList.length <= 1),
     };
     const baseContentLines: string[] = [
       "# New Game",
-      `Hey ${this.formatChannelTagString()}! A new game was started by ${this.formatPlayerNameString(startingDiscordUser)}.`,
+      `Hey ${this.formatChannelTagString()}! A new game was started by ${this.formatPlayerNameString(session.startingPlayer)}.`,
       "### Players",
-      discordUserList
+      joinerList
         .map(
-          (discordUser) =>
-            `- **${this.formatPlayerNameString(discordUser)}** (${this.formatPlayerTagString(discordUser)})`,
+          (joiner) =>
+            `- **${this.formatPlayerNameString(joiner)}** (${this.formatPlayerTagString(joiner)})`,
         )
         .join("\n"),
     ];
@@ -857,7 +847,7 @@ export class InteractionController {
     let outbound: DiscordMessage | DiscordInteractionResponse;
     if (discordInteraction === null) {
       outbound = await Discord.sendMessage(
-        channelId,
+        session.channelId,
         Utils.linesToString(outboundContentLines),
         buttonMap,
       );
@@ -882,16 +872,14 @@ export class InteractionController {
     switch (buttonInteraction.customId) {
       case "joinGame":
         if (
-          startingDiscordUser.id !== buttonInteraction.user.id &&
-          !discordUserAccumulator.some(
+          !joinerList.some(
             (discordUser) => discordUser.id === buttonInteraction.user.id,
           )
         ) {
           discordUserAccumulator.push(buttonInteraction.user);
         }
         return this.promptNewGameMembers(
-          channelId,
-          startingDiscordUser,
+          session,
           buttonInteraction,
           discordUserAccumulator,
         );
@@ -901,7 +889,7 @@ export class InteractionController {
           Utils.linesToString(baseContentLines),
           {},
         );
-        return [startingDiscordUser, ...discordUserAccumulator];
+        return discordUserAccumulator;
       default:
         Log.throw(
           "Cannot resolve new game member prompt. Unknown button interaction response ID.",
@@ -911,7 +899,7 @@ export class InteractionController {
   }
 
   public static async promptRevealCards(
-    player: PlayerState,
+    player: Player,
     discordInteraction:
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
@@ -961,7 +949,7 @@ export class InteractionController {
   }
 
   public static async promptRollForImposter(
-    player: PlayerState,
+    player: Player,
     playerCard: PlayerCard,
     discordInteraction:
       | DiscordCommandInteraction

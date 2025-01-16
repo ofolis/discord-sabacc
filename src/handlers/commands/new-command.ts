@@ -1,4 +1,4 @@
-import { GameController, InteractionController, SessionController } from "..";
+import { DataController, GameController, InteractionController } from "..";
 import { Command } from "../../core";
 import {
   DiscordButtonInteraction,
@@ -7,7 +7,7 @@ import {
   DiscordUser,
 } from "../../core/discord";
 import { SessionStatus } from "../../enums";
-import type { SessionState } from "../../types";
+import type { ChannelState, Session } from "../../types";
 
 export class NewCommand implements Command {
   public readonly description = "Start a new game.";
@@ -19,7 +19,7 @@ export class NewCommand implements Command {
   public readonly name = "new";
 
   public async execute(interaction: DiscordCommandInteraction): Promise<void> {
-    const session: SessionState | null = SessionController.loadSession(
+    let channelState: ChannelState | null = DataController.loadChannelState(
       interaction.channelId,
     );
     let currentInteraction:
@@ -27,7 +27,10 @@ export class NewCommand implements Command {
       | DiscordMessageComponentInteraction = interaction;
     let createSession: boolean = false;
 
-    if (session === null || session.status === SessionStatus.COMPLETED) {
+    if (
+      channelState === null ||
+      channelState.session.status === SessionStatus.COMPLETED
+    ) {
       createSession = true;
     } else {
       const endCurrentGameResponse: DiscordButtonInteraction | null =
@@ -40,19 +43,25 @@ export class NewCommand implements Command {
 
     if (createSession) {
       await InteractionController.informStartedGame(currentInteraction);
+      const session: Session = DataController.createSession(
+        interaction.channelId,
+        interaction.user,
+        6,
+      );
       const newGameMembersResponse: DiscordUser[] | null =
-        await InteractionController.promptNewGameMembers(
-          interaction.channelId,
-          interaction.user,
-        );
+        await InteractionController.promptNewGameMembers(session);
       if (newGameMembersResponse !== null) {
-        const newSession: SessionState = SessionController.createSession(
-          interaction.channelId,
-          newGameMembersResponse,
-          6,
-        );
-        await GameController.startGame(newSession);
-        SessionController.saveSession(newSession);
+        DataController.addSessionPlayers(session, newGameMembersResponse);
+        if (channelState === null) {
+          channelState = DataController.createChannelState(
+            interaction.channelId,
+            session,
+          );
+        } else {
+          channelState.session = session;
+        }
+        await GameController.startGame(channelState.session);
+        DataController.saveChannelState(channelState);
       }
     }
   }

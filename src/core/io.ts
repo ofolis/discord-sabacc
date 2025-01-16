@@ -1,7 +1,7 @@
 import * as fs from "fs";
-import { Saveable } from "../types";
 import { Environment } from "./environment";
 import { Log } from "./log";
+import { Saveable } from "./types";
 
 export class IO {
   private static getDataFilePath(id: string): string {
