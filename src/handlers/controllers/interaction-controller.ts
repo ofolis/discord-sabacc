@@ -487,13 +487,6 @@ export class InteractionController {
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
   ): Promise<[DiscordButtonInteraction, PlayerCard] | null> {
-    const buttonMap: Record<string, DiscordButtonBuilder> = {};
-    const contentLines: string[] = [
-      this.formatTableDiscardMessage(session),
-      this.formatPlayerItemsMessage(player),
-      "",
-      "**Choose a card to discard.**",
-    ];
     const playerCardSet: PlayerCard[] | null =
       player.currentBloodCards.length > 1
         ? player.currentBloodCards
@@ -506,14 +499,26 @@ export class InteractionController {
         player,
       );
     }
-    const discardMap: Record<string, PlayerCard> = {};
-    playerCardSet.forEach((playerCard, index) => {
-      const key: string = `discardOption${index.toString()}`;
-      discardMap[key] = playerCard;
-      buttonMap[key] = new DiscordButtonBuilder()
-        .setLabel(this.formatCardString(playerCard.card, false))
-        .setStyle(DiscordButtonStyle.Primary);
-    });
+    if (playerCardSet.length !== 2) {
+      Log.throw(
+        "Cannot prompt choose discard card. Card set does not contain exactly 2 cards.",
+        player,
+      );
+    }
+    const buttonMap: Record<string, DiscordButtonBuilder> = {
+      firstCard: new DiscordButtonBuilder()
+        .setLabel(this.formatCardString(playerCardSet[0].card, false))
+        .setStyle(DiscordButtonStyle.Primary),
+      secondCard: new DiscordButtonBuilder()
+        .setLabel(this.formatCardString(playerCardSet[1].card, false))
+        .setStyle(DiscordButtonStyle.Primary),
+    };
+    const contentLines: string[] = [
+      this.formatTableDiscardMessage(session),
+      this.formatPlayerItemsMessage(player),
+      "",
+      "**Choose a card to keep. The other will be discarded.**",
+    ];
     const interactionResponse: DiscordInteractionResponse =
       await Discord.sendPersistentInteractionResponse(
         discordInteraction,
@@ -534,14 +539,17 @@ export class InteractionController {
       );
       return null;
     }
-    if (!(buttonInteraction.customId in discardMap)) {
-      Log.throw(
-        "Cannot prompt choose discard card. Unknown button interaction response ID.",
-        buttonInteraction,
-        discardMap,
-      );
+    switch (buttonInteraction.customId) {
+      case "firstCard":
+        return [buttonInteraction, playerCardSet[1]];
+      case "secondCard":
+        return [buttonInteraction, playerCardSet[0]];
+      default:
+        Log.throw(
+          "Cannot prompt choose discard card. Unknown button interaction response ID.",
+          buttonInteraction,
+        );
     }
-    return [buttonInteraction, discardMap[buttonInteraction.customId]];
   }
 
   public static async promptChooseDrawSource(
