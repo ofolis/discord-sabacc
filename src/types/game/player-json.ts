@@ -1,6 +1,7 @@
-import { HandResult, PlayerCard, TurnRecord } from ".";
+import { HandResult, PlayerCard, TurnRecord } from "..";
+import { PlayerStatus } from "../../enums";
 
-export type Player = {
+export type PlayerJson = {
   avatarId: string | null;
   currentBloodCards: PlayerCard[];
   currentSandCards: PlayerCard[];
@@ -8,8 +9,8 @@ export type Player = {
   currentTokenTotal: number;
   currentTurnRecord: TurnRecord | null;
   id: string;
-  isEliminated: boolean;
   globalName: string | null;
   handResults: HandResult[];
+  status: PlayerStatus;
   username: string;
 };

@@ -1,10 +1,10 @@
-import { DataController, InteractionController } from "..";
-import { Command } from "../../core";
-import type { DiscordCommandInteraction } from "../../core/discord";
-import { SessionStatus } from "../../enums";
-import type { ChannelState, Player } from "../../types";
+import { DataController, InteractionController } from "../controllers";
+import { Command } from "../core";
+import type { DiscordCommandInteraction } from "../core/discord";
+import { SessionStatus } from "../enums";
+import { ChannelState, Player } from "../saveables";
 
-export class InfoCommand implements Command {
+export class Info implements Command {
   public readonly description = "View your hand and see game info.";
 
   public readonly isGlobal = false;
@@ -25,8 +25,7 @@ export class InfoCommand implements Command {
       return;
     }
 
-    const player: Player | null = DataController.getSessionPlayerById(
-      channelState.session,
+    const player: Player | null = channelState.session.getPlayerById(
       interaction.user.id,
     );
     if (player === null) {

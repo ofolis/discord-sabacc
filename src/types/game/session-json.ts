@@ -1,7 +1,8 @@
-import { Card, HandResult, Player } from "..";
+import { PlayerJson } from ".";
+import { Card, HandResult } from "..";
 import { SessionStatus } from "../../enums";
 
-export type Session = {
+export type SessionJson = {
   bloodDeck: Card[];
   bloodDiscard: Card[];
   channelId: string;
@@ -9,11 +10,12 @@ export type Session = {
   currentPlayerIndex: number;
   currentRoundIndex: number;
   handResults: HandResult[][];
-  players: Player[];
+  playerOrder: string[];
+  players: Record<string, PlayerJson>;
   sandDeck: Card[];
   sandDiscard: Card[];
-  startedAt?: number;
-  startingPlayer: Player;
+  startedAt: number | null;
+  startingPlayerId: string;
   startingTokenTotal: number;
   status: SessionStatus;
 };

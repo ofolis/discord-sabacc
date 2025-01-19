@@ -1,15 +1,15 @@
-import { DataController, GameController, InteractionController } from "..";
-import { Command } from "../../core";
+import { DataController, InteractionController } from "../controllers";
+import { Command } from "../core";
 import {
   DiscordButtonInteraction,
   DiscordCommandInteraction,
   DiscordMessageComponentInteraction,
   DiscordUser,
-} from "../../core/discord";
-import { SessionStatus } from "../../enums";
-import type { ChannelState, Session } from "../../types";
+} from "../core/discord";
+import { SessionStatus } from "../enums";
+import { ChannelState, Player, Session } from "../saveables";
 
-export class NewCommand implements Command {
+export class New implements Command {
   public readonly description = "Start a new game.";
 
   public readonly isGlobal = false;
@@ -43,24 +43,26 @@ export class NewCommand implements Command {
 
     if (createSession) {
       await InteractionController.informStartedGame(currentInteraction);
-      const session: Session = DataController.createSession(
+      const startingTokenTotal: number = 6;
+      const startingPlayer: Player = new Player(interaction.user);
+      const session: Session = new Session(
         interaction.channelId,
-        interaction.user,
-        6,
+        startingPlayer,
+        startingTokenTotal,
       );
       const newGameMembersResponse: DiscordUser[] | null =
         await InteractionController.promptNewGameMembers(session);
       if (newGameMembersResponse !== null) {
-        DataController.addSessionPlayers(session, newGameMembersResponse);
+        const players: Player[] = newGameMembersResponse.map(
+          discordUser => new Player(discordUser),
+        );
+        session.addPlayers(players);
         if (channelState === null) {
-          channelState = DataController.createChannelState(
-            interaction.channelId,
-            session,
-          );
+          channelState = new ChannelState(interaction.channelId, session);
         } else {
           channelState.session = session;
         }
-        await GameController.startGame(channelState.session);
+        await channelState.session.startGame();
         DataController.saveChannelState(channelState);
       }
     }

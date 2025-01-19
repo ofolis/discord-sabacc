@@ -77,6 +77,7 @@ export default tseslint.config(
       eqeqeq: ["error"],
       "linebreak-style": ["error", "unix"],
       "require-await": ["error"],
+      "lines-between-class-members": ["error", "always"],
     },
   },
   eslintConfigPrettier,

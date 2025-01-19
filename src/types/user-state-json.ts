@@ -1,10 +1,9 @@
-import { Session } from "./game";
-
-export type ChannelState = {
-  channelId: string;
+export type UserStateJson = {
+  id: string;
   latestGameCompletedAt: number | null;
   latestGameStartedAt: number | null;
-  session: Session;
   totalGamesCompleted: number;
+  totalGamesLost: number;
   totalGamesStarted: number;
+  totalGamesWon: number;
 };

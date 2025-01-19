@@ -1,5 +1,5 @@
-export { Command } from "./command";
 export { Discord } from "./discord";
+export * from "./entities";
 export { Environment } from "./environment";
 export { IO } from "./io";
 export { Log } from "./log";

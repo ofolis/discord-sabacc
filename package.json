@@ -18,6 +18,7 @@
     "husky": "^9.1.7",
     "prettier": "3.4.2",
     "prettier-plugin-organize-imports": "^4.1.0",
+    "prettier-plugin-sort-members": "^0.2.2",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",

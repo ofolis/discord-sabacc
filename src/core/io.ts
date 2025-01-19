@@ -1,26 +1,26 @@
 import * as fs from "fs";
 import { Environment } from "./environment";
 import { Log } from "./log";
-import { Saveable } from "./types";
+import { Json } from "./types";
 
 export class IO {
   private static getDataFilePath(id: string): string {
     return `${Environment.dataPath}/${id}.json`;
   }
 
-  public static loadData(id: string): Saveable | null {
+  public static loadData(id: string): Json | null {
     Log.debug("Loading data at ID...", { id });
     const filePath: string = this.getDataFilePath(id);
     if (!fs.existsSync(filePath)) {
       return null;
     }
     const jsonString: string = fs.readFileSync(filePath, "utf8");
-    const saveable: Saveable = JSON.parse(jsonString) as Saveable;
+    const saveable: Json = JSON.parse(jsonString) as Json;
     Log.debug("Data loaded successfully.", { saveable });
     return saveable;
   }
 
-  public static saveData(id: string, data: Saveable): void {
+  public static saveData(id: string, data: Json): void {
     Log.debug("Saving data at ID...", { id, data });
     if (!fs.existsSync(Environment.dataPath)) {
       fs.mkdirSync(Environment.dataPath);

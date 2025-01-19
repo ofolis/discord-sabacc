@@ -1,20 +1,24 @@
-import { DataController, GameController, InteractionController } from "..";
-import { Command, Log } from "../../core";
+import {
+  DataController,
+  GameController,
+  InteractionController,
+} from "../controllers";
+import { Command, Log } from "../core";
 import {
   DiscordButtonInteraction,
   DiscordCommandInteraction,
   DiscordMessageComponentInteraction,
-} from "../../core/discord";
+} from "../core/discord";
 import {
   CardType,
   PlayerCardSource,
   SessionStatus,
   TurnAction,
   TurnStatus,
-} from "../../enums";
-import type { ChannelState, Player, PlayerCard, Session } from "../../types";
+} from "../enums";
+import type { ChannelState, Player, PlayerCard, Session } from "../types";
 
-export class PlayCommand implements Command {
+export class Play implements Command {
   public readonly description = "Play your turn.";
 
   public readonly isGlobal = false;
@@ -296,7 +300,7 @@ export class PlayCommand implements Command {
       return;
     }
 
-    const player: Player | null = DataController.getSessionPlayerById(
+    const player: Player | null = DataController.getPlayerById(
       channelState.session,
       interaction.user.id,
     );

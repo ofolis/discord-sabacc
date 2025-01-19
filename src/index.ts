@@ -1,11 +1,7 @@
+import { Info, New, Play } from "./commands";
 import { Command, Discord, Environment, Log } from "./core";
-import { InfoCommand, NewCommand, PlayCommand } from "./handlers";
 
-const commands: Command[] = [
-  new InfoCommand(),
-  new NewCommand(),
-  new PlayCommand(),
-];
+const commands: Command[] = [new Info(), new New(), new Play()];
 
 function initializeApp(): void {
   if (Environment.config.devMode) {
@@ -24,7 +20,7 @@ function initializeApp(): void {
       },
     );
   });
-  Discord.client.on("guildCreate", (guild) => {
+  Discord.client.on("guildCreate", guild => {
     Discord.deployCommands(commands, [guild.id]).then(
       () => {
         Log.success("Discord bot deployed to new guild.", { guild });
@@ -36,7 +32,7 @@ function initializeApp(): void {
       },
     );
   });
-  Discord.client.on("interactionCreate", (interaction) => {
+  Discord.client.on("interactionCreate", interaction => {
     if (!interaction.isCommand()) {
       return;
     }
@@ -62,7 +58,7 @@ function initializeApp(): void {
     Log.info(`New interaction ${interaction.id}.`, interactionInfo);
     try {
       const interactionCommand: Command | undefined = commands.find(
-        (command) => command.name === interaction.commandName,
+        command => command.name === interaction.commandName,
       );
       if (interactionCommand === undefined) {
         Log.throw(

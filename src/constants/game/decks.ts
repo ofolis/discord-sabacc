@@ -114,8 +114,5 @@ const createDeck: (suit: CardSuit) => Card[] = (suit: CardSuit): Card[] => [
   },
 ];
 
-const bloodDeck: Card[] = createDeck(CardSuit.BLOOD);
-const sandDeck: Card[] = createDeck(CardSuit.SAND);
-
-export const createBloodDeck: () => Card[] = (): Card[] => [...bloodDeck]; // Return a fresh copy of the blood deck
-export const createSandDeck: () => Card[] = (): Card[] => [...sandDeck]; // Return a fresh copy of the sand deck
+export const bloodDeck: Card[] = createDeck(CardSuit.BLOOD);
+export const sandDeck: Card[] = createDeck(CardSuit.SAND);

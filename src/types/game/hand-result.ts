@@ -5,7 +5,7 @@ export type HandResult = {
   bloodCardValue: number;
   cardDifference: number;
   lowestCardValue: number;
-  playerIndex: number;
+  playerId: string;
   rankIndex: number;
   sandCard: PlayerCard;
   sandCardValue: number;

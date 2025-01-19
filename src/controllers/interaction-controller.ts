@@ -1,4 +1,5 @@
-import { Log, Utils } from "../../core";
+import { DataController, GameController } from ".";
+import { Log, Utils } from "../core";
 import {
   Discord,
   DiscordButtonBuilder,
@@ -9,10 +10,9 @@ import {
   DiscordMessage,
   DiscordMessageComponentInteraction,
   DiscordUser,
-} from "../../core/discord";
-import { CardSuit, CardType, PlayerCardSource, TurnAction } from "../../enums";
-import { Card, Player, PlayerCard, Session } from "../../types";
-import { GameController } from "./game-controller";
+} from "../core/discord";
+import { CardSuit, CardType, PlayerCardSource, TurnAction } from "../enums";
+import { Card, Player, PlayerCard, Session } from "../types";
 
 export class InteractionController {
   private static formatCardSuitIcon(cardSuit: CardSuit): string {
@@ -78,10 +78,10 @@ export class InteractionController {
 
   private static formatPlayerItemsMessage(player: Player): string {
     const cardStrings: string[] = [];
-    player.currentSandCards.forEach((playerCard) => {
+    player.currentSandCards.forEach(playerCard => {
       cardStrings.push(this.formatCardString(playerCard));
     });
-    player.currentBloodCards.forEach((playerCard) => {
+    player.currentBloodCards.forEach(playerCard => {
       cardStrings.push(this.formatCardString(playerCard));
     });
     const contentLines: string[] = [
@@ -92,14 +92,17 @@ export class InteractionController {
     return Utils.linesToString(contentLines);
   }
 
-  private static formatPlayerListMessage(session: Session): string {
+  private static formatPlayerListMessage(
+    session: Session,
+    includeTag: boolean = false,
+  ): string {
     const contentLines: string[] = ["> ### Players"];
-    session.players.forEach((player, index) =>
+    DataController.getOrderedPlayers(session).forEach((player, index) => {
       contentLines.push(
-        `> - **${this.formatPlayerNameString(player)}**${index === session.currentPlayerIndex ? " 👤" : ""}`,
+        `> - **${this.formatPlayerNameString(player)}**${includeTag ? ` (${this.formatPlayerTagString(player)})` : ""}${index === session.currentPlayerIndex ? " 👤" : ""}`,
         `>   - Tokens: ${this.formatTokenString(player.currentTokenTotal, -player.currentSpentTokenTotal)}`,
-      ),
-    );
+      );
+    });
     return Utils.linesToString(contentLines);
   }
 
@@ -174,8 +177,8 @@ export class InteractionController {
   }
 
   public static async announceGameEnded(session: Session): Promise<void> {
-    const activePlayers: Player[] = session.players.filter(
-      (player) => !player.isEliminated,
+    const activePlayers: Player[] = Object.values(session.players).filter(
+      player => !player.isEliminated,
     );
     if (activePlayers.length !== 1) {
       Log.throw(
@@ -217,9 +220,12 @@ export class InteractionController {
       `## ✅ Ended Hand ${(session.currentHandIndex + 1).toString()}`,
       "Here are the results...",
     ];
-    const usedPlayerIndexes: number[] = [];
-    session.handResults[session.currentHandIndex].forEach((handResult) => {
-      const player: Player = session.players[handResult.playerIndex];
+    const usedPlayerIds: string[] = [];
+    session.handResults[session.currentHandIndex].forEach(handResult => {
+      const player: Player = DataController.getPlayerById(
+        session,
+        handResult.playerId,
+      );
       const tokenDetailStrings: string[] = [];
       if (handResult.tokenLossTotal === 0) {
         tokenDetailStrings.push("Full Refund!");
@@ -241,10 +247,10 @@ export class InteractionController {
         `  - Tokens: \`${this.formatTokenString(player.currentTokenTotal, handResult.tokenLossTotal, true)}\` `,
         `    -# ${tokenDetailStrings.join(" + ")}`,
       );
-      usedPlayerIndexes.push(handResult.playerIndex);
+      usedPlayerIds.push(handResult.playerId);
     });
-    session.players.forEach((player, playerIndex) => {
-      if (!usedPlayerIndexes.includes(playerIndex)) {
+    Object.values(session.players).forEach(player => {
+      if (!usedPlayerIds.includes(player.id)) {
         contentLines.push(`~~${this.formatPlayerNameString(player)}~~ 💀`);
       }
     });
@@ -278,7 +284,10 @@ export class InteractionController {
   }
 
   public static async announceTurnEnded(session: Session): Promise<void> {
-    const player: Player = session.players[session.currentPlayerIndex];
+    const player: Player = DataController.getPlayerById(
+      session,
+      session.playerOrder[session.currentPlayerIndex],
+    );
     if (player.currentTurnRecord === null) {
       Log.throw(
         "Cannot announce turn ended. Player did not contain a turn record.",
@@ -366,9 +375,13 @@ export class InteractionController {
   }
 
   public static async announceTurnStarted(session: Session): Promise<void> {
+    const player: Player = DataController.getPlayerById(
+      session,
+      session.playerOrder[session.currentPlayerIndex],
+    );
     const contentLines: string[] = [
-      `## 🆙 ${this.formatPlayerNameString(session.players[session.currentPlayerIndex])}'s Turn`,
-      `${this.formatPlayerTagString(session.players[session.currentPlayerIndex])} use the **/play** command to take your turn.`,
+      `## 🆙 ${this.formatPlayerNameString(player)}'s Turn`,
+      `${this.formatPlayerTagString(player)} use the **/play** command to take your turn.`,
       this.formatHandRoundMessage(session),
       this.formatPlayerListMessage(session),
     ];
@@ -419,7 +432,10 @@ export class InteractionController {
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction,
   ): Promise<void> {
-    const currentPlayer: Player = session.players[session.currentPlayerIndex];
+    const currentPlayer: Player = DataController.getPlayerById(
+      session,
+      session.playerOrder[session.currentPlayerIndex],
+    );
     const contentLines: string[] = [
       "## Not Your Turn",
       `It is currently ${this.formatPlayerNameString(currentPlayer)}'s turn.`,
@@ -529,7 +545,7 @@ export class InteractionController {
     const buttonInteraction: DiscordButtonInteraction | null =
       await Discord.getButtonInteraction(
         interactionResponse,
-        (i) => i.user.id === discordInteraction.user.id,
+        i => i.user.id === discordInteraction.user.id,
       );
     if (buttonInteraction === null) {
       await Discord.updateSentItem(
@@ -824,7 +840,7 @@ export class InteractionController {
     discordUserAccumulator: DiscordUser[] = [],
   ): Promise<DiscordUser[] | null> {
     const joinerList: (Player | DiscordUser)[] = [
-      ...session.players,
+      ...Object.values(session.players),
       ...discordUserAccumulator,
     ];
     const buttonMap: Record<string, DiscordButtonBuilder> = {
@@ -836,13 +852,17 @@ export class InteractionController {
         .setStyle(DiscordButtonStyle.Success)
         .setDisabled(joinerList.length <= 1),
     };
+    const startingPlayer: Player = DataController.getPlayerById(
+      session,
+      session.startingPlayerId,
+    );
     const baseContentLines: string[] = [
       "# New Game",
-      `Hey ${this.formatChannelTagString()}! A new game was started by ${this.formatPlayerNameString(session.startingPlayer)}.`,
+      `Hey ${this.formatChannelTagString()}! A new game was started by ${this.formatPlayerNameString(startingPlayer)}.`,
       "### Players",
       joinerList
         .map(
-          (joiner) =>
+          joiner =>
             `- **${this.formatPlayerNameString(joiner)}** (${this.formatPlayerTagString(joiner)})`,
         )
         .join("\n"),
@@ -881,7 +901,7 @@ export class InteractionController {
       case "joinGame":
         if (
           !joinerList.some(
-            (discordUser) => discordUser.id === buttonInteraction.user.id,
+            discordUser => discordUser.id === buttonInteraction.user.id,
           )
         ) {
           discordUserAccumulator.push(buttonInteraction.user);
