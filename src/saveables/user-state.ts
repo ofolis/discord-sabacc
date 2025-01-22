@@ -31,33 +31,32 @@ export class UserState implements Saveable {
 
   constructor(discordUserOrJson: DiscordUser | Json) {
     if (discordUserOrJson instanceof DiscordUser) {
-      this.id = discordUserOrJson.id;
+      const discordUser: DiscordUser = discordUserOrJson;
+      this.id = discordUser.id;
     } else {
-      this.id = Utils.getJsonEntry(discordUserOrJson, "id") as string;
+      const json: Json = discordUserOrJson;
+      this.id = Utils.getJsonEntry(json, "id") as string;
       this.latestGameCompletedAt = Utils.getJsonEntry(
-        discordUserOrJson,
+        json,
         "latestGameCompletedAt",
       ) as number | null;
       this.latestGameStartedAt = Utils.getJsonEntry(
-        discordUserOrJson,
+        json,
         "latestGameStartedAt",
       ) as number | null;
       this.totalGamesCompleted = Utils.getJsonEntry(
-        discordUserOrJson,
+        json,
         "totalGamesCompleted",
       ) as number;
       this.totalGamesLost = Utils.getJsonEntry(
-        discordUserOrJson,
+        json,
         "totalGamesLost",
       ) as number;
       this.totalGamesStarted = Utils.getJsonEntry(
-        discordUserOrJson,
+        json,
         "totalGamesStarted",
       ) as number;
-      this.totalGamesWon = Utils.getJsonEntry(
-        discordUserOrJson,
-        "totalGamesWon",
-      ) as number;
+      this.totalGamesWon = Utils.getJsonEntry(json, "totalGamesWon") as number;
     }
   }
 }

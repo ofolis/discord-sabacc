@@ -1,7 +1,7 @@
 import { Card } from ".";
 import { PlayerCardSource } from "../../enums";
 
-export type PlayerCard = {
+export type PlayerCardJson = {
   card: Card;
   dieRollValues: number[];
   source: PlayerCardSource;

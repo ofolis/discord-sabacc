@@ -1,5 +1,5 @@
 export enum PlayerStatus {
   "UNINITIALIZED",
-  "INITIALIZED",
+  "ACTIVE",
   "ELIMINATED",
 }

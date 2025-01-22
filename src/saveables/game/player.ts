@@ -1,161 +1,223 @@
+import { PlayerCard, Session, Turn } from ".";
+import { GameController } from "../../controllers";
 import { Json, Log, Saveable, Utils } from "../../core";
 import { DiscordUser } from "../../core/discord";
 import { CardSuit, PlayerCardSource, PlayerStatus } from "../../enums";
 import {
   Card,
   HandResult,
-  PlayerCard,
+  PlayerCardJson,
   PlayerJson,
-  TurnRecord,
+  TurnJson,
 } from "../../types";
 
+// TODO: Keep refining as needed; keep everything possible private, then consolidate and simplify once all errors are gone
 export class Player implements Saveable {
+  private _currentSpentTokenTotal: number = 0;
+
+  private _currentTokenTotal: number = 0;
+
+  private _currentTurn: Turn | null = null;
+
   private avatarId: string | null;
 
-  private currentBloodCards: PlayerCard[] = [];
-
-  private currentSandCards: PlayerCard[] = [];
-
-  private currentSpentTokenTotal: number = 0;
-
-  private currentTokenTotal: number = 0;
-
-  private _currentTurnRecord: TurnRecord | null = null;
-
-  public readonly id: string;
+  private currentPlayerCards: PlayerCard[] = [];
 
   private globalName: string | null;
 
   private handResults: HandResult[] = [];
 
+  private session: Session;
+
   private status: PlayerStatus = PlayerStatus.UNINITIALIZED;
 
   private username: string;
 
-  public toJson(): PlayerJson {
-    return {
-      avatarId: this.avatarId,
-      currentBloodCards: this.currentBloodCards,
-      currentSandCards: this.currentSandCards,
-      currentSpentTokenTotal: this.currentSpentTokenTotal,
-      currentTokenTotal: this.currentTokenTotal,
-      currentTurnRecord: this._currentTurnRecord,
-      id: this.id,
-      globalName: this.globalName,
-      handResults: this.handResults,
-      status: this.status,
-      username: this.username,
-    };
+  public readonly id: string;
+
+  constructor(session: Session, discordUserOrJson: DiscordUser | Json) {
+    this.session = session;
+    if (discordUserOrJson instanceof DiscordUser) {
+      const discordUser: DiscordUser = discordUserOrJson;
+      this.avatarId = discordUser.avatar;
+      this.id = discordUser.id;
+      this.globalName = discordUser.globalName;
+      this.username = discordUser.username;
+    } else {
+      const json: Json = discordUserOrJson;
+      this.avatarId = Utils.getJsonEntry(json, "avatarId") as string;
+      this.currentPlayerCards = (
+        Utils.getJsonEntry(json, "currentCards") as PlayerCardJson[]
+      ).map(playerCardJson => new PlayerCard(this, playerCardJson));
+      this._currentSpentTokenTotal = Utils.getJsonEntry(
+        json,
+        "currentSpentTokenTotal",
+      ) as number;
+      this._currentTokenTotal = Utils.getJsonEntry(
+        json,
+        "currentTokenTotal",
+      ) as number;
+      this._currentTurn =
+        (Utils.getJsonEntry(json, "currentTurn") as TurnJson | null) !== null
+          ? new Turn(Utils.getJsonEntry(json, "currentTurn") as TurnJson)
+          : null;
+      this.globalName = Utils.getJsonEntry(json, "globalName") as string;
+      this.handResults = Utils.getJsonEntry(
+        json,
+        "handResults",
+      ) as HandResult[];
+      this.id = Utils.getJsonEntry(json, "id") as string;
+      this.status = Utils.getJsonEntry(json, "status") as PlayerStatus;
+      this.username = Utils.getJsonEntry(json, "username") as string;
+    }
   }
 
-  public set currentTurnRecord(value: TurnRecord | null) {
-    if (value !== null && this._currentTurnRecord !== null) {
-      Log.throw("Current turn record was set while already having a value.");
+  public get currentSpentTokenTotal(): number {
+    return this._currentSpentTokenTotal;
+  }
+
+  public get currentTokenTotal(): number {
+    return this._currentTokenTotal;
+  }
+
+  public get currentTurn(): Turn | null {
+    return this._currentTurn;
+  }
+
+  public get isEliminated(): boolean {
+    return this.status === PlayerStatus.ELIMINATED;
+  }
+
+  private validateActiveStatus(): void {
+    if (this.status !== PlayerStatus.ACTIVE) {
+      Log.throw("Player is not active.", this);
     }
-    if (value === null && this._currentTurnRecord === null) {
-      Log.error(
-        "Current turn record was reset while having a null value.",
+  }
+
+  private validateCard(playerCard: PlayerCard): void {
+    this.validateActiveStatus();
+    if (!this.currentPlayerCards.includes(playerCard)) {
+      Log.throw(
+        "Player card validation failed. Player does not contain the card.",
         this,
+        playerCard,
       );
     }
-    this._currentTurnRecord = value;
+  }
+
+  public addCard(card: Card, source: PlayerCardSource): void {
+    this.validateActiveStatus();
+    const playerCard: PlayerCard = new PlayerCard(this, card, source);
+    this.currentPlayerCards.push(playerCard);
+    this.currentPlayerCards.sort((a, b) =>
+      GameController.sortPlayerCards(a, b),
+    );
+  }
+
+  public eliminate(): void {
+    this.validateActiveStatus();
+    this.status = PlayerStatus.ELIMINATED;
+  }
+
+  public endTurn(): void {
+    this.validateActiveStatus();
+    if (this._currentTurn === null) {
+      Log.throw("Cannot end turn. Current turn is not set.", this);
+    }
+    if (!this._currentTurn.isResolved) {
+      Log.throw("Cannot end turn. Current turn is not resolved.", this);
+    }
+    this._currentTurn = null;
+  }
+
+  public getCards(cardSuit?: CardSuit): PlayerCard[] {
+    this.validateActiveStatus();
+    this.currentPlayerCards.sort((a, b) =>
+      GameController.sortPlayerCards(a, b),
+    );
+    if (cardSuit === undefined) {
+      return this.currentPlayerCards;
+    } else {
+      return this.currentPlayerCards.filter(card => card.suit === cardSuit);
+    }
   }
 
   public initialize(startingTokenTotal: number): void {
     if (this.status !== PlayerStatus.UNINITIALIZED) {
       Log.throw("Cannot initialize player. Player is not uninitialized.", this);
     }
-    this.currentTokenTotal = startingTokenTotal;
-    this.status = PlayerStatus.INITIALIZED;
+    this.status = PlayerStatus.ACTIVE;
+    this._currentTokenTotal = startingTokenTotal;
   }
 
-  public getCards(cardSuit?: CardSuit): PlayerCard[] {
-    if (cardSuit === undefined) {
-      return [...this.currentSandCards, ...this.currentBloodCards];
-    }
-    switch (cardSuit) {
-      case CardSuit.BLOOD:
-        return this.currentBloodCards;
-      case CardSuit.SAND:
-        return this.currentSandCards;
-      default:
-        Log.throw("Cannot get player cards. Unknown card suit.", { cardSuit });
-    }
+  public removeCard(playerCard: PlayerCard): PlayerCard {
+    this.validateActiveStatus();
+    this.validateCard(playerCard);
+    this.currentPlayerCards.splice(
+      this.currentPlayerCards.indexOf(playerCard),
+      1,
+    );
+    return playerCard;
   }
 
-  public removeAllCards(): Card[] {
-    const playerCards: PlayerCard[] = this.getCards();
-    Utils.emptyArray(this.currentBloodCards);
-    Utils.emptyArray(this.currentSandCards);
-    return playerCards.map(playerCard => playerCard.card);
-  }
-
-  public addCard(card: Card, cardSource: PlayerCardSource): void {
-    const playerCard: PlayerCard = {
-      card,
-      dieRollValues: [],
-      source: cardSource,
-    };
-    switch (playerCard.card.suit) {
-      case CardSuit.BLOOD:
-        this.currentBloodCards.push(playerCard);
-        break;
-      case CardSuit.SAND:
-        this.currentSandCards.push(playerCard);
-        break;
-      default:
-        Log.throw("Cannot add player card. Unknown card suit.", playerCard);
-    }
-  }
-
-  constructor(discordUserOrJson: DiscordUser | Json) {
-    if (discordUserOrJson instanceof DiscordUser) {
-      this.avatarId = discordUserOrJson.avatar;
-      this.id = discordUserOrJson.id;
-      this.globalName = discordUserOrJson.globalName;
-      this.username = discordUserOrJson.username;
+  public removeTokens(tokenTotal: number): void {
+    this.validateActiveStatus();
+    if (tokenTotal >= this._currentTokenTotal) {
+      this.eliminate();
     } else {
-      this.avatarId = Utils.getJsonEntry(
-        discordUserOrJson,
-        "avatarId",
-      ) as string;
-      this.currentBloodCards = Utils.getJsonEntry(
-        discordUserOrJson,
-        "currentBloodCards",
-      ) as PlayerCard[];
-      this.currentSandCards = Utils.getJsonEntry(
-        discordUserOrJson,
-        "currentSandCards",
-      ) as PlayerCard[];
-      this.currentSpentTokenTotal = Utils.getJsonEntry(
-        discordUserOrJson,
-        "currentSpentTokenTotal",
-      ) as number;
-      this.currentTokenTotal = Utils.getJsonEntry(
-        discordUserOrJson,
-        "currentTokenTotal",
-      ) as number;
-      this._currentTurnRecord = Utils.getJsonEntry(
-        discordUserOrJson,
-        "currentTurnRecord",
-      ) as TurnRecord;
-      this.globalName = Utils.getJsonEntry(
-        discordUserOrJson,
-        "globalName",
-      ) as string;
-      this.handResults = Utils.getJsonEntry(
-        discordUserOrJson,
-        "handResults",
-      ) as HandResult[];
-      this.id = Utils.getJsonEntry(discordUserOrJson, "id") as string;
-      this.status = Utils.getJsonEntry(
-        discordUserOrJson,
-        "status",
-      ) as PlayerStatus;
-      this.username = Utils.getJsonEntry(
-        discordUserOrJson,
-        "username",
-      ) as string;
+      this._currentTokenTotal -= tokenTotal;
+      if (this._currentSpentTokenTotal > this._currentTokenTotal) {
+        this._currentSpentTokenTotal = this._currentTokenTotal;
+      }
     }
+  }
+
+  public resetTokens(): void {
+    this.validateActiveStatus();
+    this._currentSpentTokenTotal = 0;
+  }
+
+  public spendTokens(tokenTotal: number): void {
+    this.validateActiveStatus();
+    if (tokenTotal < 1) {
+      Log.throw("Cannot spend tokens. Total to spend was less than one.", {
+        tokenTotal,
+      });
+    }
+    if (this._currentSpentTokenTotal + tokenTotal > this._currentTokenTotal) {
+      Log.throw(
+        "Cannot spend tokens. Player token spent total is not less than the current total.",
+        this,
+        { tokenTotal },
+      );
+    }
+    this._currentSpentTokenTotal += tokenTotal;
+  }
+
+  public startTurn(): Turn {
+    this.validateActiveStatus();
+    if (this._currentTurn !== null) {
+      Log.throw("Cannot start turn. Current turn record is already set.", this);
+    }
+    this._currentTurn = new Turn();
+    return this._currentTurn;
+  }
+
+  public toJson(): PlayerJson {
+    return {
+      avatarId: this.avatarId,
+      currentPlayerCards: this.currentPlayerCards.map(playerCard =>
+        playerCard.toJson(),
+      ),
+      currentSpentTokenTotal: this._currentSpentTokenTotal,
+      currentTokenTotal: this._currentTokenTotal,
+      currentTurn:
+        this._currentTurn !== null ? this._currentTurn.toJson() : null,
+      id: this.id,
+      globalName: this.globalName,
+      handResults: this.handResults,
+      status: this.status,
+      username: this.username,
+    };
   }
 }

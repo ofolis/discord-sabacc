@@ -5,7 +5,6 @@ import { SessionStatus } from "../../enums";
 export type SessionJson = {
   bloodDeck: Card[];
   bloodDiscard: Card[];
-  channelId: string;
   currentHandIndex: number;
   currentPlayerIndex: number;
   currentRoundIndex: number;

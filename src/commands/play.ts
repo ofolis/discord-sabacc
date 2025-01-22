@@ -10,13 +10,15 @@ import {
   DiscordMessageComponentInteraction,
 } from "../core/discord";
 import {
+  CardSuit,
   CardType,
   PlayerCardSource,
   SessionStatus,
   TurnAction,
   TurnStatus,
 } from "../enums";
-import type { ChannelState, Player, PlayerCard, Session } from "../types";
+import { ChannelState, Player, Session, Turn } from "../saveables";
+import type { PlayerCard } from "../types";
 
 export class Play implements Command {
   public readonly description = "Play your turn.";
@@ -34,10 +36,7 @@ export class Play implements Command {
     session: Session,
     player: Player,
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
-    if (
-      player.currentTurnRecord === null ||
-      player.currentTurnRecord.action !== TurnAction.DRAW
-    ) {
+    if (player.currentTurnAction !== TurnAction.DRAW) {
       Log.throw(
         "Cannot handle draw action. Player turn record is invalid.",
         player.currentTurnRecord,
@@ -55,11 +54,11 @@ export class Play implements Command {
         currentInteraction,
       );
       if (drawSourceResponse === null) {
-        GameController.setPlayerTurnAction(session, player, null);
+        player.setTurnAction(null);
         return currentInteraction;
       }
       currentInteraction = drawSourceResponse[0];
-      GameController.drawPlayerCard(session, player, drawSourceResponse[1]);
+      session.drawPlayerCard(player, drawSourceResponse[1]);
     }
     if (player.currentTurnRecord.drawnCard === null) {
       Log.throw(
@@ -86,6 +85,7 @@ export class Play implements Command {
     return currentInteraction;
   }
 
+  //TODO: START HERE! Keep going in this direcion -- note the pattern change here in handleGameRound, that should be used elsewhere (if we keep liking it)
   private static async handleGameRound(
     currentInteraction:
       | DiscordCommandInteraction
@@ -93,7 +93,8 @@ export class Play implements Command {
     session: Session,
     player: Player,
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
-    if (player.currentTurnRecord === null) {
+    let playerCurrentTurn: Turn | null = player.currentTurn;
+    if (playerCurrentTurn === null) {
       const turnActionResponse: [DiscordButtonInteraction, TurnAction] | null =
         await InteractionController.promptChooseTurnAction(
           session,
@@ -104,23 +105,16 @@ export class Play implements Command {
         return currentInteraction;
       }
       currentInteraction = turnActionResponse[0];
-      GameController.setPlayerTurnAction(
-        session,
-        player,
-        turnActionResponse[1],
-      );
+      playerCurrentTurn = player.initializeCurrentTurn(turnActionResponse[1]);
     }
-    if (
-      player.currentTurnRecord === null ||
-      player.currentTurnRecord.action === TurnAction.REVEAL ||
-      player.currentTurnRecord.status !== TurnStatus.ACTIVE
-    ) {
+    // TODO: remove this after adding dependency injection
+    if (playerCurrentTurn.status !== TurnStatus.ACTIVE) {
       Log.throw(
-        "Cannot handle game round. Player turn record is invalid.",
-        player.currentTurnRecord,
+        "Cannot handle game round. Player turn is not active.",
+        playerCurrentTurn,
       );
     }
-    switch (player.currentTurnRecord.action) {
+    switch (playerCurrentTurn.action) {
       case TurnAction.DRAW:
         currentInteraction = await this.handleDrawAction(
           currentInteraction,
@@ -138,7 +132,7 @@ export class Play implements Command {
       default:
         Log.throw(
           "Cannot handle game round. Unknown turn action.",
-          player.currentTurnRecord,
+          playerCurrentTurn,
         );
     }
     return currentInteraction;
@@ -200,28 +194,25 @@ export class Play implements Command {
     session: Session,
     player: Player,
   ): Promise<DiscordCommandInteraction | DiscordMessageComponentInteraction> {
-    if (
-      player.currentBloodCards.length !== 1 ||
-      player.currentSandCards.length !== 1
-    ) {
+    const bloodPlayerCards: PlayerCard[] = player.getCards(CardSuit.BLOOD);
+    const sandPlayerCards: PlayerCard[] = player.getCards(CardSuit.SAND);
+    if (bloodPlayerCards.length !== 1 || sandPlayerCards.length !== 1) {
       Log.throw(
         "Cannot handle scoring round. Player does not contain exactly one card of each suit.",
         player,
       );
     }
-    const bloodPlayerCard: PlayerCard = player.currentBloodCards[0];
-    const sandPlayerCard: PlayerCard = player.currentSandCards[0];
-    if (player.currentTurnRecord === null) {
-      GameController.setPlayerTurnAction(session, player, TurnAction.REVEAL);
+    const bloodPlayerCard: PlayerCard = bloodPlayerCards[0];
+    const sandPlayerCard: PlayerCard = sandPlayerCards[0];
+    let playerCurrentTurn: Turn | null = player.currentTurn;
+    if (playerCurrentTurn === null) {
+      playerCurrentTurn = player.initializeCurrentTurn(TurnAction.REVEAL);
     }
-    if (
-      player.currentTurnRecord === null ||
-      player.currentTurnRecord.action !== TurnAction.REVEAL ||
-      player.currentTurnRecord.status !== TurnStatus.ACTIVE
-    ) {
+    // TODO: remove this after implementing dependency injection
+    if (playerCurrentTurn.status !== TurnStatus.ACTIVE) {
       Log.throw(
-        "Cannot handle scoring round. Player turn record is invalid.",
-        player.currentTurnRecord,
+        "Cannot handle scoring round. Player turn is not active.",
+        playerCurrentTurn,
       );
     }
     if (
@@ -300,8 +291,7 @@ export class Play implements Command {
       return;
     }
 
-    const player: Player | null = DataController.getPlayerById(
-      channelState.session,
+    const player: Player | null = channelState.session.getPlayerById(
       interaction.user.id,
     );
     if (player === null) {
@@ -309,10 +299,7 @@ export class Play implements Command {
       return;
     }
 
-    if (
-      channelState.session.players[channelState.session.currentPlayerIndex]
-        .id !== interaction.user.id
-    ) {
+    if (channelState.session.currentPlayer.id !== interaction.user.id) {
       await InteractionController.informNotTurn(
         channelState.session,
         interaction,
@@ -324,13 +311,13 @@ export class Play implements Command {
       | DiscordCommandInteraction
       | DiscordMessageComponentInteraction = interaction;
     if (channelState.session.currentRoundIndex < 3) {
-      currentInteraction = await PlayCommand.handleGameRound(
+      currentInteraction = await Play.handleGameRound(
         interaction,
         channelState.session,
         player,
       );
     } else {
-      currentInteraction = await PlayCommand.handleScoringRound(
+      currentInteraction = await Play.handleScoringRound(
         interaction,
         channelState.session,
         player,
@@ -338,10 +325,10 @@ export class Play implements Command {
     }
 
     if (
-      player.currentTurnRecord !== null &&
-      player.currentTurnRecord.status === TurnStatus.COMPLETED
+      player.currentTurn !== null &&
+      player.currentTurn.status === TurnStatus.COMPLETED
     ) {
-      await GameController.endTurn(channelState.session);
+      await session.endTurn();
       await InteractionController.informTurnEnded(currentInteraction);
     }
 

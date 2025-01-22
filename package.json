@@ -19,7 +19,6 @@
     "prettier": "3.4.2",
     "prettier-plugin-organize-imports": "^4.1.0",
     "prettier-plugin-sort-members": "^0.2.2",
-    "tsup": "^8.3.5",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.17.0"
@@ -28,7 +27,7 @@
   "name": "discord-sabacc",
   "private": true,
   "scripts": {
-    "build": "tsup src/index.ts --minify && pkg dist/index.js --targets node20-linux,node20-macos,node20-win --out-path build",
+    "build": "tsc && pkg dist/index.js --targets node20-linux,node20-macos,node20-win --out-path build",
     "dev": "tsx watch src/index.ts 2>&1 | tee console.log",
     "format": "prettier . --write",
     "lint": "prettier . --list-different && eslint",

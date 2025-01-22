@@ -1,5 +1,6 @@
 import { Session, UserState } from ".";
 import { Json, Log, Saveable, Utils } from "../core";
+import { DiscordUser } from "../core/discord";
 import { ChannelStateJson, SessionJson, UserStateJson } from "../types";
 
 export class ChannelState implements Saveable {
@@ -9,7 +10,7 @@ export class ChannelState implements Saveable {
 
   private latestGameStartedAt: number | null = null;
 
-  private _session: Session;
+  private session: Session;
 
   private totalGamesCompleted: number = 0;
 
@@ -17,19 +18,16 @@ export class ChannelState implements Saveable {
 
   private userStates: Record<string, UserState> = {};
 
-  public set session(value: Session) {
-    if (value.channelId !== this.channelId) {
-      Log.throw(
-        "Cannot set session on channel state. Channel IDs do not match.",
-        this,
-        value,
-      );
-    }
-    this._session = value;
+  public createSession(
+    startingDiscordUser: DiscordUser,
+    startingTokenTotal: number,
+  ): Session {
+    this.session = new Session(this, startingDiscordUser, startingTokenTotal);
+    return this.session;
   }
 
-  public get session(): Session {
-    return this._session;
+  public getSession(): Session {
+    return this.session;
   }
 
   public toJson(): ChannelStateJson {
@@ -49,53 +47,67 @@ export class ChannelState implements Saveable {
     };
   }
 
-  constructor(channelId: string, session: Session);
+  constructor(
+    channelId: string,
+    startingDiscordUser: DiscordUser,
+    startingTokenTotal: number,
+  );
 
   constructor(json: Json);
 
-  constructor(channelIdOrJson: string | Json, session?: Session) {
+  constructor(
+    channelIdOrJson: string | Json,
+    startingDiscordUser?: DiscordUser,
+    startingTokenTotal?: number,
+  ) {
     if (typeof channelIdOrJson === "string") {
-      if (session === undefined) {
+      const channelId: string = channelIdOrJson;
+      if (
+        startingDiscordUser === undefined ||
+        startingTokenTotal === undefined
+      ) {
         Log.throw(
           "Cannot construct channel state. Constructor was missing required arguments.",
-          { channelId: channelIdOrJson, session },
+          {
+            startingDiscordUser,
+            startingTokenTotal,
+          },
         );
       }
-      this.channelId = channelIdOrJson;
-      this._session = session;
+      this.channelId = channelId;
+      this.session = this.createSession(
+        startingDiscordUser,
+        startingTokenTotal,
+      );
     } else {
-      this.channelId = Utils.getJsonEntry(
-        channelIdOrJson,
-        "channelId",
-      ) as string;
+      const json: Json = channelIdOrJson;
+      this.channelId = Utils.getJsonEntry(json, "channelId") as string;
       this.latestGameCompletedAt = Utils.getJsonEntry(
-        channelIdOrJson,
+        json,
         "latestGameCompletedAt",
       ) as number | null;
       this.latestGameStartedAt = Utils.getJsonEntry(
-        channelIdOrJson,
+        json,
         "latestGameStartedAt",
       ) as number | null;
-      this._session = new Session(
-        Utils.getJsonEntry(channelIdOrJson, "session") as SessionJson,
+      this.session = new Session(
+        this,
+        Utils.getJsonEntry(json, "session") as SessionJson,
       );
       this.totalGamesCompleted = Utils.getJsonEntry(
-        channelIdOrJson,
+        json,
         "totalGamesCompleted",
       ) as number;
       this.totalGamesStarted = Utils.getJsonEntry(
-        channelIdOrJson,
+        json,
         "totalGamesStarted",
       ) as number;
       this.userStates = Object.fromEntries(
         Object.entries(
-          Utils.getJsonEntry(channelIdOrJson, "users") as Record<
-            string,
-            UserStateJson
-          >,
+          Utils.getJsonEntry(json, "users") as Record<string, UserStateJson>,
         ).map(([userStateId, userStateJson]) => [
           userStateId,
-          new UserState(userStateJson),
+          new UserState(this, userStateJson),
         ]),
       );
     }

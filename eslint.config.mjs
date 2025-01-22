@@ -4,10 +4,11 @@
 import eslint from "@eslint/js";
 import eslintConfigPrettier from "eslint-config-prettier";
 import tseslint from "typescript-eslint";
+import onlyProtectedBracketAccess from "./eslint-rules/only-protected-bracket-access.mjs";
 
 export default tseslint.config(
   {
-    ignores: ["dist/"],
+    ignores: ["build/**/*", "dist/**/*"],
   },
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,
@@ -15,10 +16,17 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: {
-          allowDefaultProject: ["commitlint.config.mjs", "eslint.config.mjs"],
+          allowDefaultProject: ["*.mjs", "eslint-rules/*.mjs"],
           defaultProject: "tsconfig.json",
         },
         tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    plugins: {
+      "custom-rules": {
+        rules: {
+          "only-protected-bracket-access": onlyProtectedBracketAccess,
+        },
       },
     },
     rules: {
@@ -29,7 +37,7 @@ export default tseslint.config(
         {
           selector: "default",
           format: ["camelCase"],
-          leadingUnderscore: "allow",
+          leadingUnderscore: "forbid",
         },
         {
           selector: "enumMember",
@@ -38,6 +46,18 @@ export default tseslint.config(
         {
           selector: "typeLike",
           format: ["PascalCase"],
+        },
+        {
+          selector: "memberLike",
+          format: ["camelCase"],
+          leadingUnderscore: "requireDouble",
+          modifiers: ["private"],
+        },
+        {
+          selector: "memberLike",
+          format: ["camelCase"],
+          leadingUnderscore: "require",
+          modifiers: ["protected"],
         },
       ],
       "@typescript-eslint/no-extraneous-class": ["off"],
@@ -74,6 +94,7 @@ export default tseslint.config(
       ],
       complexity: ["error"],
       curly: ["error"],
+      "custom-rules/only-protected-bracket-access": "error",
       eqeqeq: ["error"],
       "linebreak-style": ["error", "unix"],
       "require-await": ["error"],
