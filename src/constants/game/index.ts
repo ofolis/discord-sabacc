@@ -1,1 +1,1 @@
-export { createBloodDeck, createSandDeck } from "./decks";
+export { DECK } from "./deck";

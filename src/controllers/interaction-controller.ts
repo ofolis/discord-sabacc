@@ -12,10 +12,11 @@ import {
   DiscordUser,
 } from "../core/discord";
 import { CardSuit, CardType, PlayerCardSource, TurnAction } from "../enums";
-import { Card, Player, PlayerCard, Session } from "../types";
+import { Player, PlayerCard, Session } from "../saveables";
+import { Card } from "../types";
 
 export class InteractionController {
-  private static formatCardSuitIcon(cardSuit: CardSuit): string {
+  private static __formatCardSuitIcon(cardSuit: CardSuit): string {
     switch (cardSuit) {
       case CardSuit.BLOOD:
         return "🟥";
@@ -28,13 +29,13 @@ export class InteractionController {
     }
   }
 
-  private static formatCardString(
+  private static __formatCardString(
     card: Card | PlayerCard,
     includeCodeQuotes: boolean = true,
   ): string {
     const playerCard: PlayerCard | null = "card" in card ? card : null;
     const actualCard: Card = "card" in card ? card.card : card;
-    const suitIcon: string = this.formatCardSuitIcon(actualCard.suit);
+    const suitIcon: string = this.__formatCardSuitIcon(actualCard.suit);
     let typeLabel: string;
     switch (actualCard.type) {
       case CardType.IMPOSTER:
@@ -61,66 +62,68 @@ export class InteractionController {
       : `${suitIcon}${typeLabel}`;
   }
 
-  private static formatChannelTagString(): string {
+  private static __formatChannelTagString(): string {
     return "@everyone";
   }
 
-  private static formatHandRoundMessage(session: Session): string {
+  private static __formatHandRoundMessage(session: Session): string {
     return `> ### Hand: \`${(session.currentHandIndex + 1).toString()}\`  |  Round: \`${session.currentRoundIndex < 3 ? `${(session.currentRoundIndex + 1).toString()}/3` : "REVEAL"}\``;
   }
 
-  private static formatPlayerAvatarUrl(player: Player): string | null {
+  private static __formatPlayerAvatarUrl(player: Player): string | null {
     if (player.avatarId === null) {
       return null;
     }
     return `https://cdn.discordapp.com/avatars/${player.id}/${player.avatarId}.webp?size=240`;
   }
 
-  private static formatPlayerItemsMessage(player: Player): string {
+  private static __formatPlayerItemsMessage(player: Player): string {
     const cardStrings: string[] = [];
     player.currentSandCards.forEach(playerCard => {
-      cardStrings.push(this.formatCardString(playerCard));
+      cardStrings.push(this.__formatCardString(playerCard));
     });
     player.currentBloodCards.forEach(playerCard => {
-      cardStrings.push(this.formatCardString(playerCard));
+      cardStrings.push(this.__formatCardString(playerCard));
     });
     const contentLines: string[] = [
       "> ### Your Items",
       `> Cards: ${cardStrings.join(" ")}`,
-      `> Tokens: ${this.formatTokenString(player.currentTokenTotal, -player.currentSpentTokenTotal)}`,
+      `> Tokens: ${this.__formatTokenString(player.currentTokenTotal, -player.currentSpentTokenTotal)}`,
     ];
     return Utils.linesToString(contentLines);
   }
 
-  private static formatPlayerListMessage(
+  private static __formatPlayerListMessage(
     session: Session,
     includeTag: boolean = false,
   ): string {
     const contentLines: string[] = ["> ### Players"];
     DataController.getOrderedPlayers(session).forEach((player, index) => {
       contentLines.push(
-        `> - **${this.formatPlayerNameString(player)}**${includeTag ? ` (${this.formatPlayerTagString(player)})` : ""}${index === session.currentPlayerIndex ? " 👤" : ""}`,
-        `>   - Tokens: ${this.formatTokenString(player.currentTokenTotal, -player.currentSpentTokenTotal)}`,
+        `> - **${this.__formatPlayerNameString(player)}**${includeTag ? ` (${this.__formatPlayerTagString(player)})` : ""}${index === session.currentPlayerIndex ? " 👤" : ""}`,
+        `>   - Tokens: ${this.__formatTokenString(player.currentTokenTotal, -player.currentSpentTokenTotal)}`,
       );
     });
     return Utils.linesToString(contentLines);
   }
 
-  private static formatPlayerNameString(player: Player | DiscordUser): string {
+  private static __formatPlayerNameString(
+    player: Player | DiscordUser,
+  ): string {
     return (player.globalName ?? player.username).toUpperCase();
   }
 
-  private static formatPlayerTagString(player: Player | DiscordUser): string {
+  private static __formatPlayerTagString(player: Player | DiscordUser): string {
     return `<@${player.id}>`;
   }
 
-  private static formatTableDiscardMessage(session: Session): string {
+  private static __formatTableDiscardMessage(session: Session): string {
     const discardCardStrings: string[] = [];
     if (session.sandDiscard.length > 0) {
-      discardCardStrings.push(this.formatCardString(session.sandDiscard[0]));
+      discardCardStrings.push(this.__formatCardString(session.sandDiscard[0]));
     }
     if (session.bloodDiscard.length > 0) {
-      discardCardStrings.push(this.formatCardString(session.bloodDiscard[0]));
+      discardCardStrings.push(this.__formatCardString(session.bloodDiscard[0]));
     }
     const contentLines: string[] = [
       "> ### Discard",
@@ -136,7 +139,7 @@ export class InteractionController {
     return Utils.linesToString(contentLines);
   }
 
-  private static formatTokenString(
+  private static __formatTokenString(
     baseTotal: number,
     adjustmentTotal: number,
     useLossIcon: boolean = false,
@@ -153,7 +156,7 @@ export class InteractionController {
     return `\`${baseTokenString}${reductionTokenString}\``;
   }
 
-  private static async handleButtonInteraction(
+  private static async __handleButtonInteraction(
     interactionResponse: DiscordInteractionResponse | DiscordMessage,
     discordInteraction:
       | DiscordCommandInteraction
@@ -189,9 +192,9 @@ export class InteractionController {
     const contentLines: string[] = [
       "# The Game Is Over!",
       `After ${(session.currentHandIndex + 1).toString()} hand${session.currentHandIndex === 0 ? "" : "s"}, the winner is...`,
-      `## ${this.formatPlayerTagString(activePlayers[0])} 🎉`,
+      `## ${this.__formatPlayerTagString(activePlayers[0])} 🎉`,
     ];
-    const avatarUrl: string | null = this.formatPlayerAvatarUrl(
+    const avatarUrl: string | null = this.__formatPlayerAvatarUrl(
       activePlayers[0],
     );
     await Discord.sendMessage(
@@ -242,16 +245,16 @@ export class InteractionController {
         }
       }
       contentLines.push(
-        `- \`#${(handResult.rankIndex + 1).toString()}\` ${player.isEliminated ? `~~**${this.formatPlayerNameString(player)}**~~ 💀` : `**${this.formatPlayerNameString(player)}**`}`,
-        `  - Cards: ${this.formatCardString(handResult.sandCard)} ${this.formatCardString(handResult.bloodCard)}`,
-        `  - Tokens: \`${this.formatTokenString(player.currentTokenTotal, handResult.tokenLossTotal, true)}\` `,
+        `- \`#${(handResult.rankIndex + 1).toString()}\` ${player.isEliminated ? `~~**${this.__formatPlayerNameString(player)}**~~ 💀` : `**${this.__formatPlayerNameString(player)}**`}`,
+        `  - Cards: ${this.__formatCardString(handResult.sandCard)} ${this.__formatCardString(handResult.bloodCard)}`,
+        `  - Tokens: \`${this.__formatTokenString(player.currentTokenTotal, handResult.tokenLossTotal, true)}\` `,
         `    -# ${tokenDetailStrings.join(" + ")}`,
       );
       usedPlayerIds.push(handResult.playerId);
     });
     Object.values(session.players).forEach(player => {
       if (!usedPlayerIds.includes(player.id)) {
-        contentLines.push(`~~${this.formatPlayerNameString(player)}~~ 💀`);
+        contentLines.push(`~~${this.__formatPlayerNameString(player)}~~ 💀`);
       }
     });
     await Discord.sendMessage(
@@ -307,7 +310,7 @@ export class InteractionController {
           );
         }
         contentLines.push(
-          `## ${this.formatPlayerNameString(player)} Drew A Card`,
+          `## ${this.__formatPlayerNameString(player)} Drew A Card`,
         );
         if (
           [PlayerCardSource.BLOOD_DECK, PlayerCardSource.SAND_DECK].includes(
@@ -315,20 +318,20 @@ export class InteractionController {
           )
         ) {
           contentLines.push(
-            `A card was drawn from the \`${this.formatCardSuitIcon(player.currentTurnRecord.drawnCard.card.suit)}\` deck and ${this.formatCardString(player.currentTurnRecord.discardedCard.card)} was discarded.`,
+            `A card was drawn from the \`${this.__formatCardSuitIcon(player.currentTurnRecord.drawnCard.card.suit)}\` deck and ${this.__formatCardString(player.currentTurnRecord.discardedCard.card)} was discarded.`,
           );
         } else {
           contentLines.push(
-            `${this.formatCardString(player.currentTurnRecord.drawnCard.card)} was drawn from the \`${this.formatCardSuitIcon(player.currentTurnRecord.drawnCard.card.suit)}\` discard and ${this.formatCardString(player.currentTurnRecord.discardedCard.card)} was discarded.`,
+            `${this.__formatCardString(player.currentTurnRecord.drawnCard.card)} was drawn from the \`${this.__formatCardSuitIcon(player.currentTurnRecord.drawnCard.card.suit)}\` discard and ${this.__formatCardString(player.currentTurnRecord.discardedCard.card)} was discarded.`,
           );
         }
-        contentLines.push(this.formatTableDiscardMessage(session));
+        contentLines.push(this.__formatTableDiscardMessage(session));
         break;
       case TurnAction.REVEAL: {
         contentLines.push(
-          `## ☑️ ${this.formatPlayerNameString(player)} Completed Their Hand`,
+          `## ☑️ ${this.__formatPlayerNameString(player)} Completed Their Hand`,
           "Here are their final cards...",
-          `# ${this.formatCardString(player.currentSandCards[0])} ${this.formatCardString(player.currentBloodCards[0])}`,
+          `# ${this.__formatCardString(player.currentSandCards[0])} ${this.__formatCardString(player.currentBloodCards[0])}`,
         );
         const bloodCardValue: number = GameController.getFinalCardValue(
           player.currentBloodCards[0],
@@ -357,9 +360,9 @@ export class InteractionController {
       }
       case TurnAction.STAND:
         contentLines.push(
-          `## ${this.formatPlayerNameString(player)} Stood`,
+          `## ${this.__formatPlayerNameString(player)} Stood`,
           "No card was drawn or discarded.",
-          this.formatTableDiscardMessage(session),
+          this.__formatTableDiscardMessage(session),
         );
         break;
       default:
@@ -380,10 +383,10 @@ export class InteractionController {
       session.playerOrder[session.currentPlayerIndex],
     );
     const contentLines: string[] = [
-      `## 🆙 ${this.formatPlayerNameString(player)}'s Turn`,
-      `${this.formatPlayerTagString(player)} use the **/play** command to take your turn.`,
-      this.formatHandRoundMessage(session),
-      this.formatPlayerListMessage(session),
+      `## 🆙 ${this.__formatPlayerNameString(player)}'s Turn`,
+      `${this.__formatPlayerTagString(player)} use the **/play** command to take your turn.`,
+      this.__formatHandRoundMessage(session),
+      this.__formatPlayerListMessage(session),
     ];
     await Discord.sendMessage(
       session.channelId,
@@ -438,7 +441,7 @@ export class InteractionController {
     );
     const contentLines: string[] = [
       "## Not Your Turn",
-      `It is currently ${this.formatPlayerNameString(currentPlayer)}'s turn.`,
+      `It is currently ${this.__formatPlayerNameString(currentPlayer)}'s turn.`,
       "-# Use the **/info** command to view your hand and see game info.",
     ];
     await Discord.sendPersistentInteractionResponse(
@@ -457,10 +460,10 @@ export class InteractionController {
       | DiscordMessageComponentInteraction,
   ): Promise<void> {
     const contentLines: string[] = [
-      this.formatHandRoundMessage(session),
-      this.formatTableDiscardMessage(session),
-      this.formatPlayerListMessage(session),
-      this.formatPlayerItemsMessage(player),
+      this.__formatHandRoundMessage(session),
+      this.__formatTableDiscardMessage(session),
+      this.__formatPlayerListMessage(session),
+      this.__formatPlayerItemsMessage(player),
     ];
     await Discord.sendPersistentInteractionResponse(
       discordInteraction,
@@ -523,15 +526,15 @@ export class InteractionController {
     }
     const buttonMap: Record<string, DiscordButtonBuilder> = {
       firstCard: new DiscordButtonBuilder()
-        .setLabel(this.formatCardString(playerCardSet[0].card, false))
+        .setLabel(this.__formatCardString(playerCardSet[0].card, false))
         .setStyle(DiscordButtonStyle.Primary),
       secondCard: new DiscordButtonBuilder()
-        .setLabel(this.formatCardString(playerCardSet[1].card, false))
+        .setLabel(this.__formatCardString(playerCardSet[1].card, false))
         .setStyle(DiscordButtonStyle.Primary),
     };
     const contentLines: string[] = [
-      this.formatTableDiscardMessage(session),
-      this.formatPlayerItemsMessage(player),
+      this.__formatTableDiscardMessage(session),
+      this.__formatPlayerItemsMessage(player),
       "",
       "**Choose a card to keep. The other will be discarded.**",
     ];
@@ -583,22 +586,22 @@ export class InteractionController {
   > {
     const buttonMap: Record<string, DiscordButtonBuilder> = {};
     const contentLines: string[] = [
-      this.formatHandRoundMessage(session),
-      this.formatTableDiscardMessage(session),
-      this.formatPlayerItemsMessage(player),
+      this.__formatHandRoundMessage(session),
+      this.__formatTableDiscardMessage(session),
+      this.__formatPlayerItemsMessage(player),
       "",
       "**Choose a draw option.**",
     ];
     if (session.sandDiscard.length > 0) {
       buttonMap.sandDiscard = new DiscordButtonBuilder()
-        .setLabel(this.formatCardString(session.sandDiscard[0], false))
+        .setLabel(this.__formatCardString(session.sandDiscard[0], false))
         .setStyle(DiscordButtonStyle.Primary);
     } else {
       contentLines.push("-# There is currently no sand discard to draw.");
     }
     if (session.bloodDiscard.length > 0) {
       buttonMap.bloodDiscard = new DiscordButtonBuilder()
-        .setLabel(this.formatCardString(session.bloodDiscard[0], false))
+        .setLabel(this.__formatCardString(session.bloodDiscard[0], false))
         .setStyle(DiscordButtonStyle.Primary);
     } else {
       contentLines.push("-# There is currently no blood discard to draw.");
@@ -628,7 +631,7 @@ export class InteractionController {
         buttonMap,
       );
     const buttonInteraction: DiscordButtonInteraction | null =
-      await this.handleButtonInteraction(
+      await this.__handleButtonInteraction(
         interactionResponse,
         discordInteraction,
         "*Card draw action timed out.*",
@@ -682,9 +685,9 @@ export class InteractionController {
         .setStyle(DiscordButtonStyle.Primary),
     };
     const contentLines: string[] = [
-      this.formatPlayerItemsMessage(player),
+      this.__formatPlayerItemsMessage(player),
       "",
-      `**Choose the die value that you want to use for your ${this.formatCardString(playerCard.card)} card.**`,
+      `**Choose the die value that you want to use for your ${this.__formatCardString(playerCard.card)} card.**`,
     ];
     const interactionResponse: DiscordInteractionResponse =
       await Discord.sendPersistentInteractionResponse(
@@ -694,7 +697,7 @@ export class InteractionController {
         buttonMap,
       );
     const buttonInteraction: DiscordButtonInteraction | null =
-      await this.handleButtonInteraction(
+      await this.__handleButtonInteraction(
         interactionResponse,
         discordInteraction,
         "*Die selection prompt timed out.*",
@@ -742,9 +745,9 @@ export class InteractionController {
         .setStyle(DiscordButtonStyle.Secondary),
     };
     const contentLines: string[] = [
-      this.formatHandRoundMessage(session),
-      this.formatTableDiscardMessage(session),
-      this.formatPlayerItemsMessage(player),
+      this.__formatHandRoundMessage(session),
+      this.__formatTableDiscardMessage(session),
+      this.__formatPlayerItemsMessage(player),
       "",
       "**Choose your turn action.**",
     ];
@@ -761,7 +764,7 @@ export class InteractionController {
         buttonMap,
       );
     const buttonInteraction: DiscordButtonInteraction | null =
-      await this.handleButtonInteraction(
+      await this.__handleButtonInteraction(
         interactionResponse,
         discordInteraction,
         "*Turn play timed out.*",
@@ -811,7 +814,7 @@ export class InteractionController {
         buttonMap,
       );
     const buttonInteraction: DiscordButtonInteraction | null =
-      await this.handleButtonInteraction(
+      await this.__handleButtonInteraction(
         interactionResponse,
         discordInteraction,
         "*End game prompt timed out.*",
@@ -858,12 +861,12 @@ export class InteractionController {
     );
     const baseContentLines: string[] = [
       "# New Game",
-      `Hey ${this.formatChannelTagString()}! A new game was started by ${this.formatPlayerNameString(startingPlayer)}.`,
+      `Hey ${this.__formatChannelTagString()}! A new game was started by ${this.__formatPlayerNameString(startingPlayer)}.`,
       "### Players",
       joinerList
         .map(
           joiner =>
-            `- **${this.formatPlayerNameString(joiner)}** (${this.formatPlayerTagString(joiner)})`,
+            `- **${this.__formatPlayerNameString(joiner)}** (${this.__formatPlayerTagString(joiner)})`,
         )
         .join("\n"),
     ];
@@ -887,7 +890,7 @@ export class InteractionController {
       );
     }
     const buttonInteraction: DiscordButtonInteraction | null =
-      await this.handleButtonInteraction(
+      await this.__handleButtonInteraction(
         outbound,
         null,
         "*Game creation timed out.*",
@@ -941,7 +944,7 @@ export class InteractionController {
         .setStyle(DiscordButtonStyle.Secondary),
     };
     const contentLines: string[] = [
-      this.formatPlayerItemsMessage(player),
+      this.__formatPlayerItemsMessage(player),
       "",
       "**Reveal your cards and complete your hand.**",
     ];
@@ -953,7 +956,7 @@ export class InteractionController {
         buttonMap,
       );
     const buttonInteraction: DiscordButtonInteraction | null =
-      await this.handleButtonInteraction(
+      await this.__handleButtonInteraction(
         interactionResponse,
         discordInteraction,
         "*Reveal cards prompt timed out.*",
@@ -1001,9 +1004,9 @@ export class InteractionController {
         .setStyle(DiscordButtonStyle.Secondary),
     };
     const contentLines: string[] = [
-      this.formatPlayerItemsMessage(player),
+      this.__formatPlayerItemsMessage(player),
       "",
-      `**Roll the dice to get a value for your ${this.formatCardString(playerCard.card)} card.**`,
+      `**Roll the dice to get a value for your ${this.__formatCardString(playerCard.card)} card.**`,
     ];
     const interactionResponse: DiscordInteractionResponse =
       await Discord.sendPersistentInteractionResponse(
@@ -1013,7 +1016,7 @@ export class InteractionController {
         buttonMap,
       );
     const buttonInteraction: DiscordButtonInteraction | null =
-      await this.handleButtonInteraction(
+      await this.__handleButtonInteraction(
         interactionResponse,
         discordInteraction,
         "*Dice roll prompt timed out.*",

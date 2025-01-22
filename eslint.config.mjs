@@ -44,8 +44,10 @@ export default tseslint.config(
           format: ["UPPER_CASE"],
         },
         {
-          selector: "typeLike",
-          format: ["PascalCase"],
+          selector: "memberLike",
+          format: ["camelCase"],
+          leadingUnderscore: "require",
+          modifiers: ["protected"],
         },
         {
           selector: "memberLike",
@@ -54,10 +56,13 @@ export default tseslint.config(
           modifiers: ["private"],
         },
         {
-          selector: "memberLike",
-          format: ["camelCase"],
-          leadingUnderscore: "require",
-          modifiers: ["protected"],
+          selector: "typeLike",
+          format: ["PascalCase"],
+        },
+        {
+          selector: "variable",
+          modifiers: ["const", "exported"],
+          format: ["UPPER_CASE"],
         },
       ],
       "@typescript-eslint/no-extraneous-class": ["off"],

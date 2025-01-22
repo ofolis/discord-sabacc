@@ -4,48 +4,19 @@ import { DiscordUser } from "../core/discord";
 import { ChannelStateJson, SessionJson, UserStateJson } from "../types";
 
 export class ChannelState implements Saveable {
+  private __latestGameCompletedAt: number | null = null;
+
+  private __latestGameStartedAt: number | null = null;
+
+  private __session: Session;
+
+  private __totalGamesCompleted: number = 0;
+
+  private __totalGamesStarted: number = 0;
+
+  private __userStates: Record<string, UserState> = {};
+
   public readonly channelId: string;
-
-  private latestGameCompletedAt: number | null = null;
-
-  private latestGameStartedAt: number | null = null;
-
-  private session: Session;
-
-  private totalGamesCompleted: number = 0;
-
-  private totalGamesStarted: number = 0;
-
-  private userStates: Record<string, UserState> = {};
-
-  public createSession(
-    startingDiscordUser: DiscordUser,
-    startingTokenTotal: number,
-  ): Session {
-    this.session = new Session(this, startingDiscordUser, startingTokenTotal);
-    return this.session;
-  }
-
-  public getSession(): Session {
-    return this.session;
-  }
-
-  public toJson(): ChannelStateJson {
-    return {
-      channelId: this.channelId,
-      latestGameCompletedAt: this.latestGameCompletedAt,
-      latestGameStartedAt: this.latestGameStartedAt,
-      session: this.session.toJson(),
-      totalGamesCompleted: this.totalGamesCompleted,
-      totalGamesStarted: this.totalGamesStarted,
-      userStates: Object.fromEntries(
-        Object.entries(this.userStates).map(([userStateId, userState]) => [
-          userStateId,
-          userState.toJson(),
-        ]),
-      ),
-    };
-  }
 
   constructor(
     channelId: string,
@@ -74,42 +45,67 @@ export class ChannelState implements Saveable {
           },
         );
       }
-      this.channelId = channelId;
-      this.session = this.createSession(
+      this.__session = this.createSession(
         startingDiscordUser,
         startingTokenTotal,
       );
+      this.channelId = channelId;
     } else {
       const json: Json = channelIdOrJson;
-      this.channelId = Utils.getJsonEntry(json, "channelId") as string;
-      this.latestGameCompletedAt = Utils.getJsonEntry(
+      this.__latestGameCompletedAt = Utils.getJsonEntry(
         json,
         "latestGameCompletedAt",
       ) as number | null;
-      this.latestGameStartedAt = Utils.getJsonEntry(
+      this.__latestGameStartedAt = Utils.getJsonEntry(
         json,
         "latestGameStartedAt",
       ) as number | null;
-      this.session = new Session(
+      this.__session = new Session(
         this,
         Utils.getJsonEntry(json, "session") as SessionJson,
       );
-      this.totalGamesCompleted = Utils.getJsonEntry(
+      this.__totalGamesCompleted = Utils.getJsonEntry(
         json,
         "totalGamesCompleted",
       ) as number;
-      this.totalGamesStarted = Utils.getJsonEntry(
+      this.__totalGamesStarted = Utils.getJsonEntry(
         json,
         "totalGamesStarted",
       ) as number;
-      this.userStates = Object.fromEntries(
+      this.__userStates = Object.fromEntries(
         Object.entries(
           Utils.getJsonEntry(json, "users") as Record<string, UserStateJson>,
         ).map(([userStateId, userStateJson]) => [
           userStateId,
-          new UserState(this, userStateJson),
+          new UserState(userStateJson),
         ]),
       );
+      this.channelId = Utils.getJsonEntry(json, "channelId") as string;
     }
+  }
+
+  public createSession(
+    startingDiscordUser: DiscordUser,
+    startingTokenTotal: number,
+  ): Session {
+    this.__session = new Session(this, startingDiscordUser, startingTokenTotal);
+    return this.__session;
+  }
+
+  public toJson(): ChannelStateJson {
+    return {
+      channelId: this.channelId,
+      latestGameCompletedAt: this.__latestGameCompletedAt,
+      latestGameStartedAt: this.__latestGameStartedAt,
+      session: this.__session.toJson(),
+      totalGamesCompleted: this.__totalGamesCompleted,
+      totalGamesStarted: this.__totalGamesStarted,
+      userStates: Object.fromEntries(
+        Object.entries(this.__userStates).map(([userStateId, userState]) => [
+          userStateId,
+          userState.toJson(),
+        ]),
+      ),
+    };
   }
 }

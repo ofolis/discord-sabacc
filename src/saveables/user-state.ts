@@ -3,31 +3,19 @@ import { DiscordUser } from "../core/discord";
 import { UserStateJson } from "../types";
 
 export class UserState implements Saveable {
+  private __latestGameCompletedAt: number | null = null;
+
+  private __latestGameStartedAt: number | null = null;
+
+  private __totalGamesCompleted: number = 0;
+
+  private __totalGamesLost: number = 0;
+
+  private __totalGamesStarted: number = 0;
+
+  private __totalGamesWon: number = 0;
+
   public readonly id: string;
-
-  private latestGameCompletedAt: number | null = null;
-
-  private latestGameStartedAt: number | null = null;
-
-  private totalGamesCompleted: number = 0;
-
-  private totalGamesLost: number = 0;
-
-  private totalGamesStarted: number = 0;
-
-  private totalGamesWon: number = 0;
-
-  public toJson(): UserStateJson {
-    return {
-      id: this.id,
-      latestGameCompletedAt: this.latestGameCompletedAt,
-      latestGameStartedAt: this.latestGameStartedAt,
-      totalGamesCompleted: this.totalGamesCompleted,
-      totalGamesLost: this.totalGamesLost,
-      totalGamesStarted: this.totalGamesStarted,
-      totalGamesWon: this.totalGamesWon,
-    };
-  }
 
   constructor(discordUserOrJson: DiscordUser | Json) {
     if (discordUserOrJson instanceof DiscordUser) {
@@ -35,28 +23,43 @@ export class UserState implements Saveable {
       this.id = discordUser.id;
     } else {
       const json: Json = discordUserOrJson;
-      this.id = Utils.getJsonEntry(json, "id") as string;
-      this.latestGameCompletedAt = Utils.getJsonEntry(
+      this.__latestGameCompletedAt = Utils.getJsonEntry(
         json,
         "latestGameCompletedAt",
       ) as number | null;
-      this.latestGameStartedAt = Utils.getJsonEntry(
+      this.__latestGameStartedAt = Utils.getJsonEntry(
         json,
         "latestGameStartedAt",
       ) as number | null;
-      this.totalGamesCompleted = Utils.getJsonEntry(
+      this.__totalGamesCompleted = Utils.getJsonEntry(
         json,
         "totalGamesCompleted",
       ) as number;
-      this.totalGamesLost = Utils.getJsonEntry(
+      this.__totalGamesLost = Utils.getJsonEntry(
         json,
         "totalGamesLost",
       ) as number;
-      this.totalGamesStarted = Utils.getJsonEntry(
+      this.__totalGamesStarted = Utils.getJsonEntry(
         json,
         "totalGamesStarted",
       ) as number;
-      this.totalGamesWon = Utils.getJsonEntry(json, "totalGamesWon") as number;
+      this.__totalGamesWon = Utils.getJsonEntry(
+        json,
+        "totalGamesWon",
+      ) as number;
+      this.id = Utils.getJsonEntry(json, "id") as string;
     }
+  }
+
+  public toJson(): UserStateJson {
+    return {
+      id: this.id,
+      latestGameCompletedAt: this.__latestGameCompletedAt,
+      latestGameStartedAt: this.__latestGameStartedAt,
+      totalGamesCompleted: this.__totalGamesCompleted,
+      totalGamesLost: this.__totalGamesLost,
+      totalGamesStarted: this.__totalGamesStarted,
+      totalGamesWon: this.__totalGamesWon,
+    };
   }
 }
