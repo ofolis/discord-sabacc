@@ -37,22 +37,22 @@ export {
 } from "discord.js";
 
 export class Discord {
-  private static _client: Client | null = null;
+  private static __client: Client | null = null;
 
   public static get client(): Client {
-    if (this._client === null) {
+    if (this.__client === null) {
       Log.debug("Creating Discord client...");
-      this._client = new Client({
+      this.__client = new Client({
         intents: ["DirectMessages", "Guilds", "GuildMessages"],
       });
       Log.debug("Discord client created successfully.", {
-        client: this._client,
+        client: this.__client,
       });
     }
-    return this._client;
+    return this.__client;
   }
 
-  private static buttonMapToActionRow(
+  private static __buttonMapToActionRow(
     buttonMap: Record<string, ButtonBuilder>,
   ): ActionRowBuilder<ButtonBuilder> {
     if (Object.keys(buttonMap).length === 0) {
@@ -69,7 +69,7 @@ export class Discord {
     return buttonRow;
   }
 
-  private static createComponentsValue(
+  private static __createComponentsValue(
     buttonMap?: Record<string, ButtonBuilder>,
   ):
     | (
@@ -84,11 +84,11 @@ export class Discord {
       return undefined;
     }
     return Object.keys(buttonMap).length > 0
-      ? [this.buttonMapToActionRow(buttonMap)]
+      ? [this.__buttonMapToActionRow(buttonMap)]
       : [];
   }
 
-  private static async deployGlobalCommands(
+  private static async __deployGlobalCommands(
     rest: REST,
     commandMap: Record<
       string,
@@ -100,8 +100,8 @@ export class Discord {
   ): Promise<void> {
     Log.debug("Deploying Discord global commands...", { commandMap });
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
-      .filter((value) => value.command.isGlobal)
-      .map((value) => value.builder);
+      .filter(value => value.command.isGlobal)
+      .map(value => value.builder);
     await rest.put(
       Routes.applicationCommands(Environment.config.discordApplicationId),
       {
@@ -111,7 +111,7 @@ export class Discord {
     Log.debug("Discord global commands deployed successfully.");
   }
 
-  private static async deployGuildCommands(
+  private static async __deployGuildCommands(
     rest: REST,
     commandMap: Record<
       string,
@@ -124,10 +124,10 @@ export class Discord {
   ): Promise<void> {
     Log.debug("Deploying Discord guild commands...", { commandMap, guildIds });
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
-      .filter((value) => value.command.isGuild)
-      .map((value) => value.builder);
+      .filter(value => value.command.isGuild)
+      .map(value => value.builder);
     await Promise.all(
-      guildIds.map((guildId) =>
+      guildIds.map(guildId =>
         rest.put(
           Routes.applicationGuildCommands(
             Environment.config.discordApplicationId,
@@ -142,7 +142,7 @@ export class Discord {
     Log.debug("Discord guild commands deployed successfully.");
   }
 
-  private static getChannel(channelId: string): TextChannel {
+  private static __getChannel(channelId: string): TextChannel {
     Log.debug("Retrieving Discord channel...", { channelId });
     const channel: Channel | undefined =
       this.client.channels.cache.get(channelId);
@@ -185,7 +185,7 @@ export class Discord {
         command: Command;
       }
     > = {};
-    commandList.forEach((command) => {
+    commandList.forEach(command => {
       if (command.name in commandMap) {
         Log.throw(
           "Cannot deploy commands. Command names are not unique.",
@@ -200,8 +200,8 @@ export class Discord {
       };
     });
     guildIds = guildIds ?? Array.from(this.client.guilds.cache.keys());
-    await this.deployGlobalCommands(rest, commandMap);
-    await this.deployGuildCommands(rest, commandMap, guildIds);
+    await this.__deployGlobalCommands(rest, commandMap);
+    await this.__deployGuildCommands(rest, commandMap, guildIds);
     Log.debug("Discord commands deployed successfully.");
   }
 
@@ -248,7 +248,7 @@ export class Discord {
       buttonMap,
     });
     const interactionResponse: InteractionResponse = await interaction.reply({
-      components: this.createComponentsValue(buttonMap),
+      components: this.__createComponentsValue(buttonMap),
       content,
       ephemeral: isPrivate,
     });
@@ -274,9 +274,9 @@ export class Discord {
       buttonMap,
       attachments,
     });
-    const channel: TextChannel = this.getChannel(channelId);
+    const channel: TextChannel = this.__getChannel(channelId);
     const message: Message = await channel.send({
-      components: this.createComponentsValue(buttonMap),
+      components: this.__createComponentsValue(buttonMap),
       content,
       files: attachments,
     });
@@ -327,7 +327,7 @@ export class Discord {
       buttonMap,
     });
     const interactionResponse: InteractionResponse = await interaction.update({
-      components: this.createComponentsValue(buttonMap),
+      components: this.__createComponentsValue(buttonMap),
       content,
     });
     Log.debug(
@@ -348,7 +348,7 @@ export class Discord {
       buttonMap,
     });
     const message: Message = await sentItem.edit({
-      components: this.createComponentsValue(buttonMap),
+      components: this.__createComponentsValue(buttonMap),
       content,
     });
     Log.debug("Discord sent item updated successfully.", message);

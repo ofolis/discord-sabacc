@@ -4,11 +4,11 @@ import { Log } from "../core";
 import type { Config, PackageContext } from "./types";
 
 export class Environment {
-  private static _config: Config | null = null;
+  private static __config: Config | null = null;
 
-  private static _packageContext: PackageContext | null = null;
+  private static __packageContext: PackageContext | null = null;
 
-  private static getEnvVariable(key: string, required: boolean): string {
+  private static __getEnvVariable(key: string, required: boolean): string {
     const value: string | undefined = process.env[key];
     if (value === undefined) {
       if (!required) {
@@ -25,7 +25,7 @@ export class Environment {
     return value;
   }
 
-  private static getPackageJsonProperty(
+  private static __getPackageJsonProperty(
     key: string,
     required: boolean,
   ): unknown {
@@ -45,19 +45,19 @@ export class Environment {
   }
 
   public static get config(): Config {
-    if (this._config === null) {
+    if (this.__config === null) {
       dotenv.config();
-      this._config = {
+      this.__config = {
         devMode:
-          this.getEnvVariable("DEV_MODE", false).toUpperCase() === "TRUE",
-        discordApplicationId: this.getEnvVariable(
+          this.__getEnvVariable("DEV_MODE", false).toUpperCase() === "TRUE",
+        discordApplicationId: this.__getEnvVariable(
           "DISCORD_APPLICATION_ID",
           true,
         ),
-        discordBotToken: this.getEnvVariable("DISCORD_BOT_TOKEN", true),
+        discordBotToken: this.__getEnvVariable("DISCORD_BOT_TOKEN", true),
       };
     }
-    return this._config;
+    return this.__config;
   }
 
   public static get dataPath(): string {
@@ -65,14 +65,14 @@ export class Environment {
   }
 
   public static get packageContext(): PackageContext {
-    if (this._packageContext === null) {
-      this._packageContext = {
-        name: this.getPackageJsonProperty("name", true) as string,
-        version: this.getPackageJsonProperty("version", false) as
+    if (this.__packageContext === null) {
+      this.__packageContext = {
+        name: this.__getPackageJsonProperty("name", true) as string,
+        version: this.__getPackageJsonProperty("version", false) as
           | string
           | undefined,
       };
     }
-    return this._packageContext;
+    return this.__packageContext;
   }
 }

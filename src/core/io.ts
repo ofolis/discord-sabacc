@@ -4,13 +4,13 @@ import { Log } from "./log";
 import { Json } from "./types";
 
 export class IO {
-  private static getDataFilePath(id: string): string {
+  private static __getDataFilePath(id: string): string {
     return `${Environment.dataPath}/${id}.json`;
   }
 
   public static loadData(id: string): Json | null {
     Log.debug("Loading data at ID...", { id });
-    const filePath: string = this.getDataFilePath(id);
+    const filePath: string = this.__getDataFilePath(id);
     if (!fs.existsSync(filePath)) {
       return null;
     }
@@ -26,7 +26,7 @@ export class IO {
       fs.mkdirSync(Environment.dataPath);
     }
     const jsonString: string = JSON.stringify(data);
-    fs.writeFileSync(this.getDataFilePath(id), jsonString, {
+    fs.writeFileSync(this.__getDataFilePath(id), jsonString, {
       encoding: "utf8",
     });
     Log.debug("Data saved successfully.");
