@@ -83,6 +83,10 @@ export class ChannelState implements Saveable {
     }
   }
 
+  public get session(): Session {
+    return this.__session;
+  }
+
   public createSession(
     startingDiscordUser: DiscordUser,
     startingTokenTotal: number,

@@ -96,6 +96,10 @@ export class Session implements Saveable {
     }
   }
 
+  public get status(): SessionStatus {
+    return this.__status;
+  }
+
   private __createPlayer(discordUser: DiscordUser): Player {
     if (discordUser.id in this.__players) {
       Log.throw(
@@ -106,6 +110,13 @@ export class Session implements Saveable {
     }
     this.__players[discordUser.id] = new Player(discordUser);
     return this.__players[discordUser.id];
+  }
+
+  public getPlayerById(playerId: string): Player | null {
+    if (!(playerId in this.__players)) {
+      return null;
+    }
+    return this.__players[playerId];
   }
 
   public toJson(): SessionJson {
