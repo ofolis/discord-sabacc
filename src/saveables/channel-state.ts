@@ -61,7 +61,6 @@ export class ChannelState implements Saveable {
         "latestGameStartedAt",
       ) as number | null;
       this.__session = new Session(
-        this,
         Utils.getJsonEntry(json, "session") as SessionJson,
       );
       this.__totalGamesCompleted = Utils.getJsonEntry(
@@ -88,7 +87,7 @@ export class ChannelState implements Saveable {
     startingDiscordUser: DiscordUser,
     startingTokenTotal: number,
   ): Session {
-    this.__session = new Session(this, startingDiscordUser, startingTokenTotal);
+    this.__session = new Session(startingDiscordUser, startingTokenTotal);
     return this.__session;
   }
 

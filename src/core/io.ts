@@ -15,17 +15,17 @@ export class IO {
       return null;
     }
     const jsonString: string = fs.readFileSync(filePath, "utf8");
-    const saveable: Json = JSON.parse(jsonString) as Json;
-    Log.debug("Data loaded successfully.", { saveable });
-    return saveable;
+    const json: Json = JSON.parse(jsonString) as Json;
+    Log.debug("Data loaded successfully.", { json });
+    return json;
   }
 
-  public static saveData(id: string, data: Json): void {
-    Log.debug("Saving data at ID...", { id, data });
+  public static saveData(id: string, json: Json): void {
+    Log.debug("Saving data at ID...", { id, json });
     if (!fs.existsSync(Environment.dataPath)) {
       fs.mkdirSync(Environment.dataPath);
     }
-    const jsonString: string = JSON.stringify(data);
+    const jsonString: string = JSON.stringify(json);
     fs.writeFileSync(this.__getDataFilePath(id), jsonString, {
       encoding: "utf8",
     });

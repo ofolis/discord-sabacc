@@ -1,5 +1,4 @@
 import { Player } from ".";
-import { ChannelState } from "..";
 import { DECK } from "../../constants";
 import { Json, Log, Saveable, Utils } from "../../core";
 import { DiscordUser } from "../../core/discord";
@@ -10,8 +9,6 @@ export class Session implements Saveable {
   private __bloodDeck: Card[];
 
   private __bloodDiscard: Card[] = [];
-
-  private __channelState: ChannelState;
 
   private __currentHandIndex: number = 0;
 
@@ -37,20 +34,14 @@ export class Session implements Saveable {
 
   private __status: SessionStatus = SessionStatus.PENDING;
 
-  constructor(
-    channelState: ChannelState,
-    startingDiscordUser: DiscordUser,
-    startingTokenTotal: number,
-  );
+  constructor(startingDiscordUser: DiscordUser, startingTokenTotal: number);
 
-  constructor(channelState: ChannelState, json: Json);
+  constructor(json: Json);
 
   constructor(
-    channelState: ChannelState,
     startingDiscordUserOrJson: DiscordUser | Json,
     startingTokenTotal?: number,
   ) {
-    this.__channelState = channelState;
     if (startingDiscordUserOrJson instanceof DiscordUser) {
       const discordUser: DiscordUser = startingDiscordUserOrJson;
       if (startingTokenTotal === undefined) {

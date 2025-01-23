@@ -45,10 +45,12 @@ export class Player implements Saveable {
         json,
         "currentTokenTotal",
       ) as number;
+      const currentTurnJson: TurnJson | null = Utils.getJsonEntry(
+        json,
+        "currentTurn",
+      ) as TurnJson | null;
       this.__currentTurn =
-        (Utils.getJsonEntry(json, "currentTurn") as TurnJson | null) !== null
-          ? new Turn(Utils.getJsonEntry(json, "currentTurn") as TurnJson)
-          : null;
+        currentTurnJson !== null ? new Turn(currentTurnJson) : null;
       this.__globalName = Utils.getJsonEntry(json, "globalName") as string;
       this.__handResults = Utils.getJsonEntry(
         json,
