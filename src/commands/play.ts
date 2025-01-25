@@ -1,5 +1,4 @@
-import { Command } from "../core";
-import { DiscordCommandInteraction } from "../core/discord";
+import { Command, UserInteraction } from "../core";
 
 export class Play implements Command {
   public readonly description = "Play your turn.";
@@ -10,5 +9,7 @@ export class Play implements Command {
 
   public readonly name = "play";
 
-  public async execute(interaction: DiscordCommandInteraction): Promise<void> {}
+  public async execute(userInteraction: UserInteraction): Promise<void> {
+    await userInteraction.deferReply();
+  }
 }

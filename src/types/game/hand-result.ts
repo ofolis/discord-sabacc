@@ -1,13 +1,14 @@
-import { PlayerCard } from ".";
+import { PlayerCardJson } from "./player-card-json";
 
+// TODO: make this into a saveable
 export type HandResult = {
-  bloodCard: PlayerCard;
+  bloodCard: PlayerCardJson;
   bloodCardValue: number;
   cardDifference: number;
   lowestCardValue: number;
   playerId: string;
   rankIndex: number;
-  sandCard: PlayerCard;
+  sandCard: PlayerCardJson;
   sandCardValue: number;
   tokenLossTotal: number;
   tokenPenaltyTotal: number;

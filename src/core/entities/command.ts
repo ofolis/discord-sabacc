@@ -1,4 +1,4 @@
-import { DiscordCommandInteraction } from "../discord";
+import { UserInteraction } from ".";
 
 export abstract class Command {
   abstract description: string;
@@ -9,5 +9,5 @@ export abstract class Command {
 
   abstract name: string;
 
-  abstract execute(interaction: DiscordCommandInteraction): Promise<void>;
+  abstract execute(userInteraction: UserInteraction): Promise<void>;
 }

@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/explicit-function-return-type */
+/* eslint-disable @typescript-eslint/naming-convention */
+/* eslint-disable @typescript-eslint/typedef */
+
 /**
  * @type {import("eslint").Rule.RuleModule}
  */
@@ -21,7 +25,7 @@ export default {
     return {
       MemberExpression(node) {
         if (node.computed && node.property.type === "Literal") {
-          const propertyName = /** @type {string} */ (node.property.value);
+          const propertyName = node.property.value;
 
           if (typeof propertyName === "string") {
             if (!propertyName.startsWith("_")) {

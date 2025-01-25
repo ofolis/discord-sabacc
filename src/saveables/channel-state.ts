@@ -21,7 +21,7 @@ export class ChannelState implements Saveable {
   constructor(
     channelId: string,
     startingDiscordUser: DiscordUser,
-    startingTokenTotal: number,
+    startingSessionTokenTotal: number,
   );
 
   constructor(json: Json);
@@ -29,25 +29,25 @@ export class ChannelState implements Saveable {
   constructor(
     channelIdOrJson: string | Json,
     startingDiscordUser?: DiscordUser,
-    startingTokenTotal?: number,
+    startingSessionTokenTotal?: number,
   ) {
     if (typeof channelIdOrJson === "string") {
       const channelId: string = channelIdOrJson;
       if (
         startingDiscordUser === undefined ||
-        startingTokenTotal === undefined
+        startingSessionTokenTotal === undefined
       ) {
         Log.throw(
           "Cannot construct channel state. Constructor was missing required arguments.",
           {
             startingDiscordUser,
-            startingTokenTotal,
+            startingSessionTokenTotal,
           },
         );
       }
       this.__session = this.createSession(
         startingDiscordUser,
-        startingTokenTotal,
+        startingSessionTokenTotal,
       );
       this.channelId = channelId;
     } else {

@@ -1,5 +1,5 @@
 import { Info, New, Play } from "./commands";
-import { Command, Discord, Environment, Log } from "./core";
+import { Command, Discord, Environment, Log, UserInteraction } from "./core";
 
 const commands: Command[] = [new Info(), new New(), new Play()];
 
@@ -66,7 +66,8 @@ function initializeApp(): void {
           interaction,
         );
       }
-      interactionCommand.execute(interaction).then(
+      const userInteraction: UserInteraction = new UserInteraction(interaction);
+      interactionCommand.execute(userInteraction).then(
         () => {
           Log.success(`Completed interaction ${interaction.id}.`);
         },

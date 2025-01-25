@@ -1,6 +1,5 @@
 import { DataController, InteractionController } from "../controllers";
-import { Command } from "../core";
-import type { DiscordCommandInteraction } from "../core/discord";
+import { Command, UserInteraction } from "../core";
 import { SessionStatus } from "../enums";
 import { ChannelState, Player } from "../saveables";
 
@@ -13,29 +12,35 @@ export class Info implements Command {
 
   public readonly name = "info";
 
-  public async execute(interaction: DiscordCommandInteraction): Promise<void> {
+  public async execute(userInteraction: UserInteraction): Promise<void> {
+    await userInteraction.deferReply();
+
     const channelState: ChannelState | null = DataController.loadChannelState(
-      interaction.channelId,
+      userInteraction.channelId,
     );
+
     // Check for active game
     if (
       channelState === null ||
       channelState.session.status !== SessionStatus.ACTIVE
     ) {
-      await InteractionController.informNoGame(interaction);
+      await InteractionController.informNoGame(userInteraction);
       return;
     }
-    // Check if playing
+
     const player: Player | null = channelState.session.getPlayerById(
-      interaction.user.id,
+      userInteraction.userId,
     );
+
+    // Check if playing
     if (player === null) {
-      await InteractionController.informNotPlaying(interaction);
+      await InteractionController.informNotPlaying(userInteraction);
       return;
     }
+
     // Send info
     await InteractionController.informPlayerInfo(
-      interaction,
+      userInteraction,
       channelState.session,
       player,
     );

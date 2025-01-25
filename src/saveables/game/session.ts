@@ -96,6 +96,14 @@ export class Session implements Saveable {
     }
   }
 
+  public get currentHandIndex(): number {
+    return this.__currentHandIndex;
+  }
+
+  public get currentRoundIndex(): number {
+    return this.__currentRoundIndex;
+  }
+
   public get status(): SessionStatus {
     return this.__status;
   }
