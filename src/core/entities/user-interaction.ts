@@ -20,6 +20,8 @@ export class UserInteraction {
 
   private __discordUser: User;
 
+  private __isDeferred: boolean = false;
+
   private __userId: string;
 
   constructor(commandInteraction: CommandInteraction) {
@@ -72,7 +74,7 @@ export class UserInteraction {
     }
   }
 
-  public async deferReply(): Promise<void> {
+  public async deferReply(isPrivate: boolean): Promise<void> {
     if (
       !(this.__currentEntity instanceof CommandInteraction) &&
       !(this.__currentEntity instanceof MessageComponentInteraction)
@@ -82,9 +84,16 @@ export class UserInteraction {
         this,
       );
     }
-    this.__currentEntity = await this.__currentEntity.deferReply({
-      fetchReply: true,
+    if (this.__isDeferred) {
+      Log.throw(
+        "Cannot defer reply. User interaction is already deferred.",
+        this,
+      );
+    }
+    await this.__currentEntity.deferReply({
+      ephemeral: isPrivate,
     });
+    this.__isDeferred = true;
   }
 
   public async deleteMessage(): Promise<void> {
@@ -109,11 +118,18 @@ export class UserInteraction {
       this.__currentEntity instanceof CommandInteraction ||
       this.__currentEntity instanceof MessageComponentInteraction
     ) {
-      this.__currentEntity = await this.__currentEntity.reply({
-        ...options,
-        ephemeral: isPrivate,
-        fetchReply: true,
-      });
+      if (this.__isDeferred) {
+        this.__currentEntity = await this.__currentEntity.editReply({
+          ...options,
+        });
+        this.__isDeferred = false;
+      } else {
+        this.__currentEntity = await this.__currentEntity.reply({
+          ...options,
+          ephemeral: isPrivate,
+          fetchReply: true,
+        });
+      }
     } else if (this.__currentEntity instanceof Message) {
       this.__currentEntity = await this.__currentEntity.edit(options);
     } else {

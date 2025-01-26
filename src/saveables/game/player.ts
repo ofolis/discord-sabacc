@@ -35,7 +35,7 @@ export class Player implements Saveable {
       const json: Json = discordUserOrJson;
       this.__avatarId = Utils.getJsonEntry(json, "avatarId") as string;
       this.__currentPlayerCards = (
-        Utils.getJsonEntry(json, "currentCards") as PlayerCardJson[]
+        Utils.getJsonEntry(json, "currentPlayerCards") as PlayerCardJson[]
       ).map(playerCardJson => new PlayerCard(playerCardJson));
       this.__currentSpentTokenTotal = Utils.getJsonEntry(
         json,

@@ -73,7 +73,10 @@ export class ChannelState implements Saveable {
       ) as number;
       this.__userStates = Object.fromEntries(
         Object.entries(
-          Utils.getJsonEntry(json, "users") as Record<string, UserStateJson>,
+          Utils.getJsonEntry(json, "userStates") as Record<
+            string,
+            UserStateJson
+          >,
         ).map(([userStateId, userStateJson]) => [
           userStateId,
           new UserState(userStateJson),

@@ -13,7 +13,7 @@ export class Info implements Command {
   public readonly name = "info";
 
   public async execute(userInteraction: UserInteraction): Promise<void> {
-    await userInteraction.deferReply();
+    await userInteraction.deferReply(true);
 
     const channelState: ChannelState | null = DataController.loadChannelState(
       userInteraction.channelId,

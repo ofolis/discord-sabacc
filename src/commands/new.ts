@@ -1,4 +1,8 @@
-import { DataController, InteractionController } from "../controllers";
+import {
+  DataController,
+  GameController,
+  InteractionController,
+} from "../controllers";
 import { Command, UserInteraction } from "../core";
 import { SessionStatus } from "../enums";
 import { ChannelState } from "../saveables";
@@ -13,7 +17,7 @@ export class New implements Command {
   public readonly name = "new";
 
   public async execute(userInteraction: UserInteraction): Promise<void> {
-    await userInteraction.deferReply();
+    await userInteraction.deferReply(true);
 
     let channelState: ChannelState | null = DataController.loadChannelState(
       userInteraction.channelId,
@@ -43,7 +47,7 @@ export class New implements Command {
       } else {
         channelState.createSession(userInteraction.discordUser, 6);
       }
-      //GameController.startGame(channelState);
+      GameController.startGame(channelState);
     } else {
       await InteractionController.informNotStartedGame(userInteraction);
     }

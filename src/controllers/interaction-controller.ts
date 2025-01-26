@@ -5,17 +5,20 @@ import {
   ButtonStyle,
   EmbedBuilder,
 } from "discord.js";
-import { UserInteraction } from "../core";
+import { UserInteraction, Utils } from "../core";
 import { Player, Session } from "../saveables";
 
 export class InteractionController {
   public static async informNoGame(
     userInteraction: UserInteraction,
   ): Promise<void> {
+    const contentLines: string[] = [
+      "There is no game currently active in this channel.",
+      "-# Use the **/new** command to start a new game.",
+    ];
     const embed: EmbedBuilder = new EmbedBuilder({
+      description: Utils.linesToString(contentLines),
       title: "No Game",
-      description: "There is no game currently active in this channel.",
-      footer: { text: "Use the **/new** command to start a new game." },
     });
     await userInteraction.handleReply(
       {
@@ -29,8 +32,8 @@ export class InteractionController {
     userInteraction: UserInteraction,
   ): Promise<void> {
     const embed: EmbedBuilder = new EmbedBuilder({
-      title: "Not Playing",
       description: "You are not playing in the current game.",
+      title: "Not Playing",
     });
     await userInteraction.handleReply(
       {
@@ -44,8 +47,8 @@ export class InteractionController {
     userInteraction: UserInteraction,
   ): Promise<void> {
     const embed: EmbedBuilder = new EmbedBuilder({
-      title: "Game Not Started",
-      description: "You started a new game.",
+      description: "The current game is still in progress.",
+      title: "New Game Canceled",
     });
     await userInteraction.handleReply(
       {
@@ -91,8 +94,8 @@ export class InteractionController {
     userInteraction: UserInteraction,
   ): Promise<void> {
     const embed: EmbedBuilder = new EmbedBuilder({
-      title: "Game Started",
       description: "You started a new game.",
+      title: "Game Started",
     });
     await userInteraction.handleReply(
       {
@@ -121,8 +124,8 @@ export class InteractionController {
         ],
       });
     const embed: EmbedBuilder = new EmbedBuilder({
-      title: "Game In Progress",
       description: "Do you want to end the current game and start a new one?",
+      title: "Game In Progress",
     });
     await userInteraction.handleReply(
       {
