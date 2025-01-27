@@ -8,6 +8,38 @@ export class Environment {
 
   private static __packageContext: PackageContext | null = null;
 
+  public static get config(): Config {
+    if (this.__config === null) {
+      dotenv.config();
+      this.__config = {
+        devMode:
+          this.__getEnvVariable("DEV_MODE", false).toUpperCase() === "TRUE",
+        discordApplicationId: this.__getEnvVariable(
+          "DISCORD_APPLICATION_ID",
+          true,
+        ),
+        discordBotToken: this.__getEnvVariable("DISCORD_BOT_TOKEN", true),
+      };
+    }
+    return this.__config;
+  }
+
+  public static get dataPath(): string {
+    return `${process.cwd()}/data`;
+  }
+
+  public static get packageContext(): PackageContext {
+    if (this.__packageContext === null) {
+      this.__packageContext = {
+        name: this.__getPackageJsonProperty("name", true) as string,
+        version: this.__getPackageJsonProperty("version", false) as
+          | string
+          | undefined,
+      };
+    }
+    return this.__packageContext;
+  }
+
   private static __getEnvVariable(key: string, required: boolean): string {
     const value: string | undefined = process.env[key];
     if (value === undefined) {
@@ -42,37 +74,5 @@ export class Environment {
       );
     }
     return undefined;
-  }
-
-  public static get config(): Config {
-    if (this.__config === null) {
-      dotenv.config();
-      this.__config = {
-        devMode:
-          this.__getEnvVariable("DEV_MODE", false).toUpperCase() === "TRUE",
-        discordApplicationId: this.__getEnvVariable(
-          "DISCORD_APPLICATION_ID",
-          true,
-        ),
-        discordBotToken: this.__getEnvVariable("DISCORD_BOT_TOKEN", true),
-      };
-    }
-    return this.__config;
-  }
-
-  public static get dataPath(): string {
-    return `${process.cwd()}/data`;
-  }
-
-  public static get packageContext(): PackageContext {
-    if (this.__packageContext === null) {
-      this.__packageContext = {
-        name: this.__getPackageJsonProperty("name", true) as string,
-        version: this.__getPackageJsonProperty("version", false) as
-          | string
-          | undefined,
-      };
-    }
-    return this.__packageContext;
   }
 }

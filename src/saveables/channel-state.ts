@@ -18,6 +18,10 @@ export class ChannelState implements Saveable {
 
   public readonly channelId: string;
 
+  public get session(): Session | null {
+    return this.__session;
+  }
+
   constructor(channelIdOrJson: string | Json) {
     if (typeof channelIdOrJson === "string") {
       const channelId: string = channelIdOrJson;
@@ -58,10 +62,6 @@ export class ChannelState implements Saveable {
       );
       this.channelId = Utils.getJsonEntry(json, "channelId") as string;
     }
-  }
-
-  public get session(): Session | null {
-    return this.__session;
   }
 
   public createSession(

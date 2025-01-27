@@ -34,6 +34,18 @@ export class Session implements Saveable {
 
   private __status: SessionStatus = SessionStatus.PENDING;
 
+  public get currentHandIndex(): number {
+    return this.__currentHandIndex;
+  }
+
+  public get currentRoundIndex(): number {
+    return this.__currentRoundIndex;
+  }
+
+  public get status(): SessionStatus {
+    return this.__status;
+  }
+
   constructor(startingDiscordUser: DiscordUser, startingTokenTotal: number);
 
   constructor(json: Json);
@@ -94,18 +106,6 @@ export class Session implements Saveable {
       ) as number;
       this.__status = Utils.getJsonEntry(json, "status") as SessionStatus;
     }
-  }
-
-  public get currentHandIndex(): number {
-    return this.__currentHandIndex;
-  }
-
-  public get currentRoundIndex(): number {
-    return this.__currentRoundIndex;
-  }
-
-  public get status(): SessionStatus {
-    return this.__status;
   }
 
   private __createPlayer(discordUser: DiscordUser): Player {
