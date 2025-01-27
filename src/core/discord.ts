@@ -36,6 +36,7 @@ export {
   User as DiscordUser,
 } from "discord.js";
 
+// TODO: switch to async REST approach (if possible)
 export class Discord {
   private static __client: Client | null = null;
 

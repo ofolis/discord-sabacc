@@ -3,6 +3,7 @@ import { Command, Discord, Environment, Log, UserInteraction } from "./core";
 
 const commands: Command[] = [new Info(), new New(), new Play()];
 
+// TODO: switch to async approach (if possible)
 function initializeApp(): void {
   if (Environment.config.devMode) {
     Log.info("Running in development mode.");

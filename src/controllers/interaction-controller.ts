@@ -6,11 +6,11 @@ import {
   EmbedBuilder,
   EmbedData,
 } from "discord.js";
-import { UserInteraction, Utils } from "../core";
+import { Log, UserInteraction, Utils } from "../core";
 import { Player, Session } from "../saveables";
 
 export class InteractionController {
-  private static async __setInteractionContent(
+  private static async __setInteractionEmbed(
     userInteraction: UserInteraction,
     embedData: EmbedData,
     buttons?: ButtonBuilder[],
@@ -28,31 +28,24 @@ export class InteractionController {
     });
   }
 
-  public static async informGameCreated(
+  private static async __setInteractionFollowup(
     userInteraction: UserInteraction,
+    message: string,
   ): Promise<void> {
-    await this.__setInteractionContent(userInteraction, {
-      description: "You started a new game in this channel.",
-      title: "New Game Created",
+    await userInteraction.updateMessage({
+      embeds: [], // Clear any embed
+      components: [], // Clear any buttons
+      content: `*${message}*`,
     });
   }
 
-  public static async informGameReplaced(
+  public static async followupGameCreated(
     userInteraction: UserInteraction,
   ): Promise<void> {
-    await this.__setInteractionContent(userInteraction, {
-      description: "You chose to end the current game and start a new one.",
-      title: "Previous Game Ended",
-    });
-  }
-
-  public static async informGameNotReplaced(
-    userInteraction: UserInteraction,
-  ): Promise<void> {
-    await this.__setInteractionContent(userInteraction, {
-      description: "You chose not to end the current game.",
-      title: "New Game Canceled",
-    });
+    await this.__setInteractionFollowup(
+      userInteraction,
+      "You started a new game.",
+    );
   }
 
   public static async informNoGame(
@@ -62,7 +55,7 @@ export class InteractionController {
       "There is no game currently active in this channel.",
       "-# Use the **/new** command to start a new game.",
     ];
-    await this.__setInteractionContent(userInteraction, {
+    await this.__setInteractionEmbed(userInteraction, {
       description: Utils.linesToString(contentLines),
       title: "No Game",
     });
@@ -71,7 +64,7 @@ export class InteractionController {
   public static async informNotPlaying(
     userInteraction: UserInteraction,
   ): Promise<void> {
-    await this.__setInteractionContent(userInteraction, {
+    await this.__setInteractionEmbed(userInteraction, {
       description: "You are not playing in the current game.",
       title: "Not Playing",
     });
@@ -82,7 +75,7 @@ export class InteractionController {
     session: Session,
     player: Player,
   ): Promise<void> {
-    await this.__setInteractionContent(userInteraction, {
+    await this.__setInteractionEmbed(userInteraction, {
       fields: [
         {
           inline: true,
@@ -106,7 +99,7 @@ export class InteractionController {
   public static async promptEndCurrentGame(
     userInteraction: UserInteraction,
   ): Promise<boolean | null> {
-    await this.__setInteractionContent(
+    await this.__setInteractionEmbed(
       userInteraction,
       {
         description: "Do you want to end the current game and start a new one?",
@@ -127,17 +120,31 @@ export class InteractionController {
     );
     const buttonInteraction: ButtonInteraction | null =
       await userInteraction.awaitButtonInteraction();
-    // Remove buttons
-    await userInteraction.updateMessage({
-      components: [],
-    });
-    if (
-      buttonInteraction !== null &&
-      buttonInteraction.customId === "endGame"
-    ) {
-      return true;
-    } else {
+    if (buttonInteraction === null) {
+      await this.__setInteractionFollowup(
+        userInteraction,
+        "New game creation timed out.",
+      );
       return false;
+    }
+    switch (buttonInteraction.customId) {
+      case "endGame":
+        await this.__setInteractionFollowup(
+          userInteraction,
+          "You started a new game. The previous game was ended.",
+        );
+        return true;
+      case "cancel":
+        await this.__setInteractionFollowup(
+          userInteraction,
+          "You canceled new game creation. The current game is still active.",
+        );
+        return false;
+      default:
+        Log.throw(
+          "Could not resolve end current game prompt. Unknown button ID.",
+          buttonInteraction,
+        );
     }
   }
 }
