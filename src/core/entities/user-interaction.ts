@@ -56,7 +56,7 @@ export class UserInteraction {
   }
 
   public async awaitButtonInteraction(
-    timeout: number = 6000,
+    timeout: number = 60000,
   ): Promise<ButtonInteraction | null> {
     Log.debug("Awaiting Discord button interaction...", { timeout });
     try {
