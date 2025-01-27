@@ -4,7 +4,6 @@ import {
   InteractionController,
 } from "../controllers";
 import { Command, UserInteraction } from "../core";
-import { SessionStatus } from "../enums";
 import { ChannelState } from "../saveables";
 
 export class New implements Command {
@@ -24,10 +23,7 @@ export class New implements Command {
     );
 
     let createGame: boolean = false;
-    if (
-      channelState === null ||
-      channelState.session.status === SessionStatus.COMPLETED
-    ) {
+    if (channelState === null || channelState.session === null) {
       createGame = true;
     } else {
       const promptResult: boolean | null =
@@ -37,19 +33,11 @@ export class New implements Command {
       }
     }
     if (createGame) {
-      await InteractionController.informStartedGame(userInteraction);
       if (channelState === null) {
-        channelState = new ChannelState(
-          userInteraction.channelId,
-          userInteraction.discordUser,
-          6,
-        );
-      } else {
-        channelState.createSession(userInteraction.discordUser, 6);
+        channelState = new ChannelState(userInteraction.channelId);
       }
+      channelState.createSession(userInteraction.discordUser, 6);
       GameController.startGame(channelState);
-    } else {
-      await InteractionController.informNotStartedGame(userInteraction);
     }
   }
 }

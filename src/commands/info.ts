@@ -22,6 +22,7 @@ export class Info implements Command {
     // Check for active game
     if (
       channelState === null ||
+      channelState.session === null ||
       channelState.session.status !== SessionStatus.ACTIVE
     ) {
       await InteractionController.informNoGame(userInteraction);

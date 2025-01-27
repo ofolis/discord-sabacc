@@ -3,6 +3,7 @@ import {
   ButtonInteraction,
   CommandInteraction,
   ComponentType,
+  InteractionResponse,
   Message,
   MessageComponentInteraction,
   User,
@@ -15,12 +16,9 @@ export class UserInteraction {
   private __currentEntity:
     | CommandInteraction
     | MessageComponentInteraction
-    | Message
-    | null;
+    | InteractionResponse;
 
   private __discordUser: User;
-
-  private __isDeferred: boolean = false;
 
   private __userId: string;
 
@@ -46,9 +44,12 @@ export class UserInteraction {
   public async awaitButtonInteraction(
     timeout: number = 6000,
   ): Promise<ButtonInteraction | null> {
-    if (!(this.__currentEntity instanceof Message)) {
+    if (
+      !(this.__currentEntity instanceof InteractionResponse) &&
+      !(this.__currentEntity instanceof Message)
+    ) {
       Log.throw(
-        "Cannot await button press. User interaction current entity is not a message.",
+        "Cannot await button press. User interaction current entity is not an interaction response.",
         this,
       );
     }
@@ -61,9 +62,8 @@ export class UserInteraction {
         });
       Log.debug(
         "Discord button interaction retrieved successfully.",
-        this.__currentEntity,
+        buttonInteraction,
       );
-      this.__currentEntity = buttonInteraction;
       return buttonInteraction;
     } catch (result: unknown) {
       // This method is the best way I found to determine when we time out versus an actual error
@@ -84,54 +84,39 @@ export class UserInteraction {
         this,
       );
     }
-    if (this.__isDeferred) {
+    if (this.__currentEntity.deferred) {
       Log.throw(
-        "Cannot defer reply. User interaction is already deferred.",
+        "Cannot defer reply. User interaction has already been deferred.",
         this,
       );
     }
-    await this.__currentEntity.deferReply({
+    this.__currentEntity = await this.__currentEntity.deferReply({
       ephemeral: isPrivate,
     });
-    this.__isDeferred = true;
   }
 
-  public async deleteMessage(): Promise<void> {
-    if (!(this.__currentEntity instanceof Message)) {
-      Log.throw(
-        "Cannot delete message. User interaction current entity is not a message.",
-        this,
-      );
-    }
-    await this.__currentEntity.delete();
-  }
-
-  public async handleReply(
+  public async handleSend(
     options: BaseMessageOptions,
     isPrivate: boolean,
+    createNewMessage: boolean,
   ): Promise<void> {
-    if (this.__currentEntity === null) {
-      Log.throw(
-        "Cannot handle reply. User interaction current entity does not exist (likely deleted).",
-      );
-    } else if (
+    console.log(createNewMessage);
+    if (
       this.__currentEntity instanceof CommandInteraction ||
       this.__currentEntity instanceof MessageComponentInteraction
     ) {
-      if (this.__isDeferred) {
-        this.__currentEntity = await this.__currentEntity.editReply({
+      if (this.__currentEntity.deferred || this.__currentEntity.replied) {
+        await this.__currentEntity.editReply({
           ...options,
         });
-        this.__isDeferred = false;
       } else {
         this.__currentEntity = await this.__currentEntity.reply({
           ...options,
           ephemeral: isPrivate,
-          fetchReply: true,
         });
       }
-    } else if (this.__currentEntity instanceof Message) {
-      this.__currentEntity = await this.__currentEntity.edit(options);
+    } else if (this.__currentEntity instanceof InteractionResponse) {
+      await this.__currentEntity.edit(options);
     } else {
       Log.throw(
         "Cannot handle reply. User interaction current entity is an unknown type.",

@@ -20,11 +20,12 @@ export class InteractionController {
       description: Utils.linesToString(contentLines),
       title: "No Game",
     });
-    await userInteraction.handleReply(
+    await userInteraction.handleSend(
       {
         embeds: [embed],
       },
       true,
+      false,
     );
   }
 
@@ -35,26 +36,12 @@ export class InteractionController {
       description: "You are not playing in the current game.",
       title: "Not Playing",
     });
-    await userInteraction.handleReply(
+    await userInteraction.handleSend(
       {
         embeds: [embed],
       },
       true,
-    );
-  }
-
-  public static async informNotStartedGame(
-    userInteraction: UserInteraction,
-  ): Promise<void> {
-    const embed: EmbedBuilder = new EmbedBuilder({
-      description: "The current game is still in progress.",
-      title: "New Game Canceled",
-    });
-    await userInteraction.handleReply(
-      {
-        embeds: [embed],
-      },
-      true,
+      false,
     );
   }
 
@@ -82,26 +69,12 @@ export class InteractionController {
         },
       ],
     });
-    await userInteraction.handleReply(
+    await userInteraction.handleSend(
       {
         embeds: [embed],
       },
       true,
-    );
-  }
-
-  public static async informStartedGame(
-    userInteraction: UserInteraction,
-  ): Promise<void> {
-    const embed: EmbedBuilder = new EmbedBuilder({
-      description: "You started a new game.",
-      title: "Game Started",
-    });
-    await userInteraction.handleReply(
-      {
-        embeds: [embed],
-      },
-      true,
+      false,
     );
   }
 
@@ -123,16 +96,19 @@ export class InteractionController {
           }),
         ],
       });
-    const embed: EmbedBuilder = new EmbedBuilder({
-      description: "Do you want to end the current game and start a new one?",
-      title: "Game In Progress",
-    });
-    await userInteraction.handleReply(
+    await userInteraction.handleSend(
       {
-        embeds: [embed],
+        embeds: [
+          new EmbedBuilder({
+            description:
+              "Do you want to end the current game and start a new one?",
+            title: "Game In Progress",
+          }),
+        ],
         components: [buttonRow],
       },
       true,
+      false,
     );
     const buttonInteraction: ButtonInteraction | null =
       await userInteraction.awaitButtonInteraction();
@@ -140,8 +116,35 @@ export class InteractionController {
       buttonInteraction !== null &&
       buttonInteraction.customId === "endGame"
     ) {
+      await userInteraction.handleSend(
+        {
+          embeds: [
+            new EmbedBuilder({
+              description:
+                "You chose to end the current game and start a new one.",
+              title: "Starting New Game",
+            }),
+          ],
+          components: [],
+        },
+        true,
+        false,
+      );
       return true;
     } else {
+      await userInteraction.handleSend(
+        {
+          embeds: [
+            new EmbedBuilder({
+              description: "You chose not to end the current game.",
+              title: "No New Game",
+            }),
+          ],
+          components: [],
+        },
+        true,
+        false,
+      );
       return false;
     }
   }

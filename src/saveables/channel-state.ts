@@ -1,5 +1,5 @@
 import { Session, UserState } from ".";
-import { Json, Log, Saveable, Utils } from "../core";
+import { Json, Saveable, Utils } from "../core";
 import { DiscordUser } from "../core/discord";
 import { ChannelStateJson, SessionJson, UserStateJson } from "../types";
 
@@ -8,7 +8,7 @@ export class ChannelState implements Saveable {
 
   private __latestGameStartedAt: number | null = null;
 
-  private __session: Session;
+  private __session: Session | null = null;
 
   private __totalGamesCompleted: number = 0;
 
@@ -18,37 +18,9 @@ export class ChannelState implements Saveable {
 
   public readonly channelId: string;
 
-  constructor(
-    channelId: string,
-    startingDiscordUser: DiscordUser,
-    startingSessionTokenTotal: number,
-  );
-
-  constructor(json: Json);
-
-  constructor(
-    channelIdOrJson: string | Json,
-    startingDiscordUser?: DiscordUser,
-    startingSessionTokenTotal?: number,
-  ) {
+  constructor(channelIdOrJson: string | Json) {
     if (typeof channelIdOrJson === "string") {
       const channelId: string = channelIdOrJson;
-      if (
-        startingDiscordUser === undefined ||
-        startingSessionTokenTotal === undefined
-      ) {
-        Log.throw(
-          "Cannot construct channel state. Constructor was missing required arguments.",
-          {
-            startingDiscordUser,
-            startingSessionTokenTotal,
-          },
-        );
-      }
-      this.__session = this.createSession(
-        startingDiscordUser,
-        startingSessionTokenTotal,
-      );
       this.channelId = channelId;
     } else {
       const json: Json = channelIdOrJson;
@@ -60,9 +32,11 @@ export class ChannelState implements Saveable {
         json,
         "latestGameStartedAt",
       ) as number | null;
-      this.__session = new Session(
-        Utils.getJsonEntry(json, "session") as SessionJson,
-      );
+      const sessionJson: SessionJson | null = Utils.getJsonEntry(
+        json,
+        "session",
+      ) as SessionJson | null;
+      this.__session = sessionJson !== null ? new Session(sessionJson) : null;
       this.__totalGamesCompleted = Utils.getJsonEntry(
         json,
         "totalGamesCompleted",
@@ -86,7 +60,7 @@ export class ChannelState implements Saveable {
     }
   }
 
-  public get session(): Session {
+  public get session(): Session | null {
     return this.__session;
   }
 
@@ -103,7 +77,7 @@ export class ChannelState implements Saveable {
       channelId: this.channelId,
       latestGameCompletedAt: this.__latestGameCompletedAt,
       latestGameStartedAt: this.__latestGameStartedAt,
-      session: this.__session.toJson(),
+      session: this.__session !== null ? this.__session.toJson() : null,
       totalGamesCompleted: this.__totalGamesCompleted,
       totalGamesStarted: this.__totalGamesStarted,
       userStates: Object.fromEntries(
