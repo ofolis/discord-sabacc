@@ -98,10 +98,10 @@ export class Discord {
       }
     >,
   ): Promise<void> {
-    Log.debug("Deploying Discord global commands...", { commandMap });
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
       .filter(value => value.command.isGlobal)
       .map(value => value.builder);
+    Log.debug("Deploying global commands to Discord...", commandBuilders);
     await rest.put(
       Routes.applicationCommands(Environment.config.discordApplicationId),
       {
@@ -122,10 +122,13 @@ export class Discord {
     >,
     guildIds: string[],
   ): Promise<void> {
-    Log.debug("Deploying Discord guild commands...", { commandMap, guildIds });
     const commandBuilders: SlashCommandBuilder[] = Object.values(commandMap)
       .filter(value => value.command.isGuild)
       .map(value => value.builder);
+    Log.debug("Deploying commands to Discord guilds...", {
+      commandBuilders,
+      guildIds,
+    });
     await Promise.all(
       guildIds.map(guildId =>
         rest.put(

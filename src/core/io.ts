@@ -16,7 +16,7 @@ export class IO {
     }
     const jsonString: string = fs.readFileSync(filePath, "utf8");
     const json: Json = JSON.parse(jsonString) as Json;
-    Log.debug("Data loaded successfully.", { json });
+    Log.debug("Data loaded successfully.", { id, json });
     return json;
   }
 

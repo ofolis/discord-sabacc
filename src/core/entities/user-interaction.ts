@@ -12,8 +12,10 @@ export class UserInteraction {
   public static async create(
     commandInteraction: CommandInteraction,
   ): Promise<UserInteraction> {
+    Log.debug("Deferring command interaction...");
     const interactionResponse: InteractionResponse =
       await commandInteraction.deferReply({ ephemeral: true });
+    Log.debug("Command interaction deferred successfully.");
     return new UserInteraction(
       commandInteraction.channelId,
       commandInteraction.user,
@@ -50,11 +52,13 @@ export class UserInteraction {
     this.__currentInteractionResponse = interactionResponse;
     this.__discordUser = discordUser;
     this.__userId = discordUser.id;
+    Log.debug("User interaction constructed.");
   }
 
   public async awaitButtonInteraction(
     timeout: number = 6000,
   ): Promise<ButtonInteraction | null> {
+    Log.debug("Awaiting Discord button interaction...", { timeout });
     try {
       const buttonInteraction: ButtonInteraction =
         await this.__currentInteractionResponse.awaitMessageComponent<ComponentType.Button>(
@@ -79,6 +83,8 @@ export class UserInteraction {
   }
 
   public async updateMessage(options: BaseMessageOptions): Promise<void> {
+    Log.debug("Updating Discord message...", options);
     await this.__currentInteractionResponse.edit(options);
+    Log.debug("Discord message updated successfully.");
   }
 }
