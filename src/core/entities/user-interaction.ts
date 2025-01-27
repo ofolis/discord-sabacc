@@ -4,30 +4,30 @@ import {
   CommandInteraction,
   ComponentType,
   InteractionResponse,
-  Message,
-  MessageComponentInteraction,
   User,
 } from "discord.js";
 import { Log } from "..";
 
 export class UserInteraction {
+  public static async create(
+    commandInteraction: CommandInteraction,
+  ): Promise<UserInteraction> {
+    const interactionResponse: InteractionResponse =
+      await commandInteraction.deferReply({ ephemeral: true });
+    return new UserInteraction(
+      commandInteraction.channelId,
+      commandInteraction.user,
+      interactionResponse,
+    );
+  }
+
   private __channelId: string;
 
-  private __currentEntity:
-    | CommandInteraction
-    | MessageComponentInteraction
-    | InteractionResponse;
+  private __currentInteractionResponse: InteractionResponse;
 
   private __discordUser: User;
 
   private __userId: string;
-
-  constructor(commandInteraction: CommandInteraction) {
-    this.__channelId = commandInteraction.channelId;
-    this.__currentEntity = commandInteraction;
-    this.__discordUser = commandInteraction.user;
-    this.__userId = commandInteraction.user.id;
-  }
 
   public get channelId(): string {
     return this.__channelId;
@@ -41,25 +41,29 @@ export class UserInteraction {
     return this.__userId;
   }
 
+  private constructor(
+    channelId: string,
+    discordUser: User,
+    interactionResponse: InteractionResponse,
+  ) {
+    this.__channelId = channelId;
+    this.__currentInteractionResponse = interactionResponse;
+    this.__discordUser = discordUser;
+    this.__userId = discordUser.id;
+  }
+
   public async awaitButtonInteraction(
     timeout: number = 6000,
   ): Promise<ButtonInteraction | null> {
-    if (
-      !(this.__currentEntity instanceof InteractionResponse) &&
-      !(this.__currentEntity instanceof Message)
-    ) {
-      Log.throw(
-        "Cannot await button press. User interaction current entity is not an interaction response.",
-        this,
-      );
-    }
     try {
       const buttonInteraction: ButtonInteraction =
-        await this.__currentEntity.awaitMessageComponent<ComponentType.Button>({
-          componentType: ComponentType.Button,
-          filter: (i): boolean => i.user.id === this.userId,
-          time: timeout,
-        });
+        await this.__currentInteractionResponse.awaitMessageComponent<ComponentType.Button>(
+          {
+            componentType: ComponentType.Button,
+            filter: (i): boolean => i.user.id === this.userId,
+            time: timeout,
+          },
+        );
       Log.debug(
         "Discord button interaction retrieved successfully.",
         buttonInteraction,
@@ -74,53 +78,7 @@ export class UserInteraction {
     }
   }
 
-  public async deferReply(isPrivate: boolean): Promise<void> {
-    if (
-      !(this.__currentEntity instanceof CommandInteraction) &&
-      !(this.__currentEntity instanceof MessageComponentInteraction)
-    ) {
-      Log.throw(
-        "Cannot defer reply. User interaction current entity is not an interaction.",
-        this,
-      );
-    }
-    if (this.__currentEntity.deferred) {
-      Log.throw(
-        "Cannot defer reply. User interaction has already been deferred.",
-        this,
-      );
-    }
-    this.__currentEntity = await this.__currentEntity.deferReply({
-      ephemeral: isPrivate,
-    });
-  }
-
-  public async handleSend(
-    options: BaseMessageOptions,
-    isPrivate: boolean,
-    createNewMessage: boolean,
-  ): Promise<void> {
-    console.log(createNewMessage);
-    if (
-      this.__currentEntity instanceof CommandInteraction ||
-      this.__currentEntity instanceof MessageComponentInteraction
-    ) {
-      if (this.__currentEntity.deferred || this.__currentEntity.replied) {
-        await this.__currentEntity.editReply({
-          ...options,
-        });
-      } else {
-        this.__currentEntity = await this.__currentEntity.reply({
-          ...options,
-          ephemeral: isPrivate,
-        });
-      }
-    } else if (this.__currentEntity instanceof InteractionResponse) {
-      await this.__currentEntity.edit(options);
-    } else {
-      Log.throw(
-        "Cannot handle reply. User interaction current entity is an unknown type.",
-      );
-    }
+  public async updateMessage(options: BaseMessageOptions): Promise<void> {
+    await this.__currentInteractionResponse.edit(options);
   }
 }

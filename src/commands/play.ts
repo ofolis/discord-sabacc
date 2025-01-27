@@ -10,6 +10,8 @@ export class Play implements Command {
   public readonly name = "play";
 
   public async execute(userInteraction: UserInteraction): Promise<void> {
-    await userInteraction.deferReply(true);
+    await userInteraction.updateMessage({
+      content: "Hi!",
+    });
   }
 }

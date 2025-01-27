@@ -66,13 +66,22 @@ function initializeApp(): void {
           interaction,
         );
       }
-      const userInteraction: UserInteraction = new UserInteraction(interaction);
-      interactionCommand.execute(userInteraction).then(
-        () => {
-          Log.success(`Completed interaction ${interaction.id}.`);
+      UserInteraction.create(interaction).then(
+        userInteraction => {
+          interactionCommand.execute(userInteraction).then(
+            () => {
+              Log.success(`Completed interaction ${interaction.id}.`);
+            },
+            (reason: unknown) => {
+              Log.throw("Could complete command execution.", reason);
+            },
+          );
         },
         (reason: unknown) => {
-          Log.throw(reason, interaction);
+          Log.throw(
+            "Could not create user interaction from command interaction.",
+            reason,
+          );
         },
       );
     } catch (reason: unknown) {

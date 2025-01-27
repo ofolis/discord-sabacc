@@ -4,11 +4,57 @@ import {
   ButtonInteraction,
   ButtonStyle,
   EmbedBuilder,
+  EmbedData,
 } from "discord.js";
 import { UserInteraction, Utils } from "../core";
 import { Player, Session } from "../saveables";
 
 export class InteractionController {
+  private static async __setInteractionContent(
+    userInteraction: UserInteraction,
+    embedData: EmbedData,
+    buttons?: ButtonBuilder[],
+  ): Promise<void> {
+    await userInteraction.updateMessage({
+      embeds: [new EmbedBuilder(embedData)],
+      components:
+        buttons !== undefined
+          ? [
+              new ActionRowBuilder<ButtonBuilder>({
+                components: buttons,
+              }),
+            ]
+          : undefined,
+    });
+  }
+
+  public static async informGameCreated(
+    userInteraction: UserInteraction,
+  ): Promise<void> {
+    await this.__setInteractionContent(userInteraction, {
+      description: "You started a new game in this channel.",
+      title: "New Game Created",
+    });
+  }
+
+  public static async informGameReplaced(
+    userInteraction: UserInteraction,
+  ): Promise<void> {
+    await this.__setInteractionContent(userInteraction, {
+      description: "You chose to end the current game and start a new one.",
+      title: "Previous Game Ended",
+    });
+  }
+
+  public static async informGameNotReplaced(
+    userInteraction: UserInteraction,
+  ): Promise<void> {
+    await this.__setInteractionContent(userInteraction, {
+      description: "You chose not to end the current game.",
+      title: "New Game Canceled",
+    });
+  }
+
   public static async informNoGame(
     userInteraction: UserInteraction,
   ): Promise<void> {
@@ -16,33 +62,19 @@ export class InteractionController {
       "There is no game currently active in this channel.",
       "-# Use the **/new** command to start a new game.",
     ];
-    const embed: EmbedBuilder = new EmbedBuilder({
+    await this.__setInteractionContent(userInteraction, {
       description: Utils.linesToString(contentLines),
       title: "No Game",
     });
-    await userInteraction.handleSend(
-      {
-        embeds: [embed],
-      },
-      true,
-      false,
-    );
   }
 
   public static async informNotPlaying(
     userInteraction: UserInteraction,
   ): Promise<void> {
-    const embed: EmbedBuilder = new EmbedBuilder({
+    await this.__setInteractionContent(userInteraction, {
       description: "You are not playing in the current game.",
       title: "Not Playing",
     });
-    await userInteraction.handleSend(
-      {
-        embeds: [embed],
-      },
-      true,
-      false,
-    );
   }
 
   public static async informPlayerInfo(
@@ -50,7 +82,7 @@ export class InteractionController {
     session: Session,
     player: Player,
   ): Promise<void> {
-    const embed: EmbedBuilder = new EmbedBuilder({
+    await this.__setInteractionContent(userInteraction, {
       fields: [
         {
           inline: true,
@@ -69,82 +101,42 @@ export class InteractionController {
         },
       ],
     });
-    await userInteraction.handleSend(
-      {
-        embeds: [embed],
-      },
-      true,
-      false,
-    );
   }
 
   public static async promptEndCurrentGame(
     userInteraction: UserInteraction,
   ): Promise<boolean | null> {
-    const buttonRow: ActionRowBuilder<ButtonBuilder> =
-      new ActionRowBuilder<ButtonBuilder>({
-        components: [
-          new ButtonBuilder({
-            customId: "endGame",
-            label: "End Current Game",
-            style: ButtonStyle.Danger,
-          }),
-          new ButtonBuilder({
-            customId: "cancel",
-            label: "Cancel",
-            style: ButtonStyle.Secondary,
-          }),
-        ],
-      });
-    await userInteraction.handleSend(
+    await this.__setInteractionContent(
+      userInteraction,
       {
-        embeds: [
-          new EmbedBuilder({
-            description:
-              "Do you want to end the current game and start a new one?",
-            title: "Game In Progress",
-          }),
-        ],
-        components: [buttonRow],
+        description: "Do you want to end the current game and start a new one?",
+        title: "Game In Progress",
       },
-      true,
-      false,
+      [
+        new ButtonBuilder({
+          customId: "endGame",
+          label: "End Current Game",
+          style: ButtonStyle.Danger,
+        }),
+        new ButtonBuilder({
+          customId: "cancel",
+          label: "Cancel",
+          style: ButtonStyle.Secondary,
+        }),
+      ],
     );
     const buttonInteraction: ButtonInteraction | null =
       await userInteraction.awaitButtonInteraction();
+    // Remove buttons
+    await userInteraction.updateMessage({
+      components: [],
+    });
     if (
       buttonInteraction !== null &&
       buttonInteraction.customId === "endGame"
     ) {
-      await userInteraction.handleSend(
-        {
-          embeds: [
-            new EmbedBuilder({
-              description:
-                "You chose to end the current game and start a new one.",
-              title: "Starting New Game",
-            }),
-          ],
-          components: [],
-        },
-        true,
-        false,
-      );
       return true;
     } else {
-      await userInteraction.handleSend(
-        {
-          embeds: [
-            new EmbedBuilder({
-              description: "You chose not to end the current game.",
-              title: "No New Game",
-            }),
-          ],
-          components: [],
-        },
-        true,
-        false,
-      );
       return false;
     }
   }
