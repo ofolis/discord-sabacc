@@ -1,27 +1,4 @@
-import {
-  ActionRowBuilder,
-  ActionRowData,
-  APIActionRowComponent,
-  APIMessageActionRowComponent,
-  ButtonBuilder,
-  ButtonInteraction,
-  Channel,
-  ChannelType,
-  Client,
-  CollectorFilter,
-  CommandInteraction,
-  ComponentType,
-  InteractionResponse,
-  JSONEncodable,
-  Message,
-  MessageActionRowComponentBuilder,
-  MessageActionRowComponentData,
-  MessageComponentInteraction,
-  REST,
-  Routes,
-  SlashCommandBuilder,
-  TextChannel,
-} from "discord.js";
+import { Client, REST, Routes, SlashCommandBuilder } from "discord.js";
 import { Environment, Log } from ".";
 import { Command } from "../core";
 
@@ -36,7 +13,6 @@ export {
   User as DiscordUser,
 } from "discord.js";
 
-// TODO: switch to async REST approach (if possible)
 export class Discord {
   private static __client: Client | null = null;
 
@@ -51,42 +27,6 @@ export class Discord {
       });
     }
     return this.__client;
-  }
-
-  private static __buttonMapToActionRow(
-    buttonMap: Record<string, ButtonBuilder>,
-  ): ActionRowBuilder<ButtonBuilder> {
-    if (Object.keys(buttonMap).length === 0) {
-      Log.throw(
-        "Cannot create Discord action row. Button map contained no entries.",
-      );
-    }
-    const buttonRow: ActionRowBuilder<ButtonBuilder> =
-      new ActionRowBuilder<ButtonBuilder>();
-    Object.entries(buttonMap).forEach(([customId, button]) => {
-      button.setCustomId(customId);
-      buttonRow.addComponents(button);
-    });
-    return buttonRow;
-  }
-
-  private static __createComponentsValue(
-    buttonMap?: Record<string, ButtonBuilder>,
-  ):
-    | (
-        | JSONEncodable<APIActionRowComponent<APIMessageActionRowComponent>>
-        | ActionRowData<
-            MessageActionRowComponentData | MessageActionRowComponentBuilder
-          >
-        | APIActionRowComponent<APIMessageActionRowComponent>
-      )[]
-    | undefined {
-    if (buttonMap === undefined) {
-      return undefined;
-    }
-    return Object.keys(buttonMap).length > 0
-      ? [this.__buttonMapToActionRow(buttonMap)]
-      : [];
   }
 
   private static async __deployGlobalCommands(
@@ -146,34 +86,6 @@ export class Discord {
     Log.debug("Discord guild commands deployed successfully.");
   }
 
-  private static __getChannel(channelId: string): TextChannel {
-    Log.debug("Retrieving Discord channel...", { channelId });
-    const channel: Channel | undefined =
-      this.client.channels.cache.get(channelId);
-    if (channel === undefined) {
-      Log.throw(
-        "Cannot get Discord channel. ID was not found in the channel cache.",
-        channelId,
-      );
-    }
-    if (channel.type !== ChannelType.GuildText) {
-      Log.throw(
-        "Cannot get Discord channel. Channel at ID was not a guild text channel.",
-        channel,
-      );
-    }
-    Log.debug("Discord channel retrieved successfully.", channel);
-    return channel;
-  }
-
-  public static async deleteSentItem(
-    sentItem: Message | InteractionResponse,
-  ): Promise<void> {
-    Log.debug("Deleting Discord sent item...", { sentItem });
-    await sentItem.delete();
-    Log.debug("Discord sent item deleted successfully.");
-  }
-
   public static async deployCommands(
     commandList: Command[],
     guildIds?: string[],
@@ -207,154 +119,5 @@ export class Discord {
     await this.__deployGlobalCommands(rest, commandMap);
     await this.__deployGuildCommands(rest, commandMap, guildIds);
     Log.debug("Discord commands deployed successfully.");
-  }
-
-  public static async getButtonInteraction(
-    context: InteractionResponse | Message,
-    filter: CollectorFilter<[MessageComponentInteraction]> | null = null,
-    timeout = 60000,
-  ): Promise<ButtonInteraction | null> {
-    Log.debug("Retrieving Discord button interaction...", {
-      context,
-      filter,
-      timeout,
-    });
-    try {
-      const buttonInteraction: ButtonInteraction =
-        await context.awaitMessageComponent<ComponentType.Button>({
-          componentType: ComponentType.Button,
-          filter: filter ?? undefined,
-          time: timeout,
-        });
-      Log.debug(
-        "Discord button interaction retrieved successfully.",
-        buttonInteraction,
-      );
-      return buttonInteraction;
-    } catch (result: unknown) {
-      if (result instanceof Error && result.message.endsWith("reason: time")) {
-        return null;
-      }
-      throw result;
-    }
-  }
-
-  public static async sendInteractionResponse(
-    interaction: CommandInteraction | MessageComponentInteraction,
-    content: string,
-    isPrivate = false,
-    buttonMap?: Record<string, ButtonBuilder>,
-  ): Promise<InteractionResponse> {
-    Log.debug("Sending Discord interaction response...", {
-      interaction,
-      content,
-      isPrivate,
-      buttonMap,
-    });
-    const interactionResponse: InteractionResponse = await interaction.reply({
-      components: this.__createComponentsValue(buttonMap),
-      content,
-      ephemeral: isPrivate,
-    });
-    Log.debug(
-      "Discord interaction response sent successfully.",
-      interactionResponse,
-    );
-    return interactionResponse;
-  }
-
-  public static async sendMessage(
-    channelId: string,
-    content: string,
-    buttonMap?: Record<string, ButtonBuilder>,
-    attachments?: {
-      attachment: string;
-      name: string;
-    }[],
-  ): Promise<Message> {
-    Log.debug("Sending Discord message...", {
-      channelId,
-      content,
-      buttonMap,
-      attachments,
-    });
-    const channel: TextChannel = this.__getChannel(channelId);
-    const message: Message = await channel.send({
-      components: this.__createComponentsValue(buttonMap),
-      content,
-      files: attachments,
-    });
-    Log.debug("Discord message sent successfully.", message);
-    return message;
-  }
-
-  public static async sendPersistentInteractionResponse(
-    interaction: CommandInteraction | MessageComponentInteraction,
-    content: string,
-    isPrivate = false,
-    buttonMap?: Record<string, ButtonBuilder>,
-  ): Promise<InteractionResponse> {
-    Log.debug("Sending Discord persistent interaction response...");
-    let interactionResponse: InteractionResponse;
-    if (interaction instanceof MessageComponentInteraction) {
-      Log.debug(
-        "Handling persistent interaction response as a MessageComponentInteraction.",
-      );
-      interactionResponse = await this.updateInteractionSourceItem(
-        interaction,
-        content,
-        buttonMap,
-      );
-    } else {
-      Log.debug(
-        "Handling persistent interaction response as a CommandInteraction.",
-      );
-      interactionResponse = await this.sendInteractionResponse(
-        interaction,
-        content,
-        isPrivate,
-        buttonMap,
-      );
-    }
-    Log.debug("Discord persistent interaction response sent successfully.");
-    return interactionResponse;
-  }
-
-  public static async updateInteractionSourceItem(
-    interaction: MessageComponentInteraction,
-    content: string,
-    buttonMap?: Record<string, ButtonBuilder>,
-  ): Promise<InteractionResponse> {
-    Log.debug("Updating Discord interaction source item...", {
-      interaction,
-      content,
-      buttonMap,
-    });
-    const interactionResponse: InteractionResponse = await interaction.update({
-      components: this.__createComponentsValue(buttonMap),
-      content,
-    });
-    Log.debug(
-      "Discord interaction source item updated successfully.",
-      interactionResponse,
-    );
-    return interactionResponse;
-  }
-
-  public static async updateSentItem(
-    sentItem: Message | InteractionResponse,
-    content: string,
-    buttonMap?: Record<string, ButtonBuilder>,
-  ): Promise<void> {
-    Log.debug("Updating Discord sent item...", {
-      sentItem,
-      content,
-      buttonMap,
-    });
-    const message: Message = await sentItem.edit({
-      components: this.__createComponentsValue(buttonMap),
-      content,
-    });
-    Log.debug("Discord sent item updated successfully.", message);
   }
 }
