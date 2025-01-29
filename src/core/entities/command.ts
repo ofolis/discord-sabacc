@@ -1,4 +1,4 @@
-import { UserInteraction } from ".";
+import { PrivateChannelMessage } from ".";
 
 export abstract class Command {
   abstract description: string;
@@ -9,5 +9,5 @@ export abstract class Command {
 
   abstract name: string;
 
-  abstract execute(userInteraction: UserInteraction): Promise<void>;
+  abstract execute(privateChannelMessage: PrivateChannelMessage): Promise<void>;
 }

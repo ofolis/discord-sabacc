@@ -1,50 +1,52 @@
 import { PlayerCard, Turn } from ".";
 import { Json, Saveable, Utils } from "../../core";
 import { DiscordUser } from "../../core/discord";
-import { PlayerStatus } from "../../enums";
-import { HandResult, PlayerCardJson, PlayerJson, TurnJson } from "../../types";
+import { CardSuit, PlayerCardSource, PlayerStatus } from "../../enums";
+import {
+  Card,
+  HandResult,
+  PlayerCardJson,
+  PlayerJson,
+  TurnJson,
+} from "../../types";
 export class Player implements Saveable {
-  private __currentSpentTokenTotal: number = 0;
-
-  private __currentTokenTotal: number = 0;
-
-  private __currentTurn: Turn | null = null;
-
   private __avatarId: string | null;
 
-  private __currentPlayerCards: PlayerCard[] = [];
+  private __cards: PlayerCard[] = [];
+
+  private __currentTurn: Turn | null = null;
 
   private __globalName: string | null;
 
   private __handResults: HandResult[] = [];
 
+  private __id: string;
+
+  private __spentTokenTotal: number = 0;
+
   private __status: PlayerStatus = PlayerStatus.UNINITIALIZED;
+
+  private __tokenTotal: number = 0;
 
   private __username: string;
 
-  public readonly id: string;
+  public get cardTotal(): number {
+    return this.__cards.length;
+  }
 
   constructor(discordUserOrJson: DiscordUser | Json) {
     if (discordUserOrJson instanceof DiscordUser) {
       const discordUser: DiscordUser = discordUserOrJson;
       this.__avatarId = discordUser.avatar;
       this.__globalName = discordUser.globalName;
+      this.__id = discordUser.id;
       this.__username = discordUser.username;
-      this.id = discordUser.id;
     } else {
       const json: Json = discordUserOrJson;
       this.__avatarId = Utils.getJsonEntry(json, "avatarId") as string;
-      this.__currentPlayerCards = (
-        Utils.getJsonEntry(json, "currentPlayerCards") as PlayerCardJson[]
+      this.__cards = (
+        Utils.getJsonEntry(json, "cards") as PlayerCardJson[]
       ).map(playerCardJson => new PlayerCard(playerCardJson));
-      this.__currentSpentTokenTotal = Utils.getJsonEntry(
-        json,
-        "currentSpentTokenTotal",
-      ) as number;
-      this.__currentTokenTotal = Utils.getJsonEntry(
-        json,
-        "currentTokenTotal",
-      ) as number;
       const currentTurnJson: TurnJson | null = Utils.getJsonEntry(
         json,
         "currentTurn",
@@ -56,26 +58,50 @@ export class Player implements Saveable {
         json,
         "handResults",
       ) as HandResult[];
+      this.__id = Utils.getJsonEntry(json, "id") as string;
+      this.__spentTokenTotal = Utils.getJsonEntry(
+        json,
+        "spentTokenTotal",
+      ) as number;
       this.__status = Utils.getJsonEntry(json, "status") as PlayerStatus;
+      this.__tokenTotal = Utils.getJsonEntry(json, "tokenTotal") as number;
       this.__username = Utils.getJsonEntry(json, "username") as string;
-      this.id = Utils.getJsonEntry(json, "id") as string;
     }
+  }
+
+  public addCard(card: Card, playerCardSource: PlayerCardSource): void {
+    const playerCard: PlayerCard = new PlayerCard(card, playerCardSource);
+    this.__cards.push(playerCard);
+  }
+
+  public getCards(cardSuit?: CardSuit): PlayerCard[] {
+    if (cardSuit === undefined) {
+      return [...this.__cards]; // Shallow copy
+    } else {
+      return this.__cards.filter(
+        playerCard => playerCard.card.suit === cardSuit,
+      );
+    }
+  }
+
+  public removeAllCards(): Card[] {
+    const cards: Card[] = this.__cards.map(playerCard => playerCard.card);
+    Utils.emptyArray(this.__cards);
+    return cards;
   }
 
   public toJson(): PlayerJson {
     return {
       avatarId: this.__avatarId,
-      currentPlayerCards: this.__currentPlayerCards.map(playerCard =>
-        playerCard.toJson(),
-      ),
-      currentSpentTokenTotal: this.__currentSpentTokenTotal,
-      currentTokenTotal: this.__currentTokenTotal,
+      cards: this.__cards.map(playerCard => playerCard.toJson()),
       currentTurn:
         this.__currentTurn !== null ? this.__currentTurn.toJson() : null,
-      id: this.id,
+      id: this.__id,
       globalName: this.__globalName,
       handResults: this.__handResults,
+      spentTokenTotal: this.__spentTokenTotal,
       status: this.__status,
+      tokenTotal: this.__tokenTotal,
       username: this.__username,
     };
   }

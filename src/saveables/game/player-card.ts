@@ -9,6 +9,10 @@ export class PlayerCard implements Saveable {
 
   private __source: PlayerCardSource;
 
+  public get card(): Card {
+    return this.__card;
+  }
+
   constructor(card: Card, source: PlayerCardSource);
 
   constructor(json: Json);

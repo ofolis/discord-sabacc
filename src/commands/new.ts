@@ -3,7 +3,8 @@ import {
   GameController,
   InteractionController,
 } from "../controllers";
-import { Command, UserInteraction } from "../core";
+import { Command, PrivateChannelMessage } from "../core";
+import { DiscordUser } from "../core/discord";
 import { ChannelState } from "../saveables";
 
 export class New implements Command {
@@ -15,31 +16,38 @@ export class New implements Command {
 
   public readonly name = "new";
 
-  public async execute(userInteraction: UserInteraction): Promise<void> {
+  public async execute(
+    privateChannelMessage: PrivateChannelMessage,
+  ): Promise<void> {
     let channelState: ChannelState | null = DataController.loadChannelState(
-      userInteraction.channelId,
+      privateChannelMessage.channelId,
     );
 
     // Determine if a game should be created
     let createGame: boolean = false;
-    if (channelState === null || channelState.session === null) {
+    if (channelState === null) {
       createGame = true;
-      await InteractionController.followupGameCreated(userInteraction);
+      await InteractionController.followupGameCreated(privateChannelMessage);
     } else {
-      const promptResult: boolean | null =
-        await InteractionController.promptEndCurrentGame(userInteraction);
-      if (promptResult !== null) {
-        createGame = promptResult;
+      const endGameDecision: boolean | null =
+        await InteractionController.promptEndCurrentGame(privateChannelMessage);
+      if (endGameDecision !== null) {
+        createGame = endGameDecision;
       }
     }
 
     // Create the new game if necessary
     if (createGame) {
       if (channelState === null) {
-        channelState = new ChannelState(userInteraction.channelId);
+        channelState = new ChannelState(privateChannelMessage);
       }
-      channelState.createSession(userInteraction.discordUser, 6);
-      GameController.startGame(channelState);
+      channelState.createSession(privateChannelMessage);
+      const joinedUsers: DiscordUser[] | null =
+        await InteractionController.promptJoinGame(privateChannelMessage);
+      if (joinedUsers !== null) {
+        channelState.session.addPlayers(joinedUsers);
+        GameController.startGame(channelState);
+      }
     }
   }
 }

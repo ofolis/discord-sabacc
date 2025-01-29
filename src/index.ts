@@ -1,5 +1,11 @@
 import { Info, New, Play } from "./commands";
-import { Command, Discord, Environment, Log, UserInteraction } from "./core";
+import {
+  Command,
+  Discord,
+  Environment,
+  Log,
+  PrivateChannelMessage,
+} from "./core";
 
 const commands: Command[] = [new Info(), new New(), new Play()];
 
@@ -70,10 +76,10 @@ function initializeApp(): void {
       );
       return;
     }
-    UserInteraction.create(interaction)
-      .then(userInteraction => {
+    PrivateChannelMessage.create(interaction)
+      .then(privateChannelMessage => {
         interactionCommand
-          .execute(userInteraction)
+          .execute(privateChannelMessage)
           .then(() => {
             Log.success(`Completed interaction ${interaction.id}.`);
           })
@@ -82,8 +88,9 @@ function initializeApp(): void {
           });
       })
       .catch((reason: unknown) => {
+        // TODO: review all error logs again for consistency
         Log.error(
-          "Could not create user interaction from command interaction.",
+          "Could not create user channel interaction from command interaction.",
           reason,
         );
       });

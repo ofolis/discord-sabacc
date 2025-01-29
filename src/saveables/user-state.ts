@@ -51,6 +51,11 @@ export class UserState implements Saveable {
     }
   }
 
+  public logGameStarted(): void {
+    this.__latestGameStartedAt = Date.now();
+    this.__totalGamesStarted++;
+  }
+
   public toJson(): UserStateJson {
     return {
       id: this.id,

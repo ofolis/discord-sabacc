@@ -1,5 +1,5 @@
 import { Session, UserState } from ".";
-import { Json, Saveable, Utils } from "../core";
+import { Json, PrivateChannelMessage, Saveable, Utils } from "../core";
 import { DiscordUser } from "../core/discord";
 import { ChannelStateJson, SessionJson, UserStateJson } from "../types";
 
@@ -8,7 +8,9 @@ export class ChannelState implements Saveable {
 
   private __latestGameStartedAt: number | null = null;
 
-  private __session: Session | null = null;
+  private __loadedJson: Json | null = null;
+
+  private __session: Session;
 
   private __totalGamesCompleted: number = 0;
 
@@ -18,16 +20,21 @@ export class ChannelState implements Saveable {
 
   public readonly channelId: string;
 
-  public get session(): Session | null {
+  public get session(): Session {
     return this.__session;
   }
 
-  constructor(channelIdOrJson: string | Json) {
-    if (typeof channelIdOrJson === "string") {
-      const channelId: string = channelIdOrJson;
-      this.channelId = channelId;
+  constructor(privateChannelMessageOrJson: PrivateChannelMessage | Json) {
+    if (privateChannelMessageOrJson instanceof PrivateChannelMessage) {
+      const privateChannelMessage: PrivateChannelMessage =
+        privateChannelMessageOrJson;
+      // TODO: pull token total from userInteraction
+      this.__session = new Session(privateChannelMessage.discordUser, 6);
+      this.channelId = privateChannelMessage.channelId;
+      // Create initial user state
+      this.__createUserState(privateChannelMessage.discordUser);
     } else {
-      const json: Json = channelIdOrJson;
+      const json: Json = privateChannelMessageOrJson;
       this.__latestGameCompletedAt = Utils.getJsonEntry(
         json,
         "latestGameCompletedAt",
@@ -36,11 +43,9 @@ export class ChannelState implements Saveable {
         json,
         "latestGameStartedAt",
       ) as number | null;
-      const sessionJson: SessionJson | null = Utils.getJsonEntry(
-        json,
-        "session",
-      ) as SessionJson | null;
-      this.__session = sessionJson !== null ? new Session(sessionJson) : null;
+      this.__session = new Session(
+        Utils.getJsonEntry(json, "session") as SessionJson,
+      );
       this.__totalGamesCompleted = Utils.getJsonEntry(
         json,
         "totalGamesCompleted",
@@ -61,23 +66,31 @@ export class ChannelState implements Saveable {
         ]),
       );
       this.channelId = Utils.getJsonEntry(json, "channelId") as string;
+      // Store the loaded JSON for future comparison
+      this.__loadedJson = json;
     }
   }
 
-  public createSession(
-    startingDiscordUser: DiscordUser,
-    startingTokenTotal: number,
-  ): Session {
-    this.__session = new Session(startingDiscordUser, startingTokenTotal);
-    return this.__session;
+  private __createUserState(discordUser: DiscordUser): void {
+    this.__userStates[discordUser.id] = new UserState(discordUser);
+  }
+
+  private __updateUserStates(): void {
+    // TODO: write logic to compare old/new states and update user states
+  }
+
+  public createSession(privateChannelMessage: PrivateChannelMessage): void {
+    // TODO: pull token total from userInteraction
+    this.__session = new Session(privateChannelMessage.discordUser, 6);
   }
 
   public toJson(): ChannelStateJson {
+    this.__updateUserStates();
     return {
       channelId: this.channelId,
       latestGameCompletedAt: this.__latestGameCompletedAt,
       latestGameStartedAt: this.__latestGameStartedAt,
-      session: this.__session !== null ? this.__session.toJson() : null,
+      session: this.__session.toJson(),
       totalGamesCompleted: this.__totalGamesCompleted,
       totalGamesStarted: this.__totalGamesStarted,
       userStates: Object.fromEntries(

@@ -1,5 +1,15 @@
-import { Client, REST, Routes, SlashCommandBuilder } from "discord.js";
-import { Environment, Log } from ".";
+import {
+  Channel,
+  ChannelType,
+  Client,
+  Message,
+  MessageCreateOptions,
+  REST,
+  Routes,
+  SlashCommandBuilder,
+  TextChannel,
+} from "discord.js";
+import { ChannelMessage, Environment, Log } from ".";
 import { Command } from "../core";
 
 export {
@@ -86,6 +96,26 @@ export class Discord {
     Log.debug("Discord guild commands deployed successfully.");
   }
 
+  private static __getChannel(channelId: string): TextChannel {
+    Log.debug("Retrieving Discord channel...", { channelId });
+    const channel: Channel | undefined =
+      this.client.channels.cache.get(channelId);
+    if (channel === undefined) {
+      Log.throw(
+        "Cannot get Discord channel. ID was not found in the channel cache.",
+        channelId,
+      );
+    }
+    if (channel.type !== ChannelType.GuildText) {
+      Log.throw(
+        "Cannot get Discord channel. Channel at ID was not a guild text channel.",
+        channel,
+      );
+    }
+    Log.debug("Discord channel retrieved successfully.", channel);
+    return channel;
+  }
+
   public static async deployCommands(
     commandList: Command[],
     guildIds?: string[],
@@ -119,5 +149,23 @@ export class Discord {
     await this.__deployGlobalCommands(rest, commandMap);
     await this.__deployGuildCommands(rest, commandMap, guildIds);
     Log.debug("Discord commands deployed successfully.");
+  }
+
+  public static async sendChannelMessage(
+    channelId: string,
+    messageCreateOptions: MessageCreateOptions,
+  ): Promise<ChannelMessage> {
+    Log.debug("Sending Discord channel message...", {
+      channelId,
+      messageCreateOptions,
+    });
+    const channel: TextChannel = this.__getChannel(channelId);
+    const message: Message = await channel.send(messageCreateOptions);
+    Log.debug("Discord message sent successfully.", message);
+    const channelMessage: ChannelMessage = new ChannelMessage(
+      message,
+      channelId,
+    );
+    return channelMessage;
   }
 }
