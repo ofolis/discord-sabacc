@@ -1,5 +1,6 @@
 import { User } from "discord.js";
 import { Session, UserState } from ".";
+import { TOKEN_DEFAULT } from "../constants";
 import {
   CommandOptionType,
   Json,
@@ -34,11 +35,11 @@ export class ChannelState implements Saveable {
     if (privateChannelMessageOrJson instanceof PrivateChannelMessage) {
       const privateChannelMessage: PrivateChannelMessage =
         privateChannelMessageOrJson;
-      const startingTokenTotal: number =
+      const startingTokenTotal: number | undefined =
         privateChannelMessage.getCommandOption<CommandOptionType.INTEGER>(
           "tokens",
           CommandOptionType.INTEGER,
-        );
+        ) ?? TOKEN_DEFAULT;
       this.__session = new Session(
         privateChannelMessage.user,
         startingTokenTotal,
@@ -97,7 +98,7 @@ export class ChannelState implements Saveable {
       privateChannelMessage.getCommandOption<CommandOptionType.INTEGER>(
         "tokens",
         CommandOptionType.INTEGER,
-      );
+      ) ?? TOKEN_DEFAULT;
     this.__session = new Session(
       privateChannelMessage.user,
       startingTokenTotal,

@@ -49,7 +49,7 @@ export class PrivateChannelMessage extends ChannelMessage {
   public getCommandOption<T extends CommandOptionType>(
     name: string,
     type: T,
-  ): CommandOptionTypeMap[T] {
+  ): CommandOptionTypeMap[T] | undefined {
     if (this.__commandOptions === undefined) {
       Log.throw(
         "Cannot get command option. Command options have not been set.",
@@ -59,11 +59,8 @@ export class PrivateChannelMessage extends ChannelMessage {
     const option: CommandInteractionOption | undefined =
       this.__commandOptions.find(opt => opt.name === name);
     if (option === undefined || option.value === undefined) {
-      Log.throw(
-        "Cannot get command option. No valid option found.",
-        { name, option },
-        this,
-      );
+      // Option is intentionally undefined
+      return undefined;
     }
     const isValidType: boolean =
       (type === CommandOptionType.BOOLEAN &&

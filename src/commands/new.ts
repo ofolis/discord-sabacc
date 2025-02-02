@@ -1,4 +1,5 @@
 import { User } from "discord.js";
+import { TOKEN_MAXIMUM, TOKEN_MINIMUM } from "../constants";
 import {
   DataController,
   GameController,
@@ -24,9 +25,9 @@ export class New implements Command {
   public readonly options: CommandOption[] = [
     {
       description: "The starting token total for each player.",
-      isRequired: true,
-      maxValue: 10,
-      minValue: 0,
+      isRequired: false,
+      maxValue: TOKEN_MAXIMUM,
+      minValue: TOKEN_MINIMUM,
       name: "tokens",
       type: CommandOptionType.INTEGER,
     },
