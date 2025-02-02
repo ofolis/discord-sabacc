@@ -1,13 +1,15 @@
-import { Command, PrivateChannelMessage } from "../core";
+import { Command, CommandOption, PrivateChannelMessage } from "../core";
 
 export class Play implements Command {
-  public readonly description = "Play your turn.";
+  public readonly description: string = "Play your turn.";
 
-  public readonly isGlobal = false;
+  public readonly isGlobal: boolean = false;
 
-  public readonly isGuild = true;
+  public readonly isGuild: boolean = true;
 
-  public readonly name = "play";
+  public readonly name: string = "play";
+
+  public readonly options: CommandOption[] = [];
 
   public async execute(
     privateChannelMessage: PrivateChannelMessage,

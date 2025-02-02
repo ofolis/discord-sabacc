@@ -1,5 +1,5 @@
+import { User } from "discord.js";
 import { Json, Saveable, Utils } from "../core";
-import { DiscordUser } from "../core/discord";
 import { UserStateJson } from "../types";
 
 export class UserState implements Saveable {
@@ -17,12 +17,12 @@ export class UserState implements Saveable {
 
   public readonly id: string;
 
-  constructor(discordUserOrJson: DiscordUser | Json) {
-    if (discordUserOrJson instanceof DiscordUser) {
-      const discordUser: DiscordUser = discordUserOrJson;
-      this.id = discordUser.id;
+  constructor(userOrJson: User | Json) {
+    if (userOrJson instanceof User) {
+      const user: User = userOrJson;
+      this.id = user.id;
     } else {
-      const json: Json = discordUserOrJson;
+      const json: Json = userOrJson;
       this.__latestGameCompletedAt = Utils.getJsonEntry(
         json,
         "latestGameCompletedAt",

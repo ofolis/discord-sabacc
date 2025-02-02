@@ -1,6 +1,12 @@
-import { CommandInteraction, InteractionResponse, User } from "discord.js";
+import {
+  ApplicationCommandOptionType,
+  CommandInteraction,
+  CommandInteractionOption,
+  InteractionResponse,
+  User,
+} from "discord.js";
 import { ChannelMessage } from ".";
-import { Log } from "../..";
+import { CommandOptionType, CommandOptionTypeMap, Log } from "../..";
 
 export class PrivateChannelMessage extends ChannelMessage {
   public static async create(
@@ -14,30 +20,70 @@ export class PrivateChannelMessage extends ChannelMessage {
       interactionResponse,
       commandInteraction.channelId,
       commandInteraction.user,
+      [...commandInteraction.options.data],
     );
   }
 
-  private __discordUser: User;
+  private __commandOptions: CommandInteractionOption[] | undefined;
 
-  private __userId: string;
+  private __user: User;
 
-  public get discordUser(): User {
-    return this.__discordUser;
-  }
-
-  public get userId(): string {
-    return this.__userId;
+  public get user(): User {
+    return this.__user;
   }
 
   private constructor(
     interactionResponse: InteractionResponse,
     channelId: string,
-    discordUser: User,
+    user: User,
+    commandOptions?: CommandInteractionOption[],
   ) {
     super(interactionResponse, channelId);
-    this.__discordUser = discordUser;
-    this.__userId = discordUser.id;
-    this._buttonInteractionFilter = (i): boolean => i.user.id === this.__userId;
+    this.__commandOptions = commandOptions;
+    this.__user = user;
+    this._buttonInteractionFilter = (i): boolean =>
+      i.user.id === this.__user.id;
     Log.debug("User channel interaction constructed.");
+  }
+
+  public getCommandOption<T extends CommandOptionType>(
+    name: string,
+    type: T,
+  ): CommandOptionTypeMap[T] {
+    if (this.__commandOptions === undefined) {
+      Log.throw(
+        "Cannot get command option. Command options have not been set.",
+        this,
+      );
+    }
+    const option: CommandInteractionOption | undefined =
+      this.__commandOptions.find(opt => opt.name === name);
+    if (option === undefined || option.value === undefined) {
+      Log.throw(
+        "Cannot get command option. No valid option found.",
+        { name, option },
+        this,
+      );
+    }
+    const isValidType: boolean =
+      (type === CommandOptionType.BOOLEAN &&
+        option.type === ApplicationCommandOptionType.Boolean &&
+        typeof option.value === "boolean") ||
+      (type === CommandOptionType.INTEGER &&
+        option.type === ApplicationCommandOptionType.Integer &&
+        typeof option.value === "number") ||
+      (type === CommandOptionType.NUMBER &&
+        option.type === ApplicationCommandOptionType.Number &&
+        typeof option.value === "number") ||
+      (type === CommandOptionType.STRING &&
+        option.type === ApplicationCommandOptionType.String &&
+        typeof option.value === "string");
+    if (!isValidType) {
+      Log.throw("Cannot get command option. Type mismatch.", {
+        expectedType: type,
+        receivedData: option,
+      });
+    }
+    return option.value as CommandOptionTypeMap[T];
   }
 }

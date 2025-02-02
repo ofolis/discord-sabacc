@@ -1,8 +1,8 @@
+import { User } from "discord.js";
 import { Random } from "random-js";
 import { Player } from ".";
 import { DECK } from "../../constants";
 import { Json, Log, Saveable, Utils } from "../../core";
-import { DiscordUser } from "../../core/discord";
 import {
   CardSuit,
   DrawSource,
@@ -50,16 +50,13 @@ export class Session implements Saveable {
     return this.__status;
   }
 
-  constructor(discordUser: DiscordUser, startingTokenTotal: number);
+  constructor(user: User, startingTokenTotal: number);
 
   constructor(json: Json);
 
-  constructor(
-    discordUserOrJson: DiscordUser | Json,
-    startingTokenTotal?: number,
-  ) {
-    if (discordUserOrJson instanceof DiscordUser) {
-      const discordUser: DiscordUser = discordUserOrJson;
+  constructor(userOrJson: User | Json, startingTokenTotal?: number) {
+    if (userOrJson instanceof User) {
+      const user: User = userOrJson;
       if (startingTokenTotal === undefined) {
         Log.throw(
           "Cannot construct session. Constructor was missing required arguments.",
@@ -76,12 +73,12 @@ export class Session implements Saveable {
           [DrawSource.DISCARD]: [],
         },
       };
-      this.__startingPlayerId = discordUser.id;
+      this.__startingPlayerId = user.id;
       this.__startingTokenTotal = startingTokenTotal;
       // Create the first player
-      this.__createPlayer(discordUser);
+      this.__createPlayer(user);
     } else {
-      const json: Json = discordUserOrJson;
+      const json: Json = userOrJson;
       this.__cards = Utils.getJsonEntry(json, "cards") as Record<
         CardSuit,
         Record<DrawSource, Card[]>
@@ -131,17 +128,17 @@ export class Session implements Saveable {
     });
   }
 
-  private __createPlayer(discordUser: DiscordUser): Player {
-    if (discordUser.id in this.__players) {
+  private __createPlayer(user: User): Player {
+    if (user.id in this.__players) {
       Log.throw(
         "Cannot create player. A player already exists with the provided ID.",
         this,
-        discordUser,
+        user,
       );
     }
-    this.__players[discordUser.id] = new Player(discordUser);
-    this.__playerOrder.push(discordUser.id);
-    return this.__players[discordUser.id];
+    this.__players[user.id] = new Player(user);
+    this.__playerOrder.push(user.id);
+    return this.__players[user.id];
   }
 
   private __dealCards(): void {
@@ -173,12 +170,12 @@ export class Session implements Saveable {
     random.shuffle(this.__cards[CardSuit.SAND][DrawSource.DECK]);
   }
 
-  public addPlayers(discordUsers: DiscordUser[]): void {
+  public addPlayers(users: User[]): void {
     if (this.__status !== SessionStatus.PENDING) {
       Log.throw("Cannot add players. Session is not currently pending.", this);
     }
-    discordUsers.forEach(discordUser => {
-      this.__createPlayer(discordUser);
+    users.forEach(user => {
+      this.__createPlayer(user);
     });
   }
 

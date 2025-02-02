@@ -1,20 +1,36 @@
+import { User } from "discord.js";
 import {
   DataController,
   GameController,
   InteractionController,
 } from "../controllers";
-import { Command, PrivateChannelMessage } from "../core";
-import { DiscordUser } from "../core/discord";
+import {
+  Command,
+  CommandOption,
+  CommandOptionType,
+  PrivateChannelMessage,
+} from "../core";
 import { ChannelState } from "../saveables";
 
 export class New implements Command {
-  public readonly description = "Start a new game.";
+  public readonly description: string = "Start a new game.";
 
-  public readonly isGlobal = false;
+  public readonly isGlobal: boolean = false;
 
-  public readonly isGuild = true;
+  public readonly isGuild: boolean = true;
 
-  public readonly name = "new";
+  public readonly name: string = "new";
+
+  public readonly options: CommandOption[] = [
+    {
+      description: "The starting token total for each player.",
+      isRequired: true,
+      maxValue: 10,
+      minValue: 0,
+      name: "tokens",
+      type: CommandOptionType.INTEGER,
+    },
+  ];
 
   public async execute(
     privateChannelMessage: PrivateChannelMessage,
@@ -40,9 +56,10 @@ export class New implements Command {
     if (createGame) {
       if (channelState === null) {
         channelState = new ChannelState(privateChannelMessage);
+      } else {
+        channelState.createSession(privateChannelMessage);
       }
-      channelState.createSession(privateChannelMessage);
-      const joinedUsers: DiscordUser[] | null =
+      const joinedUsers: User[] | null =
         await InteractionController.promptJoinGame(privateChannelMessage);
       if (joinedUsers !== null) {
         channelState.session.addPlayers(joinedUsers);

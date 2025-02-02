@@ -1,6 +1,12 @@
+import { User } from "discord.js";
 import { Session, UserState } from ".";
-import { Json, PrivateChannelMessage, Saveable, Utils } from "../core";
-import { DiscordUser } from "../core/discord";
+import {
+  CommandOptionType,
+  Json,
+  PrivateChannelMessage,
+  Saveable,
+  Utils,
+} from "../core";
 import { ChannelStateJson, SessionJson, UserStateJson } from "../types";
 
 export class ChannelState implements Saveable {
@@ -28,11 +34,18 @@ export class ChannelState implements Saveable {
     if (privateChannelMessageOrJson instanceof PrivateChannelMessage) {
       const privateChannelMessage: PrivateChannelMessage =
         privateChannelMessageOrJson;
-      // TODO: pull token total from userInteraction
-      this.__session = new Session(privateChannelMessage.discordUser, 6);
+      const startingTokenTotal: number =
+        privateChannelMessage.getCommandOption<CommandOptionType.INTEGER>(
+          "tokens",
+          CommandOptionType.INTEGER,
+        );
+      this.__session = new Session(
+        privateChannelMessage.user,
+        startingTokenTotal,
+      );
       this.channelId = privateChannelMessage.channelId;
       // Create initial user state
-      this.__createUserState(privateChannelMessage.discordUser);
+      this.__createUserState(privateChannelMessage.user);
     } else {
       const json: Json = privateChannelMessageOrJson;
       this.__latestGameCompletedAt = Utils.getJsonEntry(
@@ -71,8 +84,8 @@ export class ChannelState implements Saveable {
     }
   }
 
-  private __createUserState(discordUser: DiscordUser): void {
-    this.__userStates[discordUser.id] = new UserState(discordUser);
+  private __createUserState(user: User): void {
+    this.__userStates[user.id] = new UserState(user);
   }
 
   private __updateUserStates(): void {
@@ -80,8 +93,15 @@ export class ChannelState implements Saveable {
   }
 
   public createSession(privateChannelMessage: PrivateChannelMessage): void {
-    // TODO: pull token total from userInteraction
-    this.__session = new Session(privateChannelMessage.discordUser, 6);
+    const startingTokenTotal: number =
+      privateChannelMessage.getCommandOption<CommandOptionType.INTEGER>(
+        "tokens",
+        CommandOptionType.INTEGER,
+      );
+    this.__session = new Session(
+      privateChannelMessage.user,
+      startingTokenTotal,
+    );
   }
 
   public toJson(): ChannelStateJson {

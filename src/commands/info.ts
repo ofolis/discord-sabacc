@@ -1,16 +1,18 @@
 import { DataController, InteractionController } from "../controllers";
-import { Command, PrivateChannelMessage } from "../core";
+import { Command, CommandOption, PrivateChannelMessage } from "../core";
 import { SessionStatus } from "../enums";
 import { ChannelState } from "../saveables";
 
 export class Info implements Command {
-  public readonly description = "View your hand and see game info.";
+  public readonly description: string = "View your hand and see game info.";
 
-  public readonly isGlobal = false;
+  public readonly isGlobal: boolean = false;
 
-  public readonly isGuild = true;
+  public readonly isGuild: boolean = true;
 
-  public readonly name = "info";
+  public readonly name: string = "info";
+
+  public readonly options: CommandOption[] = [];
 
   public async execute(
     privateChannelMessage: PrivateChannelMessage,
@@ -29,7 +31,7 @@ export class Info implements Command {
     }
 
     // Check if playing
-    if (channelState.session.playerExists(privateChannelMessage.userId)) {
+    if (channelState.session.playerExists(privateChannelMessage.user.id)) {
       await InteractionController.informNotPlaying(privateChannelMessage);
       return;
     }
@@ -38,7 +40,7 @@ export class Info implements Command {
     await InteractionController.informPlayerInfo(
       privateChannelMessage,
       channelState,
-      privateChannelMessage.userId,
+      privateChannelMessage.user.id,
     );
   }
 }

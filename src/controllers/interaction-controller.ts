@@ -1,4 +1,3 @@
-// TODO: figure out how to handle the discord.js imports, should we kill the exports from the Discord class?
 import {
   ActionRowBuilder,
   BaseMessageOptions,
@@ -7,10 +6,16 @@ import {
   ButtonStyle,
   EmbedBuilder,
   EmbedData,
+  User,
 } from "discord.js";
 import { PLAYER_MAXIMUM, PLAYER_MINIMUM } from "../constants";
-import { ChannelMessage, Log, PrivateChannelMessage, Utils } from "../core";
-import { Discord, DiscordUser } from "../core/discord";
+import {
+  ChannelMessage,
+  Discord,
+  Log,
+  PrivateChannelMessage,
+  Utils,
+} from "../core";
 import { ChannelState } from "../saveables";
 import { PlayerJson } from "../types";
 
@@ -44,10 +49,8 @@ export class InteractionController {
     };
   }
 
-  private static __formatPlayerNameString(
-    player: PlayerJson | DiscordUser,
-  ): string {
-    return (player.globalName ?? player.username).toUpperCase();
+  private static __formatNameString(playerOrUser: PlayerJson | User): string {
+    return (playerOrUser.globalName ?? playerOrUser.username).toUpperCase();
   }
 
   private static async __setChannelMessageEmbed(
@@ -184,20 +187,17 @@ export class InteractionController {
 
   public static async promptJoinGame(
     privateChannelMessage: PrivateChannelMessage,
-  ): Promise<DiscordUser[] | null> {
+  ): Promise<User[] | null> {
     let channelMessage: ChannelMessage | null = null;
-    const discordUserAccumulator: DiscordUser[] = [];
-    while (discordUserAccumulator.length + 1 < PLAYER_MAXIMUM) {
+    const userAccumulator: User[] = [];
+    while (userAccumulator.length + 1 < PLAYER_MAXIMUM) {
       const embedData: EmbedData = {
         description: "JOIN!",
         fields: [
           {
             name: "Players",
-            value: [
-              privateChannelMessage.discordUser,
-              ...discordUserAccumulator,
-            ]
-              .map(discordUser => this.__formatPlayerNameString(discordUser))
+            value: [privateChannelMessage.user, ...userAccumulator]
+              .map(user => this.__formatNameString(user))
               .join(","),
           },
         ],
@@ -211,7 +211,7 @@ export class InteractionController {
         }),
         new ButtonBuilder({
           customId: "start",
-          disabled: discordUserAccumulator.length + 1 < PLAYER_MINIMUM,
+          disabled: userAccumulator.length + 1 < PLAYER_MINIMUM,
           label: "Start Game",
           style: ButtonStyle.Success,
         }),
@@ -237,20 +237,18 @@ export class InteractionController {
       switch (buttonInteraction.customId) {
         case "join":
           if (
-            buttonInteraction.user.id !== privateChannelMessage.userId &&
-            !discordUserAccumulator.some(
-              discordUser => discordUser.id === buttonInteraction.user.id,
-            )
+            buttonInteraction.user.id !== privateChannelMessage.user.id &&
+            !userAccumulator.some(user => user.id === buttonInteraction.user.id)
           ) {
-            discordUserAccumulator.push(buttonInteraction.user);
+            userAccumulator.push(buttonInteraction.user);
           }
           continue;
         case "start":
           await this.__setChannelMessageFollowup(
             channelMessage,
-            `The game was started by ${this.__formatPlayerNameString(buttonInteraction.user)}!`,
+            `The game was started by ${this.__formatNameString(buttonInteraction.user)}!`,
           );
-          return discordUserAccumulator;
+          return userAccumulator;
         default:
           Log.throw(
             "Could not resolve game setup prompt. Unknown button ID.",
@@ -267,6 +265,6 @@ export class InteractionController {
       channelMessage,
       `${PLAYER_MAXIMUM.toString()} players have joined. The game has started!`,
     );
-    return discordUserAccumulator;
+    return userAccumulator;
   }
 }
