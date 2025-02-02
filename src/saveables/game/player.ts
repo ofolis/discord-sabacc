@@ -1,6 +1,6 @@
 import { User } from "discord.js";
 import { PlayerCard, Turn } from ".";
-import { Json, Saveable, Utils } from "../../core";
+import { Json, Log, Saveable, Utils } from "../../core";
 import { CardSuit, PlayerCardSource, PlayerStatus } from "../../enums";
 import {
   Card,
@@ -31,6 +31,9 @@ export class Player implements Saveable {
   private __username: string;
 
   public get cardTotal(): number {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot get card total. Player is not currently active.", this);
+    }
     return this.__cards.length;
   }
 
@@ -70,11 +73,17 @@ export class Player implements Saveable {
   }
 
   public addCard(card: Card, playerCardSource: PlayerCardSource): void {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot add cards. Player is not currently active.", this);
+    }
     const playerCard: PlayerCard = new PlayerCard(card, playerCardSource);
     this.__cards.push(playerCard);
   }
 
   public getCards(cardSuit?: CardSuit): PlayerCard[] {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot get cards. Player is not currently active.", this);
+    }
     if (cardSuit === undefined) {
       return [...this.__cards]; // Shallow copy
     } else {
@@ -85,9 +94,26 @@ export class Player implements Saveable {
   }
 
   public removeAllCards(): Card[] {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw(
+        "Cannot remove all cards. Player is not currently active.",
+        this,
+      );
+    }
     const cards: Card[] = this.__cards.map(playerCard => playerCard.card);
     Utils.emptyArray(this.__cards);
     return cards;
+  }
+
+  public initialize(tokenTotal: number): void {
+    if (this.__status !== PlayerStatus.UNINITIALIZED) {
+      Log.throw(
+        "Cannot initialize player. Player is not currently uninitialized.",
+        this,
+      );
+    }
+    this.__tokenTotal = tokenTotal;
+    this.__status = PlayerStatus.ACTIVE;
   }
 
   public toJson(): PlayerJson {

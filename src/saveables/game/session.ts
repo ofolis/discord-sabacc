@@ -164,6 +164,13 @@ export class Session implements Saveable {
     return Utils.removeTopArrayItem(this.__cards[cardSuit][drawSource]);
   }
 
+  private __initializePlayers(): void {
+    new Random().shuffle(this.__playerOrder);
+    this.__orderedPlayers.forEach(player => {
+      player.initialize(this.__startingTokenTotal);
+    });
+  }
+
   private __shuffleDecks(): void {
     const random: Random = new Random();
     random.shuffle(this.__cards[CardSuit.BLOOD][DrawSource.DECK]);
@@ -232,13 +239,13 @@ export class Session implements Saveable {
     return playerId in this.__players;
   }
 
-  public prepareDecks(): void {
+  public resetDecks(): void {
     if (this.__status !== SessionStatus.ACTIVE) {
-      Log.throw("Cannot prepare decks. Session is not currently active.", this);
+      Log.throw("Cannot reset decks. Session is not currently active.", this);
     }
     if (this.__roundIndex !== 0 || this.__playerIndex !== 0) {
       Log.throw(
-        "Cannot prepare decks. Round index and player index are not currently 0.",
+        "Cannot reset decks. Round index and player index are not currently 0.",
         this,
       );
     }
@@ -255,7 +262,7 @@ export class Session implements Saveable {
     }
     this.__startedAt = Date.now();
     this.__status = SessionStatus.ACTIVE;
-    new Random().shuffle(this.__playerOrder);
+    this.__initializePlayers();
   }
 
   public toJson(): SessionJson {
