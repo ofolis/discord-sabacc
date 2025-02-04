@@ -1,5 +1,5 @@
 import { DataController, InteractionController } from "../controllers";
-import { Command, CommandOption, PrivateChannelMessage } from "../core";
+import { ChannelCommandMessage, Command, CommandOption } from "../core";
 import { SessionStatus } from "../enums";
 import { ChannelState } from "../saveables";
 
@@ -10,15 +10,15 @@ export class Info implements Command {
 
   public readonly isGuild: boolean = true;
 
+  public readonly isPrivate: boolean = true;
+
   public readonly name: string = "info";
 
   public readonly options: CommandOption[] = [];
 
-  public async execute(
-    privateChannelMessage: PrivateChannelMessage,
-  ): Promise<void> {
+  public async execute(message: ChannelCommandMessage): Promise<void> {
     const channelState: ChannelState | null = DataController.loadChannelState(
-      privateChannelMessage.channelId,
+      message.channelId,
     );
 
     // Check for active game
@@ -26,21 +26,21 @@ export class Info implements Command {
       channelState === null ||
       channelState.session.status !== SessionStatus.ACTIVE
     ) {
-      await InteractionController.informNoGame(privateChannelMessage);
+      await InteractionController.informNoGame(message);
       return;
     }
 
     // Check if playing
-    if (channelState.session.playerExists(privateChannelMessage.user.id)) {
-      await InteractionController.informNotPlaying(privateChannelMessage);
+    if (channelState.session.playerExists(message.user.id)) {
+      await InteractionController.informNotPlaying(message);
       return;
     }
 
     // Send info
     await InteractionController.informPlayerInfo(
-      privateChannelMessage,
+      message,
       channelState,
-      privateChannelMessage.user.id,
+      message.user.id,
     );
   }
 }

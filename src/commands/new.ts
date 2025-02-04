@@ -1,4 +1,4 @@
-import { User } from "discord.js";
+import * as discordJs from "discord.js";
 import { TOKEN_MAXIMUM, TOKEN_MINIMUM } from "../constants";
 import {
   DataController,
@@ -6,10 +6,10 @@ import {
   InteractionController,
 } from "../controllers";
 import {
+  ChannelCommandMessage,
   Command,
   CommandOption,
   CommandOptionType,
-  PrivateChannelMessage,
 } from "../core";
 import { ChannelState } from "../saveables";
 
@@ -19,6 +19,8 @@ export class New implements Command {
   public readonly isGlobal: boolean = false;
 
   public readonly isGuild: boolean = true;
+
+  public readonly isPrivate: boolean = true;
 
   public readonly name: string = "new";
 
@@ -33,21 +35,19 @@ export class New implements Command {
     },
   ];
 
-  public async execute(
-    privateChannelMessage: PrivateChannelMessage,
-  ): Promise<void> {
+  public async execute(message: ChannelCommandMessage): Promise<void> {
     let channelState: ChannelState | null = DataController.loadChannelState(
-      privateChannelMessage.channelId,
+      message.channelId,
     );
 
     // Determine if a game should be created
     let createGame: boolean = false;
     if (channelState === null) {
       createGame = true;
-      await InteractionController.followupGameCreated(privateChannelMessage);
+      await InteractionController.followupGameCreated(message);
     } else {
       const endGameDecision: boolean | null =
-        await InteractionController.promptEndCurrentGame(privateChannelMessage);
+        await InteractionController.promptEndCurrentGame(message);
       if (endGameDecision !== null) {
         createGame = endGameDecision;
       }
@@ -56,12 +56,12 @@ export class New implements Command {
     // Create the new game if necessary
     if (createGame) {
       if (channelState === null) {
-        channelState = new ChannelState(privateChannelMessage);
+        channelState = new ChannelState(message);
       } else {
-        channelState.createSession(privateChannelMessage);
+        channelState.createSession(message);
       }
-      const joinedUsers: User[] | null =
-        await InteractionController.promptJoinGame(privateChannelMessage);
+      const joinedUsers: discordJs.User[] | null =
+        await InteractionController.promptJoinGame(message);
       if (joinedUsers !== null) {
         channelState.session.addPlayers(joinedUsers);
         GameController.startGame(channelState);

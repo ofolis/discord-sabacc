@@ -1,24 +1,14 @@
-import {
-  Channel,
-  ChannelType,
-  Client,
-  Message,
-  MessageCreateOptions,
-  REST,
-  Routes,
-  SlashCommandBuilder,
-  TextChannel,
-} from "discord.js";
+import * as discordJs from "discord.js";
 import { ChannelMessage, CommandOptionType, Environment, Log } from ".";
 import { Command } from "../core";
 
 export class Discord {
-  private static __client: Client | null = null;
+  private static __client: discordJs.Client | null = null;
 
-  public static get client(): Client {
+  public static get client(): discordJs.Client {
     if (this.__client === null) {
       Log.debug("Creating Discord client...");
-      this.__client = new Client({
+      this.__client = new discordJs.Client({
         intents: ["DirectMessages", "Guilds", "GuildMessages"],
       });
       Log.debug("Discord client created successfully.", {
@@ -29,12 +19,14 @@ export class Discord {
   }
 
   private static async __deployGlobalCommands(
-    rest: REST,
-    commands: SlashCommandBuilder[],
+    rest: discordJs.REST,
+    commands: discordJs.SlashCommandBuilder[],
   ): Promise<void> {
     Log.debug("Deploying global commands to Discord...", commands);
     await rest.put(
-      Routes.applicationCommands(Environment.config.discordApplicationId),
+      discordJs.Routes.applicationCommands(
+        Environment.config.discordApplicationId,
+      ),
       {
         body: commands,
       },
@@ -43,8 +35,8 @@ export class Discord {
   }
 
   private static async __deployGuildCommands(
-    rest: REST,
-    commands: SlashCommandBuilder[],
+    rest: discordJs.REST,
+    commands: discordJs.SlashCommandBuilder[],
     guildIds: string[],
   ): Promise<void> {
     Log.debug("Deploying commands to Discord guilds...", {
@@ -54,7 +46,7 @@ export class Discord {
     await Promise.all(
       guildIds.map(guildId =>
         rest.put(
-          Routes.applicationGuildCommands(
+          discordJs.Routes.applicationGuildCommands(
             Environment.config.discordApplicationId,
             guildId,
           ),
@@ -67,9 +59,9 @@ export class Discord {
     Log.debug("Discord guild commands deployed successfully.");
   }
 
-  private static __getChannel(channelId: string): TextChannel {
+  private static __getChannel(channelId: string): discordJs.TextChannel {
     Log.debug("Retrieving Discord channel...", { channelId });
-    const channel: Channel | undefined =
+    const channel: discordJs.Channel | undefined =
       this.client.channels.cache.get(channelId);
     if (channel === undefined) {
       Log.throw(
@@ -77,7 +69,7 @@ export class Discord {
         channelId,
       );
     }
-    if (channel.type !== ChannelType.GuildText) {
+    if (channel.type !== discordJs.ChannelType.GuildText) {
       Log.throw(
         "Cannot get Discord channel. Channel at ID was not a guild text channel.",
         channel,
@@ -92,15 +84,16 @@ export class Discord {
     guildIds?: string[],
   ): Promise<void> {
     Log.debug("Deploying Discord commands...", { commandList, guildIds });
-    const rest: REST = new REST({
+    const rest: discordJs.REST = new discordJs.REST({
       version: "10",
     }).setToken(Environment.config.discordBotToken);
-    const globalCommandMap: Record<string, SlashCommandBuilder> = {};
-    const guildCommandMap: Record<string, SlashCommandBuilder> = {};
+    const globalCommandMap: Record<string, discordJs.SlashCommandBuilder> = {};
+    const guildCommandMap: Record<string, discordJs.SlashCommandBuilder> = {};
     commandList.forEach(command => {
-      const slashCommandBuilder: SlashCommandBuilder = new SlashCommandBuilder()
-        .setName(command.name)
-        .setDescription(command.description);
+      const slashCommandBuilder: discordJs.SlashCommandBuilder =
+        new discordJs.SlashCommandBuilder()
+          .setName(command.name)
+          .setDescription(command.description);
       command.options.forEach(option => {
         switch (option.type) {
           case CommandOptionType.BOOLEAN:
@@ -179,14 +172,14 @@ export class Discord {
 
   public static async sendChannelMessage(
     channelId: string,
-    messageCreateOptions: MessageCreateOptions,
+    messageCreateOptions: discordJs.MessageCreateOptions,
   ): Promise<ChannelMessage> {
     Log.debug("Sending Discord channel message...", {
       channelId,
       messageCreateOptions,
     });
-    const channel: TextChannel = this.__getChannel(channelId);
-    const message: Message = await channel.send(messageCreateOptions);
+    const channel: discordJs.TextChannel = this.__getChannel(channelId);
+    const message: discordJs.Message = await channel.send(messageCreateOptions);
     Log.debug("Discord message sent successfully.", message);
     const channelMessage: ChannelMessage = new ChannelMessage(
       message,

@@ -1,19 +1,10 @@
-import {
-  ActionRowBuilder,
-  BaseMessageOptions,
-  ButtonBuilder,
-  ButtonInteraction,
-  ButtonStyle,
-  EmbedBuilder,
-  EmbedData,
-  User,
-} from "discord.js";
+import * as discordJs from "discord.js";
 import { PLAYER_MAXIMUM, PLAYER_MINIMUM } from "../constants";
 import {
+  ChannelCommandMessage,
   ChannelMessage,
   Discord,
   Log,
-  PrivateChannelMessage,
   Utils,
 } from "../core";
 import { ChannelState } from "../saveables";
@@ -22,8 +13,8 @@ import { PlayerJson } from "../types";
 export class InteractionController {
   private static async __createChannelMessageEmbed(
     channelId: string,
-    embedData: EmbedData,
-    buttons?: ButtonBuilder[],
+    embedData: discordJs.EmbedData,
+    buttons?: discordJs.ButtonBuilder[],
   ): Promise<ChannelMessage> {
     return await Discord.sendChannelMessage(
       channelId,
@@ -32,31 +23,33 @@ export class InteractionController {
   }
 
   private static __createEmbedBaseMessageOptions(
-    embedData: EmbedData,
-    buttons?: ButtonBuilder[],
-  ): BaseMessageOptions {
-    const components: ActionRowBuilder<ButtonBuilder>[] =
+    embedData: discordJs.EmbedData,
+    buttons?: discordJs.ButtonBuilder[],
+  ): discordJs.BaseMessageOptions {
+    const components: discordJs.ActionRowBuilder<discordJs.ButtonBuilder>[] =
       buttons !== undefined && buttons.length > 0
         ? [
-            new ActionRowBuilder<ButtonBuilder>({
+            new discordJs.ActionRowBuilder<discordJs.ButtonBuilder>({
               components: buttons,
             }),
           ]
         : [];
     return {
-      embeds: [new EmbedBuilder(embedData)],
+      embeds: [new discordJs.EmbedBuilder(embedData)],
       components: components.length > 0 ? components : undefined,
     };
   }
 
-  private static __formatNameString(playerOrUser: PlayerJson | User): string {
+  private static __formatNameString(
+    playerOrUser: PlayerJson | discordJs.User,
+  ): string {
     return (playerOrUser.globalName ?? playerOrUser.username).toUpperCase();
   }
 
   private static async __setChannelMessageEmbed(
     channelMessage: ChannelMessage,
-    embedData: EmbedData,
-    buttons?: ButtonBuilder[],
+    embedData: discordJs.EmbedData,
+    buttons?: discordJs.ButtonBuilder[],
   ): Promise<void> {
     await channelMessage.update(
       this.__createEmbedBaseMessageOptions(embedData, buttons),
@@ -143,19 +136,19 @@ export class InteractionController {
         title: "Game In Progress",
       },
       [
-        new ButtonBuilder({
+        new discordJs.ButtonBuilder({
           customId: "endGame",
           label: "End Current Game",
-          style: ButtonStyle.Danger,
+          style: discordJs.ButtonStyle.Danger,
         }),
-        new ButtonBuilder({
+        new discordJs.ButtonBuilder({
           customId: "cancel",
           label: "Cancel",
-          style: ButtonStyle.Secondary,
+          style: discordJs.ButtonStyle.Secondary,
         }),
       ],
     );
-    const buttonInteraction: ButtonInteraction | null =
+    const buttonInteraction: discordJs.ButtonInteraction | null =
       await channelMessage.awaitButtonInteraction();
     if (buttonInteraction === null) {
       await this.__setChannelMessageFollowup(
@@ -186,12 +179,12 @@ export class InteractionController {
   }
 
   public static async promptJoinGame(
-    privateChannelMessage: PrivateChannelMessage,
-  ): Promise<User[] | null> {
+    privateChannelMessage: ChannelCommandMessage,
+  ): Promise<discordJs.User[] | null> {
     let channelMessage: ChannelMessage | null = null;
-    const userAccumulator: User[] = [];
+    const userAccumulator: discordJs.User[] = [];
     while (userAccumulator.length + 1 < PLAYER_MAXIMUM) {
-      const embedData: EmbedData = {
+      const embedData: discordJs.EmbedData = {
         description: "JOIN!",
         fields: [
           {
@@ -203,17 +196,17 @@ export class InteractionController {
         ],
         title: "JOIN",
       };
-      const buttons: ButtonBuilder[] = [
-        new ButtonBuilder({
+      const buttons: discordJs.ButtonBuilder[] = [
+        new discordJs.ButtonBuilder({
           customId: "join",
           label: "Join Game",
-          style: ButtonStyle.Primary,
+          style: discordJs.ButtonStyle.Primary,
         }),
-        new ButtonBuilder({
+        new discordJs.ButtonBuilder({
           customId: "start",
           disabled: userAccumulator.length + 1 < PLAYER_MINIMUM,
           label: "Start Game",
-          style: ButtonStyle.Success,
+          style: discordJs.ButtonStyle.Success,
         }),
       ];
       if (channelMessage === null) {
@@ -225,7 +218,7 @@ export class InteractionController {
       } else {
         await this.__setChannelMessageEmbed(channelMessage, embedData, buttons);
       }
-      const buttonInteraction: ButtonInteraction | null =
+      const buttonInteraction: discordJs.ButtonInteraction | null =
         await channelMessage.awaitButtonInteraction();
       if (buttonInteraction === null) {
         await this.__setChannelMessageFollowup(

@@ -1,4 +1,4 @@
-import { User } from "discord.js";
+import * as discordJs from "discord.js";
 import { PlayerCard, Turn } from ".";
 import { Json, Log, Saveable, Utils } from "../../core";
 import { CardSuit, PlayerCardSource, PlayerStatus } from "../../enums";
@@ -37,9 +37,9 @@ export class Player implements Saveable {
     return this.__cards.length;
   }
 
-  constructor(userOrJson: User | Json) {
-    if (userOrJson instanceof User) {
-      const user: User = userOrJson;
+  constructor(userOrJson: discordJs.User | Json) {
+    if (userOrJson instanceof discordJs.User) {
+      const user: discordJs.User = userOrJson;
       this.__avatarId = user.avatar;
       this.__globalName = user.globalName;
       this.__id = user.id;

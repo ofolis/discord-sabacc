@@ -1,4 +1,4 @@
-import { User } from "discord.js";
+import * as discordJs from "discord.js";
 import { Random } from "random-js";
 import { Player } from ".";
 import { DECK } from "../../constants";
@@ -50,13 +50,13 @@ export class Session implements Saveable {
     return this.__status;
   }
 
-  constructor(user: User, startingTokenTotal: number);
+  constructor(user: discordJs.User, startingTokenTotal: number);
 
   constructor(json: Json);
 
-  constructor(userOrJson: User | Json, startingTokenTotal?: number) {
-    if (userOrJson instanceof User) {
-      const user: User = userOrJson;
+  constructor(userOrJson: discordJs.User | Json, startingTokenTotal?: number) {
+    if (userOrJson instanceof discordJs.User) {
+      const user: discordJs.User = userOrJson;
       if (startingTokenTotal === undefined) {
         Log.throw(
           "Cannot construct session. Constructor was missing required arguments.",
@@ -128,7 +128,7 @@ export class Session implements Saveable {
     });
   }
 
-  private __createPlayer(user: User): Player {
+  private __createPlayer(user: discordJs.User): Player {
     if (user.id in this.__players) {
       Log.throw(
         "Cannot create player. A player already exists with the provided ID.",
@@ -177,7 +177,7 @@ export class Session implements Saveable {
     random.shuffle(this.__cards[CardSuit.SAND][DrawSource.DECK]);
   }
 
-  public addPlayers(users: User[]): void {
+  public addPlayers(users: discordJs.User[]): void {
     if (this.__status !== SessionStatus.PENDING) {
       Log.throw("Cannot add players. Session is not currently pending.", this);
     }

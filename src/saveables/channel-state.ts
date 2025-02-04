@@ -1,10 +1,10 @@
-import { User } from "discord.js";
+import * as discordJs from "discord.js";
 import { Session, UserState } from ".";
 import { TOKEN_DEFAULT } from "../constants";
 import {
+  ChannelCommandMessage,
   CommandOptionType,
   Json,
-  PrivateChannelMessage,
   Saveable,
   Utils,
 } from "../core";
@@ -31,9 +31,9 @@ export class ChannelState implements Saveable {
     return this.__session;
   }
 
-  constructor(privateChannelMessageOrJson: PrivateChannelMessage | Json) {
-    if (privateChannelMessageOrJson instanceof PrivateChannelMessage) {
-      const privateChannelMessage: PrivateChannelMessage =
+  constructor(privateChannelMessageOrJson: ChannelCommandMessage | Json) {
+    if (privateChannelMessageOrJson instanceof ChannelCommandMessage) {
+      const privateChannelMessage: ChannelCommandMessage =
         privateChannelMessageOrJson;
       const startingTokenTotal: number | undefined =
         privateChannelMessage.getCommandOption<CommandOptionType.INTEGER>(
@@ -85,7 +85,7 @@ export class ChannelState implements Saveable {
     }
   }
 
-  private __createUserState(user: User): void {
+  private __createUserState(user: discordJs.User): void {
     this.__userStates[user.id] = new UserState(user);
   }
 
@@ -93,7 +93,7 @@ export class ChannelState implements Saveable {
     // TODO: write logic to compare old/new states and update user states
   }
 
-  public createSession(privateChannelMessage: PrivateChannelMessage): void {
+  public createSession(privateChannelMessage: ChannelCommandMessage): void {
     const startingTokenTotal: number =
       privateChannelMessage.getCommandOption<CommandOptionType.INTEGER>(
         "tokens",

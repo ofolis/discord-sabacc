@@ -8,6 +8,8 @@ export abstract class Command {
 
   abstract isGuild: boolean;
 
+  abstract isPrivate: boolean;
+
   abstract name: string;
 
   abstract options: CommandOption[];

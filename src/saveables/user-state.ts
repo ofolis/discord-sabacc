@@ -1,4 +1,4 @@
-import { User } from "discord.js";
+import * as discordJs from "discord.js";
 import { Json, Saveable, Utils } from "../core";
 import { UserStateJson } from "../types";
 
@@ -17,9 +17,9 @@ export class UserState implements Saveable {
 
   public readonly id: string;
 
-  constructor(userOrJson: User | Json) {
-    if (userOrJson instanceof User) {
-      const user: User = userOrJson;
+  constructor(userOrJson: discordJs.User | Json) {
+    if (userOrJson instanceof discordJs.User) {
+      const user: discordJs.User = userOrJson;
       this.id = user.id;
     } else {
       const json: Json = userOrJson;

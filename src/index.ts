@@ -1,10 +1,10 @@
 import { Info, New, Play } from "./commands";
 import {
+  ChannelCommandMessage,
   Command,
   Discord,
   Environment,
   Log,
-  PrivateChannelMessage,
 } from "./core";
 
 const commands: Command[] = [new Info(), new New(), new Play()];
@@ -76,7 +76,7 @@ function initializeApp(): void {
       );
       return;
     }
-    PrivateChannelMessage.create(interaction)
+    ChannelCommandMessage.create(interaction, interactionCommand.isPrivate)
       .then(privateChannelMessage => {
         interactionCommand
           .execute(privateChannelMessage)
