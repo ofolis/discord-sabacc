@@ -23,7 +23,6 @@ export class PlayerCard implements Saveable {
       if (source === undefined) {
         Log.throw(
           "Cannot construct player card. Constructor was missing required arguments.",
-          this,
         );
       }
       this.__card = card;

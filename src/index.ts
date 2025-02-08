@@ -88,7 +88,6 @@ function initializeApp(): void {
           });
       })
       .catch((reason: unknown) => {
-        // TODO: review all error logs again for consistency
         Log.error(
           "Could not create user channel interaction from command interaction.",
           reason,

@@ -172,8 +172,8 @@ export class InteractionController {
         return false;
       default:
         Log.throw(
-          "Could not resolve end current game prompt. Unknown button ID.",
-          buttonInteraction,
+          "Could not resolve end current game prompt. Unknown button interaction custom ID.",
+          { buttonInteraction },
         );
     }
   }
@@ -244,8 +244,10 @@ export class InteractionController {
           return userAccumulator;
         default:
           Log.throw(
-            "Could not resolve game setup prompt. Unknown button ID.",
-            buttonInteraction,
+            "Could not resolve game setup prompt. Unknown button interaction custom ID.",
+            {
+              buttonInteraction,
+            },
           );
       }
     }

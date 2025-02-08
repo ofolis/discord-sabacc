@@ -32,7 +32,9 @@ export class Player implements Saveable {
 
   public get cardTotal(): number {
     if (this.__status !== PlayerStatus.ACTIVE) {
-      Log.throw("Cannot get card total. Player is not currently active.", this);
+      Log.throw("Cannot get card total. Player is not currently active.", {
+        status: this.__status,
+      });
     }
     return this.__cards.length;
   }
@@ -74,7 +76,9 @@ export class Player implements Saveable {
 
   public addCard(card: Card, playerCardSource: PlayerCardSource): void {
     if (this.__status !== PlayerStatus.ACTIVE) {
-      Log.throw("Cannot add cards. Player is not currently active.", this);
+      Log.throw("Cannot add card. Player is not currently active.", {
+        status: this.__status,
+      });
     }
     const playerCard: PlayerCard = new PlayerCard(card, playerCardSource);
     this.__cards.push(playerCard);
@@ -82,7 +86,9 @@ export class Player implements Saveable {
 
   public getCards(cardSuit?: CardSuit): PlayerCard[] {
     if (this.__status !== PlayerStatus.ACTIVE) {
-      Log.throw("Cannot get cards. Player is not currently active.", this);
+      Log.throw("Cannot get cards. Player is not currently active.", {
+        status: this.__status,
+      });
     }
     if (cardSuit === undefined) {
       return [...this.__cards]; // Shallow copy
@@ -95,10 +101,9 @@ export class Player implements Saveable {
 
   public removeAllCards(): Card[] {
     if (this.__status !== PlayerStatus.ACTIVE) {
-      Log.throw(
-        "Cannot remove all cards. Player is not currently active.",
-        this,
-      );
+      Log.throw("Cannot remove all cards. Player is not currently active.", {
+        status: this.__status,
+      });
     }
     const cards: Card[] = this.__cards.map(playerCard => playerCard.card);
     Utils.emptyArray(this.__cards);
@@ -109,7 +114,7 @@ export class Player implements Saveable {
     if (this.__status !== PlayerStatus.UNINITIALIZED) {
       Log.throw(
         "Cannot initialize player. Player is not currently uninitialized.",
-        this,
+        { status: this.__status },
       );
     }
     this.__tokenTotal = tokenTotal;

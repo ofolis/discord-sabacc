@@ -60,7 +60,6 @@ export class Session implements Saveable {
       if (startingTokenTotal === undefined) {
         Log.throw(
           "Cannot construct session. Constructor was missing required arguments.",
-          { startingTokenTotal },
         );
       }
       this.__cards = {
@@ -132,8 +131,7 @@ export class Session implements Saveable {
     if (user.id in this.__players) {
       Log.throw(
         "Cannot create player. A player already exists with the provided ID.",
-        this,
-        user,
+        { players: this.__players, user },
       );
     }
     this.__players[user.id] = new Player(user);
@@ -179,7 +177,9 @@ export class Session implements Saveable {
 
   public addPlayers(users: discordJs.User[]): void {
     if (this.__status !== SessionStatus.PENDING) {
-      Log.throw("Cannot add players. Session is not currently pending.", this);
+      Log.throw("Cannot add players. Session is not currently pending.", {
+        status: this.__status,
+      });
     }
     users.forEach(user => {
       this.__createPlayer(user);
@@ -190,20 +190,20 @@ export class Session implements Saveable {
     if (this.__status !== SessionStatus.ACTIVE) {
       Log.throw(
         "Cannot deal cards to players. Session is not currently active.",
-        this,
+        { status: this.__status },
       );
     }
     if (this.__roundIndex !== 0 || this.__playerIndex !== 0) {
       Log.throw(
         "Cannot deal cards to players. Round index and player index are not currently 0.",
-        this,
+        { roundIndex: this.__roundIndex, playerIndex: this.__playerIndex },
       );
     }
     Object.values(this.__players).forEach(player => {
       if (player.cardTotal !== 0) {
         Log.throw(
           "Cannot deal cards to players. One or more players still contain cards.",
-          this,
+          { players: this.__players },
         );
       }
     });
@@ -211,25 +211,23 @@ export class Session implements Saveable {
       this.__cards[CardSuit.BLOOD][DrawSource.DISCARD].length !== 0 ||
       this.__cards[CardSuit.SAND][DrawSource.DISCARD].length !== 0
     ) {
-      Log.throw(
-        "Cannot deal cards to players. Discard still contains cards.",
-        this,
-      );
+      Log.throw("Cannot deal cards to players. Discard still contains cards.", {
+        cards: this.__cards,
+      });
     }
     this.__dealCards();
   }
 
   public getPlayerState(playerId: string): PlayerJson {
     if (this.__status !== SessionStatus.ACTIVE) {
-      Log.throw(
-        "Cannot get player state. Session is not currently active.",
-        this,
-      );
+      Log.throw("Cannot get player state. Session is not currently active.", {
+        status: this.__status,
+      });
     }
     if (!(playerId in this.__players)) {
       Log.throw(
         "Cannot get player state. Player ID is not defined in players.",
-        { playerId },
+        { players: this.__players, playerId },
       );
     }
     return this.__players[playerId].toJson();
@@ -241,12 +239,14 @@ export class Session implements Saveable {
 
   public resetDecks(): void {
     if (this.__status !== SessionStatus.ACTIVE) {
-      Log.throw("Cannot reset decks. Session is not currently active.", this);
+      Log.throw("Cannot reset decks. Session is not currently active.", {
+        status: this.__status,
+      });
     }
     if (this.__roundIndex !== 0 || this.__playerIndex !== 0) {
       Log.throw(
         "Cannot reset decks. Round index and player index are not currently 0.",
-        this,
+        { roundIndex: this.__roundIndex, playerIndex: this.__playerIndex },
       );
     }
     this.__collectCards();
@@ -255,10 +255,14 @@ export class Session implements Saveable {
 
   public startGame(): void {
     if (this.__status !== SessionStatus.PENDING) {
-      Log.throw("Cannot start game. Session is not currently pending.", this);
+      Log.throw("Cannot start game. Session is not currently pending.", {
+        status: this.__status,
+      });
     }
     if (Object.entries(this.__players).length <= 1) {
-      Log.throw("Cannot start game. Player count is too low.", this);
+      Log.throw("Cannot start game. Player count is too low.", {
+        players: this.__players,
+      });
     }
     this.__startedAt = Date.now();
     this.__status = SessionStatus.ACTIVE;

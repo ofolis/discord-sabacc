@@ -22,7 +22,7 @@ export class Discord {
     rest: discordJs.REST,
     commands: discordJs.SlashCommandBuilder[],
   ): Promise<void> {
-    Log.debug("Deploying global commands to Discord...", commands);
+    Log.debug("Deploying global commands to Discord...", { commands });
     await rest.put(
       discordJs.Routes.applicationCommands(
         Environment.config.discordApplicationId,
@@ -66,16 +66,16 @@ export class Discord {
     if (channel === undefined) {
       Log.throw(
         "Cannot get Discord channel. ID was not found in the channel cache.",
-        channelId,
+        { channelId },
       );
     }
     if (channel.type !== discordJs.ChannelType.GuildText) {
       Log.throw(
         "Cannot get Discord channel. Channel at ID was not a guild text channel.",
-        channel,
+        { channel },
       );
     }
-    Log.debug("Discord channel retrieved successfully.", channel);
+    Log.debug("Discord channel retrieved successfully.", { channel });
     return channel;
   }
 
@@ -135,16 +135,15 @@ export class Discord {
             );
             break;
           default:
-            Log.throw(
-              "Cannot build command. Unknown command option type.",
-              command,
-            );
+            Log.throw("Cannot build command. Unknown command option type.", {
+              option,
+            });
         }
         if (command.isGlobal) {
           if (command.name in globalCommandMap) {
             Log.throw(
-              "Cannot deploy global commands. Command names are not unique.",
-              commandList,
+              "Cannot deploy global commands. Names in command list are not unique.",
+              { commandList },
             );
           }
           globalCommandMap[command.name] = slashCommandBuilder;
@@ -152,8 +151,8 @@ export class Discord {
         if (command.isGuild) {
           if (command.name in guildCommandMap) {
             Log.throw(
-              "Cannot deploy guild commands. Command names are not unique.",
-              commandList,
+              "Cannot deploy guild commands. Names in command list are not unique.",
+              { commandList },
             );
           }
           guildCommandMap[command.name] = slashCommandBuilder;
@@ -180,7 +179,7 @@ export class Discord {
     });
     const channel: discordJs.TextChannel = this.__getChannel(channelId);
     const message: discordJs.Message = await channel.send(messageCreateOptions);
-    Log.debug("Discord message sent successfully.", message);
+    Log.debug("Discord message sent successfully.", { message });
     const channelMessage: ChannelMessage = new ChannelMessage(
       message,
       channelId,

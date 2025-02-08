@@ -48,7 +48,6 @@ export class ChannelCommandMessage extends ChannelMessage {
     if (this.__commandOptions === undefined) {
       Log.throw(
         "Cannot get command option. Command options have not been set.",
-        this,
       );
     }
     const option: discordJs.CommandInteractionOption | undefined =
