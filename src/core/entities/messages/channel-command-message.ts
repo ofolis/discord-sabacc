@@ -41,7 +41,6 @@ export class ChannelCommandMessage extends ChannelMessage {
     Log.debug("Channel command message context added.");
   }
 
-  // TODO: see if there is a way to not have to duplicate "getCommandOption" between the two classes ... for that matter, also static creation, I think not without a mixin
   public getCommandOption<T extends CommandOptionType>(
     name: string,
     type: T,
