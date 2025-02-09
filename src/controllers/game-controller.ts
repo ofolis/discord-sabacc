@@ -66,20 +66,22 @@ export class GameController {
         return;
       }
       channelState.session.createRoundTurnForCurrentPlayer(turnAction);
-
-      // TODO: Remove this temp response
-      await message.update({
-        content: "Turn action selected.",
-      });
-
-      // Resolve turn
-      // TODO: Implement turn resolution
-
-      // End turn
-      // TODO: Implement turn end
-
-      // Save at happy path end
-      DataController.saveChannelState(channelState);
     }
+
+    // TODO: Remove this temp response
+    await message.update({
+      components: [], // Clear buttons
+      content: "Turn action selected.",
+      embeds: [], // Clear embeds
+    });
+
+    // Resolve turn
+    // TODO: Implement turn resolution
+
+    // End turn
+    // TODO: Implement turn end
+
+    // Save at happy path end
+    DataController.saveChannelState(channelState);
   }
 }
