@@ -31,7 +31,7 @@ export class Info implements Command {
     }
 
     // Check if playing
-    if (channelState.session.playerExists(message.user.id)) {
+    if (!channelState.session.playerExists(message.user.id)) {
       await InteractionController.informNotPlaying(message);
       return;
     }
