@@ -20,8 +20,6 @@ export class Player implements Saveable {
 
   private __handResults: HandResult[] = [];
 
-  private __id: string;
-
   private __spentTokenTotal: number = 0;
 
   private __status: PlayerStatus = PlayerStatus.UNINITIALIZED;
@@ -29,6 +27,8 @@ export class Player implements Saveable {
   private __tokenTotal: number = 0;
 
   private __username: string;
+
+  public readonly id: string;
 
   public get cardTotal(): number {
     if (this.__status !== PlayerStatus.ACTIVE) {
@@ -44,8 +44,8 @@ export class Player implements Saveable {
       const user: discordJs.User = userOrJson;
       this.__avatarId = user.avatar;
       this.__globalName = user.globalName;
-      this.__id = user.id;
       this.__username = user.username;
+      this.id = user.id;
     } else {
       const json: Json = userOrJson;
       this.__avatarId = Utils.getJsonEntry(json, "avatarId") as string;
@@ -63,7 +63,6 @@ export class Player implements Saveable {
         json,
         "handResults",
       ) as HandResult[];
-      this.__id = Utils.getJsonEntry(json, "id") as string;
       this.__spentTokenTotal = Utils.getJsonEntry(
         json,
         "spentTokenTotal",
@@ -71,6 +70,7 @@ export class Player implements Saveable {
       this.__status = Utils.getJsonEntry(json, "status") as PlayerStatus;
       this.__tokenTotal = Utils.getJsonEntry(json, "tokenTotal") as number;
       this.__username = Utils.getJsonEntry(json, "username") as string;
+      this.id = Utils.getJsonEntry(json, "id") as string;
     }
   }
 
@@ -127,7 +127,7 @@ export class Player implements Saveable {
       cards: this.__cards.map(playerCard => playerCard.toJson()),
       currentTurn:
         this.__currentTurn !== null ? this.__currentTurn.toJson() : null,
-      id: this.__id,
+      id: this.id,
       globalName: this.__globalName,
       handResults: this.__handResults,
       spentTokenTotal: this.__spentTokenTotal,

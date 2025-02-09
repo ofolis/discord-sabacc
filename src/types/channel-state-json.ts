@@ -4,7 +4,7 @@ export type ChannelStateJson = {
   channelId: string;
   latestGameCompletedAt: number | null;
   latestGameStartedAt: number | null;
-  session: SessionJson | null;
+  session: SessionJson;
   totalGamesCompleted: number;
   totalGamesStarted: number;
   userStates: Record<string, UserStateJson>;

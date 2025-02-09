@@ -12,15 +12,15 @@ import {
 import { Card, HandResult, PlayerJson, SessionJson } from "../../types";
 
 export class Session implements Saveable {
+  private __activePlayerIndex: number = 0;
+
+  private __activePlayerOrder: string[] = [];
+
   private __cards: Record<CardSuit, Record<DrawSource, Card[]>>;
 
   private __handIndex: number = 0;
 
   private __handResults: HandResult[][] = [];
-
-  private __playerIndex: number = 0;
-
-  private __playerOrder: string[] = [];
 
   private __players: Record<string, Player> = {};
 
@@ -34,8 +34,12 @@ export class Session implements Saveable {
 
   private __status: SessionStatus = SessionStatus.PENDING;
 
-  private get __orderedPlayers(): Player[] {
-    return this.__playerOrder.map(playerId => this.__players[playerId]);
+  public get activePlayers(): Player[] {
+    return this.__activePlayerOrder.map(playerId => this.__players[playerId]);
+  }
+
+  public get allPlayers(): Player[] {
+    return Object.values(this.__players);
   }
 
   public get handIndex(): number {
@@ -78,6 +82,14 @@ export class Session implements Saveable {
       this.__createPlayer(user);
     } else {
       const json: Json = userOrJson;
+      this.__activePlayerIndex = Utils.getJsonEntry(
+        json,
+        "activePlayerIndex",
+      ) as number;
+      this.__activePlayerOrder = Utils.getJsonEntry(
+        json,
+        "activePlayerOrder",
+      ) as string[];
       this.__cards = Utils.getJsonEntry(json, "cards") as Record<
         CardSuit,
         Record<DrawSource, Card[]>
@@ -87,8 +99,6 @@ export class Session implements Saveable {
         json,
         "handResults",
       ) as HandResult[][];
-      this.__playerIndex = Utils.getJsonEntry(json, "playerIndex") as number;
-      this.__playerOrder = Utils.getJsonEntry(json, "playerOrder") as string[];
       this.__players = Object.fromEntries(
         Object.entries(
           Utils.getJsonEntry(json, "players") as Record<string, PlayerJson>,
@@ -135,12 +145,11 @@ export class Session implements Saveable {
       );
     }
     this.__players[user.id] = new Player(user);
-    this.__playerOrder.push(user.id);
     return this.__players[user.id];
   }
 
   private __dealCards(): void {
-    this.__orderedPlayers.forEach(player => {
+    this.activePlayers.forEach(player => {
       player.addCard(
         this.__drawCard(CardSuit.BLOOD, DrawSource.DECK),
         PlayerCardSource.DEALT,
@@ -163,8 +172,9 @@ export class Session implements Saveable {
   }
 
   private __initializePlayers(): void {
-    new Random().shuffle(this.__playerOrder);
-    this.__orderedPlayers.forEach(player => {
+    this.__activePlayerOrder = Object.keys(this.__players);
+    new Random().shuffle(this.__activePlayerOrder);
+    this.activePlayers.forEach(player => {
       player.initialize(this.__startingTokenTotal);
     });
   }
@@ -193,10 +203,13 @@ export class Session implements Saveable {
         { status: this.__status },
       );
     }
-    if (this.__roundIndex !== 0 || this.__playerIndex !== 0) {
+    if (this.__roundIndex !== 0 || this.__activePlayerIndex !== 0) {
       Log.throw(
-        "Cannot deal cards to players. Round index and player index are not currently 0.",
-        { roundIndex: this.__roundIndex, playerIndex: this.__playerIndex },
+        "Cannot deal cards to players. Round index and active player index are not currently 0.",
+        {
+          roundIndex: this.__roundIndex,
+          activePlayerIndex: this.__activePlayerIndex,
+        },
       );
     }
     Object.values(this.__players).forEach(player => {
@@ -243,10 +256,13 @@ export class Session implements Saveable {
         status: this.__status,
       });
     }
-    if (this.__roundIndex !== 0 || this.__playerIndex !== 0) {
+    if (this.__roundIndex !== 0 || this.__activePlayerIndex !== 0) {
       Log.throw(
-        "Cannot reset decks. Round index and player index are not currently 0.",
-        { roundIndex: this.__roundIndex, playerIndex: this.__playerIndex },
+        "Cannot reset decks. Round index and active player index are not currently 0.",
+        {
+          roundIndex: this.__roundIndex,
+          activePlayerIndex: this.__activePlayerIndex,
+        },
       );
     }
     this.__collectCards();
@@ -271,11 +287,11 @@ export class Session implements Saveable {
 
   public toJson(): SessionJson {
     return {
+      activePlayerIndex: this.__activePlayerIndex,
+      activePlayerOrder: this.__activePlayerOrder,
       cards: this.__cards,
       handIndex: this.__handIndex,
       handResults: this.__handResults,
-      playerIndex: this.__playerIndex,
-      playerOrder: this.__playerOrder,
       players: Object.fromEntries(
         Object.entries(this.__players).map(([playerId, player]) => [
           playerId,

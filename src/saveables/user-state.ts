@@ -1,4 +1,5 @@
 import * as discordJs from "discord.js";
+import { Player } from ".";
 import { Json, Saveable, Utils } from "../core";
 import { UserStateJson } from "../types";
 
@@ -17,12 +18,15 @@ export class UserState implements Saveable {
 
   public readonly id: string;
 
-  constructor(userOrJson: discordJs.User | Json) {
-    if (userOrJson instanceof discordJs.User) {
-      const user: discordJs.User = userOrJson;
-      this.id = user.id;
+  constructor(userOrPlayerOrJson: discordJs.User | Player | Json) {
+    if (
+      userOrPlayerOrJson instanceof discordJs.User ||
+      userOrPlayerOrJson instanceof Player
+    ) {
+      const userOrPlayer: discordJs.User | Player = userOrPlayerOrJson;
+      this.id = userOrPlayer.id;
     } else {
-      const json: Json = userOrJson;
+      const json: Json = userOrPlayerOrJson;
       this.__latestGameCompletedAt = Utils.getJsonEntry(
         json,
         "latestGameCompletedAt",
@@ -51,9 +55,24 @@ export class UserState implements Saveable {
     }
   }
 
+  private __logGameCompleted(): void {
+    this.__latestGameCompletedAt = Date.now();
+    this.__totalGamesCompleted++;
+  }
+
+  public logGameLost(): void {
+    this.__totalGamesLost++;
+    this.__logGameCompleted();
+  }
+
   public logGameStarted(): void {
     this.__latestGameStartedAt = Date.now();
     this.__totalGamesStarted++;
+  }
+
+  public logGameWon(): void {
+    this.__totalGamesWon++;
+    this.__logGameCompleted();
   }
 
   public toJson(): UserStateJson {
