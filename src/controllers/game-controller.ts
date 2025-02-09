@@ -1,4 +1,4 @@
-import { ChannelState } from "../entities";
+import { ChannelState } from "../saveables";
 import { DataController } from "./data-controller";
 
 export class GameController {

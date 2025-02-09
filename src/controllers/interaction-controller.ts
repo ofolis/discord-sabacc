@@ -7,7 +7,7 @@ import {
   Log,
   Utils,
 } from "../core";
-import { ChannelState } from "../entities";
+import { ChannelState } from "../saveables";
 import { PlayerJson } from "../types";
 
 export class InteractionController {

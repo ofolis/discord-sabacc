@@ -11,7 +11,7 @@ import {
   CommandOption,
   CommandOptionType,
 } from "../core";
-import { ChannelState } from "../entities";
+import { ChannelState } from "../saveables";
 
 export class New implements Command {
   public readonly description: string = "Start a new game.";
