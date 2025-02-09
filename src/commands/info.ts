@@ -36,7 +36,7 @@ export class Info implements Command {
       return;
     }
 
-    // Send info
+    // Send info to player
     await InteractionController.informPlayerInfo(
       message,
       channelState,

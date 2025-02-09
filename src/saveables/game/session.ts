@@ -8,6 +8,7 @@ import {
   DrawSource,
   PlayerCardSource,
   SessionStatus,
+  TurnAction,
 } from "../../enums";
 import { Card, HandResult, PlayerJson, SessionJson } from "../../types";
 
@@ -34,12 +35,21 @@ export class Session implements Saveable {
 
   private __status: SessionStatus = SessionStatus.PENDING;
 
-  public get activePlayers(): Player[] {
+  public get activePlayersInTurnOrder(): readonly Player[] {
     return this.__activePlayerOrder.map(playerId => this.__players[playerId]);
   }
 
-  public get allPlayers(): Player[] {
+  public get allPlayers(): readonly Player[] {
     return Object.values(this.__players);
+  }
+
+  public get currentPlayer(): Player {
+    if (this.__status !== SessionStatus.ACTIVE) {
+      Log.throw("Cannot get current player. Session is not currently active.", {
+        status: this.__status,
+      });
+    }
+    return this.__players[this.__activePlayerOrder[this.__activePlayerIndex]];
   }
 
   public get handIndex(): number {
@@ -133,7 +143,7 @@ export class Session implements Saveable {
     Utils.emptyArray(this.__cards[CardSuit.SAND][DrawSource.DISCARD]);
     // Collect player cards
     Object.values(this.__players).forEach(player => {
-      const removedCards: Card[] = player.removeAllCards();
+      const removedCards: Card[] = player["_removeAllCards"]();
       removedCards.forEach(card => {
         this.__cards[card.suit][DrawSource.DECK].push(card);
       });
@@ -152,12 +162,12 @@ export class Session implements Saveable {
   }
 
   private __dealCards(): void {
-    this.activePlayers.forEach(player => {
-      player.addCard(
+    this.activePlayersInTurnOrder.forEach(player => {
+      player["_addCard"](
         this.__drawCard(CardSuit.BLOOD, DrawSource.DECK),
         PlayerCardSource.DEALT,
       );
-      player.addCard(
+      player["_addCard"](
         this.__drawCard(CardSuit.SAND, DrawSource.DECK),
         PlayerCardSource.DEALT,
       );
@@ -177,8 +187,8 @@ export class Session implements Saveable {
   private __initializePlayers(): void {
     this.__activePlayerOrder = Object.keys(this.__players);
     new Random().shuffle(this.__activePlayerOrder);
-    this.activePlayers.forEach(player => {
-      player.initialize(this.__startingTokenTotal);
+    this.allPlayers.forEach(player => {
+      player["_initialize"](this.__startingTokenTotal);
     });
   }
 
@@ -197,6 +207,16 @@ export class Session implements Saveable {
     users.forEach(user => {
       this.__createPlayer(user);
     });
+  }
+
+  public createRoundTurnForCurrentPlayer(turnAction: TurnAction): void {
+    if (this.__status !== SessionStatus.ACTIVE) {
+      Log.throw(
+        "Cannot create round turn for current player. Session is not currently active.",
+        { status: this.__status },
+      );
+    }
+    this.currentPlayer["_createRoundTurn"](turnAction);
   }
 
   public dealCardsToPlayers(): void {
@@ -234,19 +254,19 @@ export class Session implements Saveable {
     this.__dealCards();
   }
 
-  public getPlayerState(playerId: string): PlayerJson {
+  public getPlayerById(id: string): Player {
     if (this.__status !== SessionStatus.ACTIVE) {
       Log.throw("Cannot get player state. Session is not currently active.", {
         status: this.__status,
       });
     }
-    if (!(playerId in this.__players)) {
+    if (!(id in this.__players)) {
       Log.throw(
         "Cannot get player state. Player ID is not defined in players.",
-        { players: this.__players, playerId },
+        { players: this.__players, id },
       );
     }
-    return this.__players[playerId].toJson();
+    return this.__players[id];
   }
 
   public playerExists(playerId: string): boolean {

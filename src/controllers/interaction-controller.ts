@@ -7,8 +7,8 @@ import {
   Log,
   Utils,
 } from "../core";
-import { ChannelState } from "../saveables";
-import { PlayerJson } from "../types";
+import { TurnAction } from "../enums";
+import { ChannelState, Player } from "../saveables";
 
 export class InteractionController {
   private static async __createChannelMessageEmbed(
@@ -41,71 +41,73 @@ export class InteractionController {
   }
 
   private static __formatNameString(
-    playerOrUser: PlayerJson | discordJs.User,
+    playerOrUser: Player | discordJs.User,
   ): string {
     return (playerOrUser.globalName ?? playerOrUser.username).toUpperCase();
   }
 
   private static async __setChannelMessageEmbed(
-    channelMessage: ChannelMessage,
+    message: ChannelMessage,
     embedData: discordJs.EmbedData,
     buttons?: discordJs.ButtonBuilder[],
   ): Promise<void> {
-    await channelMessage.update(
+    await message.update(
       this.__createEmbedBaseMessageOptions(embedData, buttons),
     );
   }
 
   private static async __setChannelMessageFollowup(
-    channelMessage: ChannelMessage,
-    message: string,
+    message: ChannelMessage,
+    content: string,
   ): Promise<void> {
-    await channelMessage.update({
+    await message.update({
       embeds: [], // Clear any embed
       components: [], // Clear any buttons
-      content: `*${message}*`,
+      content: `*${content}*`,
     });
   }
 
   public static async followupGameCreated(
-    channelMessage: ChannelMessage,
+    message: ChannelMessage,
   ): Promise<void> {
-    await this.__setChannelMessageFollowup(
-      channelMessage,
-      "You created a new game.",
-    );
+    await this.__setChannelMessageFollowup(message, "You created a new game.");
   }
 
-  public static async informNoGame(
-    channelMessage: ChannelMessage,
-  ): Promise<void> {
+  public static async informNoGame(message: ChannelMessage): Promise<void> {
     const contentLines: string[] = [
       "There is no game currently active in this channel.",
       "-# Use the **/new** command to start a new game.",
     ];
-    await this.__setChannelMessageEmbed(channelMessage, {
+    await this.__setChannelMessageEmbed(message, {
       description: Utils.linesToString(contentLines),
       title: "No Game",
     });
   }
 
-  public static async informNotPlaying(
-    channelMessage: ChannelMessage,
-  ): Promise<void> {
-    await this.__setChannelMessageEmbed(channelMessage, {
+  public static async informNotPlaying(message: ChannelMessage): Promise<void> {
+    await this.__setChannelMessageEmbed(message, {
       description: "You are not playing in the current game.",
       title: "Not Playing",
     });
   }
 
+  public static async informNotTurn(
+    message: ChannelMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    await this.__setChannelMessageEmbed(message, {
+      description: `It is currently ${this.__formatNameString(channelState.session.currentPlayer)}'s turn.`,
+      title: "Not Your Turn",
+    });
+  }
+
   public static async informPlayerInfo(
-    channelMessage: ChannelMessage,
+    message: ChannelMessage,
     channelState: ChannelState,
     playerId: string,
   ): Promise<void> {
-    const playerState: PlayerJson =
-      channelState.session.getPlayerState(playerId);
-    await this.__setChannelMessageEmbed(channelMessage, {
+    const player: Player = channelState.session.getPlayerById(playerId);
+    await this.__setChannelMessageEmbed(message, {
       fields: [
         {
           inline: true,
@@ -120,17 +122,64 @@ export class InteractionController {
         {
           inline: false,
           name: "Player ID",
-          value: playerState.id,
+          value: player.id,
         },
       ],
     });
   }
 
+  public static async promptChooseTurnAction(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<TurnAction | null> {
+    const player: Player = channelState.session.getPlayerById(message.user.id);
+    await this.__setChannelMessageEmbed(
+      message,
+      {
+        description: "Choose your turn action.",
+        title: "Turn Action",
+      },
+      [
+        new discordJs.ButtonBuilder({
+          customId: "draw",
+          label: "Draw",
+          style: discordJs.ButtonStyle.Primary,
+          disabled: player.currentTokenTotal === 0,
+        }),
+        new discordJs.ButtonBuilder({
+          customId: "stand",
+          label: "Stand",
+          style: discordJs.ButtonStyle.Primary,
+        }),
+      ],
+    );
+    const buttonInteraction: discordJs.ButtonInteraction | null =
+      await message.awaitButtonInteraction();
+    if (buttonInteraction === null) {
+      await this.__setChannelMessageFollowup(
+        message,
+        "Turn action selection timed out.",
+      );
+      return null;
+    }
+    switch (buttonInteraction.customId) {
+      case "draw":
+        return TurnAction.DRAW;
+      case "stand":
+        return TurnAction.STAND;
+      default:
+        Log.throw(
+          "Could not resolve choose turn action prompt. Unknown button interaction custom ID.",
+          { buttonInteraction },
+        );
+    }
+  }
+
   public static async promptEndCurrentGame(
-    channelMessage: ChannelMessage,
+    message: ChannelMessage,
   ): Promise<boolean | null> {
     await this.__setChannelMessageEmbed(
-      channelMessage,
+      message,
       {
         description: "Do you want to end the current game and start a new one?",
         title: "Game In Progress",
@@ -149,10 +198,10 @@ export class InteractionController {
       ],
     );
     const buttonInteraction: discordJs.ButtonInteraction | null =
-      await channelMessage.awaitButtonInteraction();
+      await message.awaitButtonInteraction();
     if (buttonInteraction === null) {
       await this.__setChannelMessageFollowup(
-        channelMessage,
+        message,
         "New game creation timed out.",
       );
       return false;
@@ -160,13 +209,13 @@ export class InteractionController {
     switch (buttonInteraction.customId) {
       case "endGame":
         await this.__setChannelMessageFollowup(
-          channelMessage,
+          message,
           "You created a new game. The previous game was ended.",
         );
         return true;
       case "cancel":
         await this.__setChannelMessageFollowup(
-          channelMessage,
+          message,
           "You canceled new game creation. The current game is still active.",
         );
         return false;
@@ -179,7 +228,7 @@ export class InteractionController {
   }
 
   public static async promptJoinGame(
-    privateChannelMessage: ChannelCommandMessage,
+    message: ChannelCommandMessage,
   ): Promise<discordJs.User[] | null> {
     let channelMessage: ChannelMessage | null = null;
     const userAccumulator: discordJs.User[] = [];
@@ -189,7 +238,7 @@ export class InteractionController {
         fields: [
           {
             name: "Players",
-            value: [privateChannelMessage.user, ...userAccumulator]
+            value: [message.user, ...userAccumulator]
               .map(user => this.__formatNameString(user))
               .join(","),
           },
@@ -211,7 +260,7 @@ export class InteractionController {
       ];
       if (channelMessage === null) {
         channelMessage = await this.__createChannelMessageEmbed(
-          privateChannelMessage.channelId,
+          message.channelId,
           embedData,
           buttons,
         );
@@ -230,7 +279,7 @@ export class InteractionController {
       switch (buttonInteraction.customId) {
         case "join":
           if (
-            buttonInteraction.user.id !== privateChannelMessage.user.id &&
+            buttonInteraction.user.id !== message.user.id &&
             !userAccumulator.some(user => user.id === buttonInteraction.user.id)
           ) {
             userAccumulator.push(buttonInteraction.user);

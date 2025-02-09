@@ -130,15 +130,15 @@ export class ChannelState implements Saveable {
         this.__userStates[player.id].logGameStarted();
       }
       if (gameCompleted) {
-        if (this.__session.activePlayers.length !== 1) {
+        if (this.__session.activePlayersInTurnOrder.length !== 1) {
           Log.throw(
             "Cannot update user states. The game ended with multiple active players.",
             {
-              activePlayers: this.__session.activePlayers,
+              activePlayers: this.__session.activePlayersInTurnOrder,
             },
           );
         }
-        if (player.id === this.__session.activePlayers[0].id) {
+        if (player.id === this.__session.activePlayersInTurnOrder[0].id) {
           this.__userStates[player.id].logGameWon();
         } else {
           this.__userStates[player.id].logGameLost();
