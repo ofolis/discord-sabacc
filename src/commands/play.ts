@@ -14,6 +14,7 @@ export class Play implements Command {
   public readonly options: CommandOption[] = [];
 
   public async execute(message: ChannelCommandMessage): Promise<void> {
+    // TODO: Implement the play command.
     await message.update({
       content: "Hi!",
     });
