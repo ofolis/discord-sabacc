@@ -1,7 +1,7 @@
 import { DataController, InteractionController } from "../controllers";
 import { ChannelCommandMessage, Command, CommandOption } from "../core";
+import { ChannelState } from "../entities";
 import { SessionStatus } from "../enums";
-import { ChannelState } from "../saveables";
 
 export class Info implements Command {
   public readonly description: string = "View your hand and see game info.";

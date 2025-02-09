@@ -1,5 +1,5 @@
 import { IO, Json } from "../core";
-import { ChannelState } from "../saveables";
+import { ChannelState } from "../entities";
 
 export class DataController {
   public static loadChannelState(channelId: string): ChannelState | null {
