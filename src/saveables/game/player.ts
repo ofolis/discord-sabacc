@@ -39,7 +39,7 @@ export class Player implements Saveable {
     return this.__cards.length;
   }
 
-  constructor(userOrJson: discordJs.User | Json) {
+  public constructor(userOrJson: discordJs.User | Json) {
     if (userOrJson instanceof discordJs.User) {
       const user: discordJs.User = userOrJson;
       this.__avatarId = user.avatar;

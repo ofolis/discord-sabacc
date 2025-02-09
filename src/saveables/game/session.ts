@@ -54,11 +54,14 @@ export class Session implements Saveable {
     return this.__status;
   }
 
-  constructor(user: discordJs.User, startingTokenTotal: number);
+  public constructor(user: discordJs.User, startingTokenTotal: number);
 
-  constructor(json: Json);
+  public constructor(json: Json);
 
-  constructor(userOrJson: discordJs.User | Json, startingTokenTotal?: number) {
+  public constructor(
+    userOrJson: discordJs.User | Json,
+    startingTokenTotal?: number,
+  ) {
     if (userOrJson instanceof discordJs.User) {
       const user: discordJs.User = userOrJson;
       if (startingTokenTotal === undefined) {

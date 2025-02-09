@@ -13,11 +13,11 @@ export class PlayerCard implements Saveable {
     return this.__card;
   }
 
-  constructor(card: Card, source: PlayerCardSource);
+  public constructor(card: Card, source: PlayerCardSource);
 
-  constructor(json: Json);
+  public constructor(json: Json);
 
-  constructor(cardOrJson: Card | Json, source?: PlayerCardSource) {
+  public constructor(cardOrJson: Card | Json, source?: PlayerCardSource) {
     if ("suit" in cardOrJson) {
       const card: Card = cardOrJson as Card;
       if (source === undefined) {

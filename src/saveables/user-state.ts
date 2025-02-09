@@ -18,7 +18,7 @@ export class UserState implements Saveable {
 
   public readonly id: string;
 
-  constructor(userOrPlayerOrJson: discordJs.User | Player | Json) {
+  public constructor(userOrPlayerOrJson: discordJs.User | Player | Json) {
     if (
       userOrPlayerOrJson instanceof discordJs.User ||
       userOrPlayerOrJson instanceof Player

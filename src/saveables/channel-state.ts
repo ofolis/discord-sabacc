@@ -33,7 +33,9 @@ export class ChannelState implements Saveable {
     return this.__session;
   }
 
-  constructor(privateChannelMessageOrJson: ChannelCommandMessage | Json) {
+  public constructor(
+    privateChannelMessageOrJson: ChannelCommandMessage | Json,
+  ) {
     if (privateChannelMessageOrJson instanceof ChannelCommandMessage) {
       const privateChannelMessage: ChannelCommandMessage =
         privateChannelMessageOrJson;

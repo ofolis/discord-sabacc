@@ -3,7 +3,7 @@ import { TurnAction } from "../../enums";
 import { Card, TurnJson } from "../../types";
 
 export class Turn implements Saveable {
-  private __action: TurnAction | null = null;
+  private __action: TurnAction;
 
   private __isResolved: boolean = false;
 
@@ -11,8 +11,12 @@ export class Turn implements Saveable {
 
   private __drawnCard: Card | null = null;
 
-  constructor(json?: Json) {
-    if (json !== undefined) {
+  public constructor(turnActionOrjson: TurnAction | Json) {
+    if (typeof turnActionOrjson !== "object") {
+      const turnAction: TurnAction = turnActionOrjson;
+      this.__action = turnAction;
+    } else {
+      const json: Json = turnActionOrjson;
       this.__action = Utils.getJsonEntry(json, "action") as TurnAction;
       this.__discardedCard = Utils.getJsonEntry(json, "discardedCard") as Card;
       this.__drawnCard = Utils.getJsonEntry(json, "drawnCard") as Card;
