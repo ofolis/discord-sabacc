@@ -1,4 +1,11 @@
+import {
+  DataController,
+  GameController,
+  InteractionController,
+} from "../controllers";
 import { ChannelCommandMessage, Command, CommandOption } from "../core";
+import { SessionStatus } from "../enums";
+import { ChannelState } from "../saveables";
 
 export class Play implements Command {
   public readonly description: string = "Play your turn.";
@@ -14,9 +21,32 @@ export class Play implements Command {
   public readonly options: CommandOption[] = [];
 
   public async execute(message: ChannelCommandMessage): Promise<void> {
-    // TODO: Implement the play command.
-    await message.update({
-      content: "Hi!",
-    });
+    const channelState: ChannelState | null = DataController.loadChannelState(
+      message.channelId,
+    );
+
+    // Check for active game
+    if (
+      channelState === null ||
+      channelState.session.status !== SessionStatus.ACTIVE
+    ) {
+      await InteractionController.informNoGame(message);
+      return;
+    }
+
+    // Check if playing
+    if (!channelState.session.playerExists(message.user.id)) {
+      await InteractionController.informNotPlaying(message);
+      return;
+    }
+
+    // Check if current turn
+    if (channelState.session.currentPlayer.id !== message.user.id) {
+      await InteractionController.informNotTurn(message, channelState);
+      return;
+    }
+
+    // Handle playing turn
+    await GameController.handlePlayTurn(message, channelState);
   }
 }

@@ -51,4 +51,35 @@ export class GameController {
     }
   }
 
+  public static async handlePlayTurn(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    // Create turn (choose action)
+    if (channelState.session.currentPlayer.roundTurn === null) {
+      const turnAction: TurnAction | null =
+        await InteractionController.promptChooseTurnAction(
+          message,
+          channelState,
+        );
+      if (turnAction === null) {
+        return;
+      }
+      channelState.session.createRoundTurnForCurrentPlayer(turnAction);
+
+      // TODO: Remove this temp response
+      await message.update({
+        content: "Turn action selected.",
+      });
+
+      // Resolve turn
+      // TODO: Implement turn resolution
+
+      // End turn
+      // TODO: Implement turn end
+
+      // Save at happy path end
+      DataController.saveChannelState(channelState);
+    }
+  }
 }
