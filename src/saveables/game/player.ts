@@ -131,14 +131,14 @@ export class Player implements Saveable {
     this.__status = PlayerStatus.ACTIVE;
   }
 
-  public getCards(cardSuit?: CardSuit): PlayerCard[] {
+  public getCards(cardSuit?: CardSuit): readonly PlayerCard[] {
     if (this.__status !== PlayerStatus.ACTIVE) {
       Log.throw("Cannot get cards. Player is not currently active.", {
         status: this.__status,
       });
     }
     if (cardSuit === undefined) {
-      return [...this.__cards]; // Shallow copy
+      return this.__cards;
     } else {
       return this.__cards.filter(
         playerCard => playerCard.card.suit === cardSuit,
