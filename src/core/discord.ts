@@ -139,25 +139,25 @@ export class Discord {
               option,
             });
         }
-        if (command.isGlobal) {
-          if (command.name in globalCommandMap) {
-            Log.throw(
-              "Cannot deploy global commands. Names in command list are not unique.",
-              { commandList },
-            );
-          }
-          globalCommandMap[command.name] = slashCommandBuilder;
-        }
-        if (command.isGuild) {
-          if (command.name in guildCommandMap) {
-            Log.throw(
-              "Cannot deploy guild commands. Names in command list are not unique.",
-              { commandList },
-            );
-          }
-          guildCommandMap[command.name] = slashCommandBuilder;
-        }
       });
+      if (command.isGlobal) {
+        if (command.name in globalCommandMap) {
+          Log.throw(
+            "Cannot deploy global commands. Names in command list are not unique.",
+            { commandList },
+          );
+        }
+        globalCommandMap[command.name] = slashCommandBuilder;
+      }
+      if (command.isGuild) {
+        if (command.name in guildCommandMap) {
+          Log.throw(
+            "Cannot deploy guild commands. Names in command list are not unique.",
+            { commandList },
+          );
+        }
+        guildCommandMap[command.name] = slashCommandBuilder;
+      }
     });
     guildIds = guildIds ?? Array.from(this.client.guilds.cache.keys());
     await this.__deployGlobalCommands(rest, Object.values(globalCommandMap));
