@@ -1,6 +1,6 @@
 import * as discordJs from "discord.js";
 import { Random } from "random-js";
-import { Player } from ".";
+import { Player, Turn } from ".";
 import { DECK } from "../../constants";
 import { Json, Log, Saveable, Utils } from "../../core";
 import {
@@ -50,6 +50,10 @@ export class Session implements Saveable {
       });
     }
     return this.__players[this.__activePlayerOrder[this.__activePlayerIndex]];
+  }
+
+  public get currentPlayerIsLastPlayer(): boolean {
+    return this.__activePlayerIndex === this.__activePlayerOrder.length - 1;
   }
 
   public get handIndex(): number {
@@ -209,14 +213,14 @@ export class Session implements Saveable {
     });
   }
 
-  public createRoundTurnForCurrentPlayer(turnAction: TurnAction): void {
+  public createRoundTurnForCurrentPlayer(turnAction: TurnAction): Turn {
     if (this.__status !== SessionStatus.ACTIVE) {
       Log.throw(
         "Cannot create round turn for current player. Session is not currently active.",
         { status: this.__status },
       );
     }
-    this.currentPlayer["_createRoundTurn"](turnAction);
+    return this.currentPlayer["_createRoundTurn"](turnAction);
   }
 
   public dealCardsToPlayers(): void {
@@ -290,6 +294,16 @@ export class Session implements Saveable {
     }
     this.__collectCards();
     this.__shuffleDecks();
+  }
+
+  public resolveRoundTurnForCurrentPlayer(): void {
+    if (this.__status !== SessionStatus.ACTIVE) {
+      Log.throw(
+        "Cannot resolve round turn for current player. Session is not currently active.",
+        { status: this.__status },
+      );
+    }
+    this.currentPlayer["_resolveRoundTurn"]();
   }
 
   public startGame(): void {

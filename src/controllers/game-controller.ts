@@ -1,10 +1,49 @@
 import * as discordJs from "discord.js";
 import { DataController, InteractionController } from ".";
-import { ChannelCommandMessage } from "../core";
+import { ChannelCommandMessage, Log } from "../core";
 import { TurnAction } from "../enums";
-import { ChannelState } from "../saveables";
+import { ChannelState, Turn } from "../saveables";
 
 export class GameController {
+  private static async __handleEndOfHand(
+    channelState: ChannelState,
+  ): Promise<void> {
+    // TODO: Implement end hand
+  }
+
+  private static async __handleEndOfRound(
+    channelState: ChannelState,
+  ): Promise<void> {
+    // TODO: Implement end round
+  }
+
+  private static async __handleEndOfTurn(
+    channelState: ChannelState,
+  ): Promise<void> {
+    // TODO: Implement end turn
+  }
+
+  private static async __resolveTurnDraw(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<boolean> {
+    // TODO: Implement draw action
+  }
+
+  private static async __resolveTurnReveal(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<boolean> {
+    // TODO: Implement reveal action
+  }
+
+  private static async __resolveTurnStand(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<boolean> {
+    // TODO: Implement stand action
+  }
+
   private static __startGame(channelState: ChannelState): void {
     channelState.session.startGame();
     channelState.session.resetDecks();
@@ -55,8 +94,9 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
-    // Create turn (choose action)
-    if (channelState.session.currentPlayer.roundTurn === null) {
+    // Get current turn
+    let turn: Turn | null = channelState.session.currentPlayer.roundTurn;
+    if (turn === null) {
       const turnAction: TurnAction | null =
         await InteractionController.promptChooseTurnAction(
           message,
@@ -65,21 +105,44 @@ export class GameController {
       if (turnAction === null) {
         return;
       }
-      channelState.session.createRoundTurnForCurrentPlayer(turnAction);
+      turn = channelState.session.createRoundTurnForCurrentPlayer(turnAction);
     }
 
-    // TODO: Remove this temp response
-    await message.update({
-      components: [], // Clear buttons
-      content: "Turn action selected.",
-      embeds: [], // Clear embeds
-    });
+    // Resolve turn action if not already resolved
+    let turnResolved: boolean = turn.isResolved;
+    if (!turnResolved) {
+      switch (turn.action) {
+        case TurnAction.DRAW:
+          turnResolved = await this.__resolveTurnDraw(message, channelState);
+          break;
+        case TurnAction.REVEAL:
+          turnResolved = await this.__resolveTurnReveal(message, channelState);
+          break;
+        case TurnAction.STAND:
+          turnResolved = await this.__resolveTurnStand(message, channelState);
+          break;
+        default:
+          Log.throw("Cannot handle play turn. Unknown turn action.", {
+            turnAction: turn.action,
+          });
+      }
+      if (turnResolved) {
+        channelState.session.resolveRoundTurnForCurrentPlayer();
+      }
+    }
 
-    // Resolve turn
-    // TODO: Implement turn resolution
-
-    // End turn
-    // TODO: Implement turn end
+    // End turn if resolved
+    if (turnResolved) {
+      if (channelState.session.currentPlayerIsLastPlayer) {
+        if (channelState.session.roundIndex === 3) {
+          await this.__handleEndOfHand(channelState);
+        } else {
+          await this.__handleEndOfRound(channelState);
+        }
+      } else {
+        await this.__handleEndOfTurn(channelState);
+      }
+    }
 
     // Save at happy path end
     DataController.saveChannelState(channelState);

@@ -97,7 +97,7 @@ export class Player implements Saveable {
     this.__cards.push(playerCard);
   }
 
-  protected _createRoundTurn(turnAction: TurnAction): void {
+  protected _createRoundTurn(turnAction: TurnAction): Turn {
     if (this.__status !== PlayerStatus.ACTIVE) {
       Log.throw("Cannot create turn. Player is not currently active.", {
         status: this.__status,
@@ -107,6 +107,7 @@ export class Player implements Saveable {
       Log.throw("Cannot create turn. Player already has a round turn defined.");
     }
     this.__roundTurn = new Turn(turnAction);
+    return this.__roundTurn;
   }
 
   protected _removeAllCards(): Card[] {
@@ -118,6 +119,20 @@ export class Player implements Saveable {
     const cards: Card[] = this.__cards.map(playerCard => playerCard.card);
     Utils.emptyArray(this.__cards);
     return cards;
+  }
+
+  protected _resolveRoundTurn(): void {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot resolve turn. Player is not currently active.", {
+        status: this.__status,
+      });
+    }
+    if (this.__roundTurn === null) {
+      Log.throw(
+        "Cannot resolve turn. Player does not have a round turn defined.",
+      );
+    }
+    this.__roundTurn["_resolve"]();
   }
 
   protected _initialize(tokenTotal: number): void {

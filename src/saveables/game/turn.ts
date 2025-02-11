@@ -1,32 +1,43 @@
-import { Json, Saveable, Utils } from "../../core";
+import { Json, Log, Saveable, Utils } from "../../core";
 import { TurnAction } from "../../enums";
 import { Card, TurnJson } from "../../types";
 
 export class Turn implements Saveable {
-  private __action: TurnAction;
-
   private __isResolved: boolean = false;
 
   private __discardedCard: Card | null = null;
 
   private __drawnCard: Card | null = null;
 
+  public readonly action: TurnAction;
+
+  public get isResolved(): boolean {
+    return this.__isResolved;
+  }
+
   public constructor(turnActionOrjson: TurnAction | Json) {
     if (typeof turnActionOrjson !== "object") {
       const turnAction: TurnAction = turnActionOrjson;
-      this.__action = turnAction;
+      this.action = turnAction;
     } else {
       const json: Json = turnActionOrjson;
-      this.__action = Utils.getJsonEntry(json, "action") as TurnAction;
       this.__discardedCard = Utils.getJsonEntry(json, "discardedCard") as Card;
       this.__drawnCard = Utils.getJsonEntry(json, "drawnCard") as Card;
       this.__isResolved = Utils.getJsonEntry(json, "isResolved") as boolean;
+      this.action = Utils.getJsonEntry(json, "action") as TurnAction;
     }
+  }
+
+  protected _resolve(): void {
+    if (this.__isResolved) {
+      Log.throw("Cannot resolve turn. Turn is already resolved.");
+    }
+    this.__isResolved = true;
   }
 
   public toJson(): TurnJson {
     return {
-      action: this.__action,
+      action: this.action,
       discardedCard: this.__discardedCard,
       drawnCard: this.__drawnCard,
       isResolved: this.__isResolved,
