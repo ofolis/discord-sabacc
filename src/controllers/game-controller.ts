@@ -28,14 +28,15 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
-    if (channelState.session.currentPlayer.roundTurn === null) {
+    const roundTurn: Turn | null = channelState.session.currentPlayer.roundTurn;
+    if (roundTurn === null) {
       Log.throw(
         "Cannot resolve turn draw. No round turn exists on the current player.",
         { currentPlayer: channelState.session.currentPlayer },
       );
     }
-    let drawnCard: Card | null =
-      channelState.session.currentPlayer.roundTurn.drawnCard;
+
+    let drawnCard: Card | null = roundTurn.drawnCard;
     if (drawnCard === null) {
       const drawDeck: [CardSuit, DrawSource] | null =
         await InteractionController.promptChooseDrawDeck(message, channelState);
@@ -47,7 +48,8 @@ export class GameController {
         drawDeck[1],
       );
     }
-    if (channelState.session.currentPlayer.roundTurn.discardedCard === null) {
+
+    if (roundTurn.discardedCard === null) {
       const discardedCard: PlayerCard | null =
         await InteractionController.promptChooseDiscardedCard(
           message,
@@ -58,6 +60,7 @@ export class GameController {
       }
       channelState.session.discardCardForCurrentPlayer(discardedCard);
     }
+
     await InteractionController.informTurnComplete(message, channelState);
     await InteractionController.announceTurnDraw(message, channelState);
     return true;
@@ -100,22 +103,21 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState | null,
   ): Promise<void> {
-    // Determine if new game should be created
-    let createGame: boolean = false;
+    // Check if a new game needs to be created
     if (channelState === null) {
-      createGame = true;
       await InteractionController.followupGameCreated(message);
     } else {
       const endCurrentGame: boolean | null =
         await InteractionController.promptEndCurrentGame(message);
-      if (endCurrentGame !== null) {
-        createGame = endCurrentGame;
+      if (endCurrentGame === null) {
+        return;
       }
-    }
-
-    // Bail if no game should be created
-    if (!createGame) {
-      return;
+      if (endCurrentGame) {
+        await InteractionController.followupGameEnded(message);
+      } else {
+        await InteractionController.followupGameNotEnded(message);
+        return;
+      }
     }
 
     // Ensure channel state exists with a new session

@@ -94,6 +94,18 @@ export class InteractionController {
     await this.__setChannelMessageFollowup(message, "You created a new game.");
   }
 
+  public static async followupGameEnded(
+    message: ChannelCommandMessage,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
+  public static async followupGameNotEnded(
+    message: ChannelCommandMessage,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
   public static async informNoGame(message: ChannelMessage): Promise<void> {
     const contentLines: string[] = [
       "There is no game currently active in this channel.",
@@ -257,16 +269,8 @@ export class InteractionController {
     }
     switch (buttonInteraction.customId) {
       case "endGame":
-        await this.__setChannelMessageFollowup(
-          message,
-          "You created a new game. The previous game was ended.",
-        );
         return true;
       case "cancel":
-        await this.__setChannelMessageFollowup(
-          message,
-          "You canceled new game creation. The current game is still active.",
-        );
         return false;
       default:
         Log.throw(
