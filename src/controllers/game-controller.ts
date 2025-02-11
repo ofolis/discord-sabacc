@@ -130,12 +130,16 @@ export class GameController {
     // Prompt for players to join
     const joinedUsers: discordJs.User[] | null =
       await InteractionController.promptJoinGame(message);
-    if (joinedUsers !== null) {
-      channelState.session.addPlayers(joinedUsers);
-      this.__startGame(channelState);
-      // Save at happy path end
-      DataController.saveChannelState(channelState);
+    if (joinedUsers === null) {
+      return;
     }
+
+    // Add players and start game
+    channelState.session.addPlayers(joinedUsers);
+    this.__startGame(channelState);
+
+    // Save at happy path end
+    DataController.saveChannelState(channelState);
   }
 
   public static async handlePlayTurn(
