@@ -1,8 +1,9 @@
 import * as discordJs from "discord.js";
 import { DataController, InteractionController } from ".";
 import { ChannelCommandMessage, Log } from "../core";
-import { TurnAction } from "../enums";
-import { ChannelState, Turn } from "../saveables";
+import { CardSuit, DrawSource, TurnAction } from "../enums";
+import { ChannelState, PlayerCard, Turn } from "../saveables";
+import { Card } from "../types";
 
 export class GameController {
   private static async __handleEndOfHand(
@@ -27,21 +28,66 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
-    // TODO: Implement draw action
+    if (channelState.session.currentPlayer.roundTurn === null) {
+      Log.throw(
+        "Cannot resolve turn draw. No round turn exists on the current player.",
+        { currentPlayer: channelState.session.currentPlayer },
+      );
+    }
+    let drawnCard: Card | null =
+      channelState.session.currentPlayer.roundTurn.drawnCard;
+    if (drawnCard === null) {
+      const drawDeck: [CardSuit, DrawSource] | null =
+        await InteractionController.promptChooseDrawDeck(message, channelState);
+      if (drawDeck === null) {
+        return false;
+      }
+      drawnCard = channelState.session.drawCardForCurrentPlayer(
+        drawDeck[0],
+        drawDeck[1],
+      );
+    }
+    if (channelState.session.currentPlayer.roundTurn.discardedCard === null) {
+      const discardedCard: PlayerCard | null =
+        await InteractionController.promptChooseDiscardedCard(
+          message,
+          channelState,
+        );
+      if (discardedCard === null) {
+        return false;
+      }
+      channelState.session.discardCardForCurrentPlayer(discardedCard);
+    }
+    await InteractionController.informTurnComplete(message, channelState);
+    await InteractionController.announceTurnDraw(message, channelState);
+    return true;
   }
 
   private static async __resolveTurnReveal(
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
-    // TODO: Implement reveal action
+    const revealCards: boolean | null =
+      await InteractionController.promptRevealCards(message, channelState);
+    if (revealCards === null) {
+      return false;
+    }
+    if (!revealCards) {
+      await InteractionController.informTurnIncomplete(message, channelState);
+      return false;
+    }
+    await InteractionController.informTurnComplete(message, channelState);
+    await InteractionController.announceTurnReveal(message, channelState);
+    return true;
   }
 
   private static async __resolveTurnStand(
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
-    // TODO: Implement stand action
+    await InteractionController.informTurnComplete(message, channelState);
+    await InteractionController.announceTurnStand(message, channelState);
+    return true;
   }
 
   private static __startGame(channelState: ChannelState): void {
@@ -60,10 +106,10 @@ export class GameController {
       createGame = true;
       await InteractionController.followupGameCreated(message);
     } else {
-      const endGameDecision: boolean | null =
+      const endCurrentGame: boolean | null =
         await InteractionController.promptEndCurrentGame(message);
-      if (endGameDecision !== null) {
-        createGame = endGameDecision;
+      if (endCurrentGame !== null) {
+        createGame = endCurrentGame;
       }
     }
 

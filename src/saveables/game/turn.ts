@@ -3,13 +3,21 @@ import { TurnAction } from "../../enums";
 import { Card, TurnJson } from "../../types";
 
 export class Turn implements Saveable {
-  private __isResolved: boolean = false;
-
   private __discardedCard: Card | null = null;
 
   private __drawnCard: Card | null = null;
 
+  private __isResolved: boolean = false;
+
   public readonly action: TurnAction;
+
+  public get discardedCard(): Card | null {
+    return this.__discardedCard;
+  }
+
+  public get drawnCard(): Card | null {
+    return this.__drawnCard;
+  }
 
   public get isResolved(): boolean {
     return this.__isResolved;

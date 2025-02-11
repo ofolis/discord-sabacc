@@ -1,6 +1,6 @@
 import * as discordJs from "discord.js";
 import { Random } from "random-js";
-import { Player, Turn } from ".";
+import { Player, PlayerCard, Turn } from ".";
 import { DECK } from "../../constants";
 import { Json, Log, Saveable, Utils } from "../../core";
 import {
@@ -256,6 +256,17 @@ export class Session implements Saveable {
       });
     }
     this.__dealCards();
+  }
+
+  public discardCardForCurrentPlayer(playerCard: PlayerCard): void {
+    // TODO: Implement
+  }
+
+  public drawCardForCurrentPlayer(
+    cardSuit: CardSuit,
+    drawSource: DrawSource,
+  ): Card {
+    // TODO: Implement
   }
 
   public getPlayerById(id: string): Player {

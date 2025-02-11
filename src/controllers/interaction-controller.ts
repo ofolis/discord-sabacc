@@ -7,8 +7,8 @@ import {
   Log,
   Utils,
 } from "../core";
-import { TurnAction } from "../enums";
-import { ChannelState, Player } from "../saveables";
+import { CardSuit, DrawSource, TurnAction } from "../enums";
+import { ChannelState, Player, PlayerCard } from "../saveables";
 
 export class InteractionController {
   private static async __createChannelMessageEmbed(
@@ -65,6 +65,27 @@ export class InteractionController {
       components: [], // Clear any buttons
       content: `*${content}*`,
     });
+  }
+
+  public static async announceTurnDraw(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
+  public static async announceTurnReveal(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
+  public static async announceTurnStand(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    //TODO: Implement
   }
 
   public static async followupGameCreated(
@@ -126,6 +147,34 @@ export class InteractionController {
         },
       ],
     });
+  }
+
+  public static async informTurnComplete(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
+  public static async informTurnIncomplete(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
+  public static async promptChooseDrawDeck(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<[CardSuit, DrawSource] | null> {
+    //TODO: Impelment
+  }
+
+  public static async promptChooseDiscardedCard(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<PlayerCard | null> {
+    //TODO: Implement
   }
 
   public static async promptChooseTurnAction(
@@ -310,5 +359,12 @@ export class InteractionController {
       `${PLAYER_MAXIMUM.toString()} players have joined. The game has started!`,
     );
     return userAccumulator;
+  }
+
+  public static async promptRevealCards(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<boolean | null> {
+    //TODO: Implement
   }
 }
