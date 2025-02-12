@@ -346,6 +346,16 @@ export class Session implements Saveable {
     return playerId in this.__players;
   }
 
+  public resolveRoundTurnForCurrentPlayer(): void {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw(
+        "Cannot resolve round turn for current player. Game is not active.",
+        { gameStatus: this.__gameStatus },
+      );
+    }
+    this.currentPlayer["_resolveRoundTurn"]();
+  }
+
   public scoreHand(): void {
     if (this.__gameStatus !== GameStatus.ACTIVE) {
       Log.throw("Cannot score hand. Game is not active.", {
@@ -371,16 +381,6 @@ export class Session implements Saveable {
       );
     }
     // TODO: Implement hand scoring logic
-  }
-
-  public resolveRoundTurnForCurrentPlayer(): void {
-    if (this.__gameStatus !== GameStatus.ACTIVE) {
-      Log.throw(
-        "Cannot resolve round turn for current player. Game is not active.",
-        { gameStatus: this.__gameStatus },
-      );
-    }
-    this.currentPlayer["_resolveRoundTurn"]();
   }
 
   public startGame(): void {
