@@ -223,7 +223,6 @@ export class Session implements Saveable {
 
   private __iterateHand(): void {
     this.__handIndex++;
-    // TODO: Add hand results
   }
 
   private __iterateRound(): void {
