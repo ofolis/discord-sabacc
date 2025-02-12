@@ -1,4 +1,4 @@
-export enum SessionStatus {
+export enum GameStatus {
   "ACTIVE",
   "COMPLETED",
   "PENDING",

@@ -9,11 +9,11 @@ import {
   Saveable,
   Utils,
 } from "../core";
-import { SessionStatus } from "../enums";
+import { GameStatus } from "../enums";
 import { ChannelStateJson, SessionJson, UserStateJson } from "../types";
 
 export class ChannelState implements Saveable {
-  private __lastSessionStatus: SessionStatus;
+  private __lastSessionGameStatus: GameStatus;
 
   private __latestGameCompletedAt: number | null = null;
 
@@ -85,8 +85,8 @@ export class ChannelState implements Saveable {
       );
       this.channelId = Utils.getJsonEntry(json, "channelId") as string;
     }
-    // Store the current session status for future comparison
-    this.__lastSessionStatus = this.__session.status;
+    // Store the current session game status for future comparison
+    this.__lastSessionGameStatus = this.__session.gameStatus;
   }
 
   private __createUserState(userOrPlayer: discordJs.User | Player): void {
@@ -104,16 +104,16 @@ export class ChannelState implements Saveable {
   }
 
   private __updateUserStates(): void {
-    const previousStatus: SessionStatus = this.__lastSessionStatus;
-    const currentStatus: SessionStatus = this.__session.status;
-    this.__lastSessionStatus = currentStatus; // Update last known status
+    const previousStatus: GameStatus = this.__lastSessionGameStatus;
+    const currentStatus: GameStatus = this.__session.gameStatus;
+    this.__lastSessionGameStatus = currentStatus; // Update last known status
 
     const gameStarted: boolean =
-      previousStatus !== SessionStatus.ACTIVE &&
-      currentStatus === SessionStatus.ACTIVE;
+      previousStatus !== GameStatus.ACTIVE &&
+      currentStatus === GameStatus.ACTIVE;
     const gameCompleted: boolean =
-      previousStatus !== SessionStatus.COMPLETED &&
-      currentStatus === SessionStatus.COMPLETED;
+      previousStatus !== GameStatus.COMPLETED &&
+      currentStatus === GameStatus.COMPLETED;
 
     if (gameStarted) {
       this.__logGameStarted();

@@ -1,7 +1,7 @@
 import * as discordJs from "discord.js";
 import { DataController, InteractionController } from ".";
 import { ChannelCommandMessage, Log } from "../core";
-import { CardSuit, DrawSource, SessionStatus, TurnAction } from "../enums";
+import { CardSuit, DrawSource, GameStatus, TurnAction } from "../enums";
 import { ChannelState, PlayerCard, Turn } from "../saveables";
 import { Card } from "../types";
 
@@ -10,14 +10,14 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
-    channelState.session.iteratePlayer();
+    channelState.session.iterate();
 
     // If all players have played, handle round conclusion
     if (channelState.session.activePlayerIndex === 0) {
       await this.__handleRoundEnd(message, channelState);
 
       // If game has concluded, stop here
-      if (channelState.session.status === SessionStatus.COMPLETED) {
+      if (channelState.session.gameStatus === GameStatus.COMPLETED) {
         await this.__handleGameEnd(message, channelState);
         return;
       }
@@ -41,7 +41,7 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
-    // TODO: Add invocation of session hand scoring methods here
+    channelState.session.scoreHand();
     await InteractionController.announceHandEnd(message, channelState);
   }
 
@@ -49,7 +49,7 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
-    // TODO: Add invocation of session hand reset methods here
+    channelState.session.initializeHand();
     await InteractionController.announceHandStart(message, channelState);
   }
 
@@ -154,8 +154,7 @@ export class GameController {
     channelState: ChannelState,
   ): Promise<void> {
     channelState.session.startGame();
-    channelState.session.resetDecks();
-    channelState.session.dealCardsToPlayers();
+    channelState.session.initializeHand();
     await InteractionController.announceGameStart(message, channelState);
   }
 

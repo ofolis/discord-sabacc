@@ -6,8 +6,8 @@ import { Json, Log, Saveable, Utils } from "../../core";
 import {
   CardSuit,
   DrawSource,
+  GameStatus,
   PlayerCardSource,
-  SessionStatus,
   TurnAction,
 } from "../../enums";
 import { Card, HandResult, PlayerJson, SessionJson } from "../../types";
@@ -18,6 +18,8 @@ export class Session implements Saveable {
   private __activePlayerOrder: string[] = [];
 
   private __cards: Record<CardSuit, Record<DrawSource, Card[]>>;
+
+  private __gameStatus: GameStatus = GameStatus.PENDING;
 
   private __handIndex: number = 0;
 
@@ -33,8 +35,6 @@ export class Session implements Saveable {
 
   private __startingTokenTotal: number;
 
-  private __status: SessionStatus = SessionStatus.PENDING;
-
   public get activePlayerIndex(): number {
     return this.__activePlayerIndex;
   }
@@ -48,12 +48,16 @@ export class Session implements Saveable {
   }
 
   public get currentPlayer(): Player {
-    if (this.__status !== SessionStatus.ACTIVE) {
-      Log.throw("Cannot get current player. Session is not currently active.", {
-        status: this.__status,
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot get current player. Game is not active.", {
+        gameStatus: this.__gameStatus,
       });
     }
     return this.__players[this.__activePlayerOrder[this.__activePlayerIndex]];
+  }
+
+  public get gameStatus(): GameStatus {
+    return this.__gameStatus;
   }
 
   public get handIndex(): number {
@@ -62,10 +66,6 @@ export class Session implements Saveable {
 
   public get roundIndex(): number {
     return this.__roundIndex;
-  }
-
-  public get status(): SessionStatus {
-    return this.__status;
   }
 
   public constructor(user: discordJs.User, startingTokenTotal: number);
@@ -111,6 +111,7 @@ export class Session implements Saveable {
         CardSuit,
         Record<DrawSource, Card[]>
       >;
+      this.__gameStatus = Utils.getJsonEntry(json, "gameStatus") as GameStatus;
       this.__handIndex = Utils.getJsonEntry(json, "handIndex") as number;
       this.__handResults = Utils.getJsonEntry(
         json,
@@ -131,7 +132,6 @@ export class Session implements Saveable {
         json,
         "startingTokenTotal",
       ) as number;
-      this.__status = Utils.getJsonEntry(json, "status") as SessionStatus;
     }
   }
 
@@ -165,7 +165,23 @@ export class Session implements Saveable {
     return this.__players[user.id];
   }
 
-  private __dealCards(): void {
+  private __dealCardsToPlayers(): void {
+    Object.values(this.__players).forEach(player => {
+      if (player.cardTotal !== 0) {
+        Log.throw(
+          "Cannot deal cards to players. One or more players still contain cards.",
+          { players: this.__players },
+        );
+      }
+    });
+    if (
+      this.__cards[CardSuit.BLOOD][DrawSource.DISCARD].length !== 0 ||
+      this.__cards[CardSuit.SAND][DrawSource.DISCARD].length !== 0
+    ) {
+      Log.throw("Cannot deal cards to players. Discard still contains cards.", {
+        cards: this.__cards,
+      });
+    }
     this.activePlayersInTurnOrder.forEach(player => {
       player["_addCard"](
         this.__drawCard(CardSuit.BLOOD, DrawSource.DECK),
@@ -221,18 +237,6 @@ export class Session implements Saveable {
     });
   }
 
-  private __iterateHand(): void {
-    this.__handIndex++;
-  }
-
-  private __iterateRound(): void {
-    this.__roundIndex++;
-    if (this.__roundIndex > 3) {
-      this.__roundIndex = 0;
-      this.__iterateHand();
-    }
-  }
-
   private __shuffleDecks(): void {
     const random: Random = new Random();
     random.shuffle(this.__cards[CardSuit.BLOOD][DrawSource.DECK]);
@@ -240,9 +244,9 @@ export class Session implements Saveable {
   }
 
   public addPlayers(users: discordJs.User[]): void {
-    if (this.__status !== SessionStatus.PENDING) {
-      Log.throw("Cannot add players. Session is not currently pending.", {
-        status: this.__status,
+    if (this.__gameStatus !== GameStatus.PENDING) {
+      Log.throw("Cannot add players. Game is not pending.", {
+        gameStatus: this.__gameStatus,
       });
     }
     users.forEach(user => {
@@ -251,56 +255,20 @@ export class Session implements Saveable {
   }
 
   public createRoundTurnForCurrentPlayer(turnAction: TurnAction): Turn {
-    if (this.__status !== SessionStatus.ACTIVE) {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
       Log.throw(
-        "Cannot create round turn for current player. Session is not currently active.",
-        { status: this.__status },
+        "Cannot create round turn for current player. Game is not active.",
+        { gameStatus: this.__gameStatus },
       );
     }
     return this.currentPlayer["_createRoundTurn"](turnAction);
   }
 
-  public dealCardsToPlayers(): void {
-    if (this.__status !== SessionStatus.ACTIVE) {
-      Log.throw(
-        "Cannot deal cards to players. Session is not currently active.",
-        { status: this.__status },
-      );
-    }
-    if (this.__roundIndex !== 0 || this.__activePlayerIndex !== 0) {
-      Log.throw(
-        "Cannot deal cards to players. Round index and active player index are not currently 0.",
-        {
-          roundIndex: this.__roundIndex,
-          activePlayerIndex: this.__activePlayerIndex,
-        },
-      );
-    }
-    Object.values(this.__players).forEach(player => {
-      if (player.cardTotal !== 0) {
-        Log.throw(
-          "Cannot deal cards to players. One or more players still contain cards.",
-          { players: this.__players },
-        );
-      }
-    });
-    if (
-      this.__cards[CardSuit.BLOOD][DrawSource.DISCARD].length !== 0 ||
-      this.__cards[CardSuit.SAND][DrawSource.DISCARD].length !== 0
-    ) {
-      Log.throw("Cannot deal cards to players. Discard still contains cards.", {
-        cards: this.__cards,
-      });
-    }
-    this.__dealCards();
-  }
-
   public discardCardForCurrentPlayer(playerCard: PlayerCard): void {
-    if (this.__status !== SessionStatus.ACTIVE) {
-      Log.throw(
-        "Cannot discard card for current player. Session is not currently active.",
-        { status: this.__status },
-      );
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot discard card for current player. Game is not active.", {
+        gameStatus: this.__gameStatus,
+      });
     }
     const card: Card = this.currentPlayer["_removeCard"](playerCard);
     this.__discardCard(card);
@@ -310,11 +278,10 @@ export class Session implements Saveable {
     cardSuit: CardSuit,
     drawSource: DrawSource,
   ): Card {
-    if (this.__status !== SessionStatus.ACTIVE) {
-      Log.throw(
-        "Cannot draw card for current player. Session is not currently active.",
-        { status: this.__status },
-      );
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot draw card for current player. Game is not active.", {
+        gameStatus: this.__gameStatus,
+      });
     }
     const card: Card = this.__drawCard(cardSuit, drawSource);
     const playerCardSource: PlayerCardSource =
@@ -324,9 +291,9 @@ export class Session implements Saveable {
   }
 
   public getPlayerById(id: string): Player {
-    if (this.__status !== SessionStatus.ACTIVE) {
-      Log.throw("Cannot get player state. Session is not currently active.", {
-        status: this.__status,
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot get player state. Game is not active.", {
+        gameStatus: this.__gameStatus,
       });
     }
     if (!(id in this.__players)) {
@@ -338,32 +305,15 @@ export class Session implements Saveable {
     return this.__players[id];
   }
 
-  public iteratePlayer(): void {
-    if (this.__status !== SessionStatus.ACTIVE) {
-      Log.throw("Cannot iterate player. Session is not currently active.", {
-        status: this.__status,
-      });
-    }
-    this.__activePlayerIndex++;
-    if (this.__activePlayerIndex >= this.__activePlayerOrder.length) {
-      this.__activePlayerIndex = 0;
-      this.__iterateRound();
-    }
-  }
-
-  public playerExists(playerId: string): boolean {
-    return playerId in this.__players;
-  }
-
-  public resetDecks(): void {
-    if (this.__status !== SessionStatus.ACTIVE) {
-      Log.throw("Cannot reset decks. Session is not currently active.", {
-        status: this.__status,
+  public initializeHand(): void {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot initialize hand. Game is not active.", {
+        gameStatus: this.__gameStatus,
       });
     }
     if (this.__roundIndex !== 0 || this.__activePlayerIndex !== 0) {
       Log.throw(
-        "Cannot reset decks. Round index and active player index are not currently 0.",
+        "Cannot initialize hand. Round index and active player index are not currently 0.",
         {
           roundIndex: this.__roundIndex,
           activePlayerIndex: this.__activePlayerIndex,
@@ -372,22 +322,71 @@ export class Session implements Saveable {
     }
     this.__collectCards();
     this.__shuffleDecks();
+    this.__dealCardsToPlayers();
+  }
+
+  public iterate(): void {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot iterate session. Game is not active.", {
+        gameStatus: this.__gameStatus,
+      });
+    }
+    this.__activePlayerIndex++;
+    if (this.__activePlayerIndex >= this.__activePlayerOrder.length) {
+      this.__activePlayerIndex = 0;
+      this.__roundIndex++;
+      if (this.__roundIndex > 3) {
+        this.__roundIndex = 0;
+        this.__handIndex++;
+      }
+    }
+  }
+
+  public playerExists(playerId: string): boolean {
+    return playerId in this.__players;
+  }
+
+  public scoreHand(): void {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot score hand. Game is not active.", {
+        gameStatus: this.__gameStatus,
+      });
+    }
+    if (this.__roundIndex !== 0 || this.__activePlayerIndex !== 0) {
+      Log.throw(
+        "Cannot score hand. Round index and active player index are not currently 0.",
+        {
+          roundIndex: this.__roundIndex,
+          activePlayerIndex: this.__activePlayerIndex,
+        },
+      );
+    }
+    if (this.__handResults.length !== this.__handIndex - 1) {
+      Log.throw(
+        "Cannot score hand. The current hand result count is incorrect.",
+        {
+          handIndex: this.__handIndex,
+          handResults: this.__handResults,
+        },
+      );
+    }
+    // TODO: Implement hand scoring logic
   }
 
   public resolveRoundTurnForCurrentPlayer(): void {
-    if (this.__status !== SessionStatus.ACTIVE) {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
       Log.throw(
-        "Cannot resolve round turn for current player. Session is not currently active.",
-        { status: this.__status },
+        "Cannot resolve round turn for current player. Game is not active.",
+        { gameStatus: this.__gameStatus },
       );
     }
     this.currentPlayer["_resolveRoundTurn"]();
   }
 
   public startGame(): void {
-    if (this.__status !== SessionStatus.PENDING) {
-      Log.throw("Cannot start game. Session is not currently pending.", {
-        status: this.__status,
+    if (this.__gameStatus !== GameStatus.PENDING) {
+      Log.throw("Cannot start game. Game is not pending.", {
+        gameStatus: this.__gameStatus,
       });
     }
     if (Object.entries(this.__players).length <= 1) {
@@ -396,7 +395,7 @@ export class Session implements Saveable {
       });
     }
     this.__startedAt = Date.now();
-    this.__status = SessionStatus.ACTIVE;
+    this.__gameStatus = GameStatus.ACTIVE;
     this.__initializePlayers();
   }
 
@@ -405,6 +404,7 @@ export class Session implements Saveable {
       activePlayerIndex: this.__activePlayerIndex,
       activePlayerOrder: this.__activePlayerOrder,
       cards: this.__cards,
+      gameStatus: this.__gameStatus,
       handIndex: this.__handIndex,
       handResults: this.__handResults,
       players: Object.fromEntries(
@@ -417,7 +417,6 @@ export class Session implements Saveable {
       startedAt: this.__startedAt,
       startingPlayerId: this.__startingPlayerId,
       startingTokenTotal: this.__startingTokenTotal,
-      status: this.__status,
     };
   }
 }

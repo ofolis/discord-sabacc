@@ -1,6 +1,6 @@
 import { DataController, InteractionController } from "../controllers";
 import { ChannelCommandMessage, Command, CommandOption } from "../core";
-import { SessionStatus } from "../enums";
+import { GameStatus } from "../enums";
 import { ChannelState } from "../saveables";
 
 export class Info implements Command {
@@ -24,7 +24,7 @@ export class Info implements Command {
     // Check for active game
     if (
       channelState === null ||
-      channelState.session.status !== SessionStatus.ACTIVE
+      channelState.session.gameStatus !== GameStatus.ACTIVE
     ) {
       await InteractionController.informNoGame(message);
       return;
