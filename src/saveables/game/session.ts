@@ -185,7 +185,32 @@ export class Session implements Saveable {
   }
 
   private __drawCard(cardSuit: CardSuit, drawSource: DrawSource): Card {
+    if (this.__cards[cardSuit][drawSource].length === 0) {
+      Log.throw("Cannot draw card. Requested deck is empty.", {
+        cardSuit,
+        drawSource,
+        cards: this.__cards,
+      });
+    }
     return Utils.removeTopArrayItem(this.__cards[cardSuit][drawSource]);
+  }
+
+  private __drawSourceToPlayerCardSource(
+    drawSource: DrawSource,
+  ): PlayerCardSource {
+    switch (drawSource) {
+      case DrawSource.DECK:
+        return PlayerCardSource.DECK_DRAW;
+      case DrawSource.DISCARD:
+        return PlayerCardSource.DISCARD_DRAW;
+      default:
+        Log.throw(
+          "Cannot convert draw source to player card source. Unknown draw source.",
+          {
+            drawSource,
+          },
+        );
+    }
   }
 
   private __initializePlayers(): void {
@@ -259,14 +284,31 @@ export class Session implements Saveable {
   }
 
   public discardCardForCurrentPlayer(playerCard: PlayerCard): void {
-    // TODO: Implement
+    if (this.__status !== SessionStatus.ACTIVE) {
+      Log.throw(
+        "Cannot discard card for current player. Session is not currently active.",
+        { status: this.__status },
+      );
+    }
+    const card: Card = this.currentPlayer["_removeCard"](playerCard);
+    this.__discardCard(card);
   }
 
   public drawCardForCurrentPlayer(
     cardSuit: CardSuit,
     drawSource: DrawSource,
   ): Card {
-    // TODO: Implement
+    if (this.__status !== SessionStatus.ACTIVE) {
+      Log.throw(
+        "Cannot draw card for current player. Session is not currently active.",
+        { status: this.__status },
+      );
+    }
+    const card: Card = this.__drawCard(cardSuit, drawSource);
+    const playerCardSource: PlayerCardSource =
+      this.__drawSourceToPlayerCardSource(drawSource);
+    this.currentPlayer["_addCard"](card, playerCardSource);
+    return card;
   }
 
   public getPlayerById(id: string): Player {

@@ -121,6 +121,27 @@ export class Player implements Saveable {
     return cards;
   }
 
+  protected _removeCard(playerCard: PlayerCard): Card {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot remove card. Player is not currently active.", {
+        status: this.__status,
+      });
+    }
+    const playerCardIndex: number = this.__cards.indexOf(playerCard);
+    if (playerCardIndex === -1) {
+      Log.throw(
+        "Cannot remove card. Player does not have the specified card.",
+        {
+          card: playerCard,
+          cards: this.__cards,
+        },
+      );
+    }
+    const card: Card = playerCard.card;
+    this.__cards.splice(playerCardIndex, 1);
+    return card;
+  }
+
   protected _resolveRoundTurn(): void {
     if (this.__status !== PlayerStatus.ACTIVE) {
       Log.throw("Cannot resolve turn. Player is not currently active.", {
