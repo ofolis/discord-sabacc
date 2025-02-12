@@ -1,27 +1,83 @@
 import * as discordJs from "discord.js";
 import { DataController, InteractionController } from ".";
 import { ChannelCommandMessage, Log } from "../core";
-import { CardSuit, DrawSource, TurnAction } from "../enums";
+import { CardSuit, DrawSource, SessionStatus, TurnAction } from "../enums";
 import { ChannelState, PlayerCard, Turn } from "../saveables";
 import { Card } from "../types";
 
 export class GameController {
-  private static async __handleEndOfHand(
+  private static async __endTurn(
+    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
-    // TODO: Implement end hand
+    channelState.session.iteratePlayer();
+
+    // If all players have played, handle round conclusion
+    if (channelState.session.activePlayerIndex === 0) {
+      await this.__handleRoundEnd(message, channelState);
+
+      // If game has concluded, stop here
+      if (channelState.session.status === SessionStatus.COMPLETED) {
+        await this.__handleGameEnd(message, channelState);
+        return;
+      }
+
+      // Otherwise, start a new round
+      await this.__handleRoundStart(message, channelState);
+    }
+
+    // Start next turn
+    await this.__handleTurnStart(message, channelState);
   }
 
-  private static async __handleEndOfRound(
+  private static async __handleGameEnd(
+    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
-    // TODO: Implement end round
+    await InteractionController.announceGameEnd(message, channelState);
   }
 
-  private static async __handleEndOfTurn(
+  private static async __handleHandEnd(
+    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
-    // TODO: Implement end turn
+    // TODO: Add invocation of session hand scoring methods here
+    await InteractionController.announceHandEnd(message, channelState);
+  }
+
+  private static async __handleHandStart(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    // TODO: Add invocation of session hand reset methods here
+    await InteractionController.announceHandStart(message, channelState);
+  }
+
+  private static async __handleRoundEnd(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    if (channelState.session.roundIndex === 0) {
+      await this.__handleHandEnd(message, channelState);
+    }
+  }
+
+  private static async __handleRoundStart(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    if (channelState.session.roundIndex === 0) {
+      await this.__handleHandStart(message, channelState);
+    } else {
+      await InteractionController.announceRoundStart(message, channelState);
+    }
+  }
+
+  private static async __handleTurnStart(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    await InteractionController.announceTurnStart(message, channelState);
   }
 
   private static async __resolveTurnDraw(
@@ -93,18 +149,23 @@ export class GameController {
     return true;
   }
 
-  private static __startGame(channelState: ChannelState): void {
+  private static async __startGame(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
     channelState.session.startGame();
     channelState.session.resetDecks();
     channelState.session.dealCardsToPlayers();
+    await InteractionController.announceGameStart(message, channelState);
   }
 
   public static async handleNewGame(
     message: ChannelCommandMessage,
     channelState: ChannelState | null,
   ): Promise<void> {
-    // Check if a new game needs to be created
+    // Ensure channel state exists with a new session
     if (channelState === null) {
+      channelState = new ChannelState(message);
       await InteractionController.followupGameCreated(message);
     } else {
       const endCurrentGame: boolean | null =
@@ -113,18 +174,12 @@ export class GameController {
         return;
       }
       if (endCurrentGame) {
+        channelState.createSession(message);
         await InteractionController.followupGameEnded(message);
       } else {
         await InteractionController.followupGameNotEnded(message);
         return;
       }
-    }
-
-    // Ensure channel state exists with a new session
-    if (channelState === null) {
-      channelState = new ChannelState(message);
-    } else {
-      channelState.createSession(message);
     }
 
     // Prompt for players to join
@@ -136,7 +191,7 @@ export class GameController {
 
     // Add players and start game
     channelState.session.addPlayers(joinedUsers);
-    this.__startGame(channelState);
+    await this.__startGame(message, channelState);
 
     // Save at happy path end
     DataController.saveChannelState(channelState);
@@ -176,6 +231,7 @@ export class GameController {
         default:
           Log.throw("Cannot handle play turn. Unknown turn action.", {
             turnAction: turn.action,
+            player: channelState.session.currentPlayer,
           });
       }
       if (turnResolved) {
@@ -185,15 +241,7 @@ export class GameController {
 
     // End turn if resolved
     if (turnResolved) {
-      if (channelState.session.currentPlayerIsLastPlayer) {
-        if (channelState.session.roundIndex === 3) {
-          await this.__handleEndOfHand(channelState);
-        } else {
-          await this.__handleEndOfRound(channelState);
-        }
-      } else {
-        await this.__handleEndOfTurn(channelState);
-      }
+      await this.__endTurn(message, channelState);
     }
 
     // Save at happy path end

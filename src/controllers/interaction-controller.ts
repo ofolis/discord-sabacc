@@ -67,6 +67,41 @@ export class InteractionController {
     });
   }
 
+  public static async announceGameEnd(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
+  public static async announceGameStart(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
+  public static async announceHandEnd(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
+  public static async announceHandStart(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
+  public static async announceRoundStart(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
   public static async announceTurnDraw(
     message: ChannelCommandMessage,
     channelState: ChannelState,
@@ -82,6 +117,13 @@ export class InteractionController {
   }
 
   public static async announceTurnStand(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    //TODO: Implement
+  }
+
+  public static async announceTurnStart(
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {

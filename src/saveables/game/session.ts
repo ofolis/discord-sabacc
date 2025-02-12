@@ -35,6 +35,10 @@ export class Session implements Saveable {
 
   private __status: SessionStatus = SessionStatus.PENDING;
 
+  public get activePlayerIndex(): number {
+    return this.__activePlayerIndex;
+  }
+
   public get activePlayersInTurnOrder(): readonly Player[] {
     return this.__activePlayerOrder.map(playerId => this.__players[playerId]);
   }
@@ -50,10 +54,6 @@ export class Session implements Saveable {
       });
     }
     return this.__players[this.__activePlayerOrder[this.__activePlayerIndex]];
-  }
-
-  public get currentPlayerIsLastPlayer(): boolean {
-    return this.__activePlayerIndex === this.__activePlayerOrder.length - 1;
   }
 
   public get handIndex(): number {
@@ -221,6 +221,19 @@ export class Session implements Saveable {
     });
   }
 
+  private __iterateHand(): void {
+    this.__handIndex++;
+    // TODO: Add hand results
+  }
+
+  private __iterateRound(): void {
+    this.__roundIndex++;
+    if (this.__roundIndex > 3) {
+      this.__roundIndex = 0;
+      this.__iterateHand();
+    }
+  }
+
   private __shuffleDecks(): void {
     const random: Random = new Random();
     random.shuffle(this.__cards[CardSuit.BLOOD][DrawSource.DECK]);
@@ -324,6 +337,19 @@ export class Session implements Saveable {
       );
     }
     return this.__players[id];
+  }
+
+  public iteratePlayer(): void {
+    if (this.__status !== SessionStatus.ACTIVE) {
+      Log.throw("Cannot iterate player. Session is not currently active.", {
+        status: this.__status,
+      });
+    }
+    this.__activePlayerIndex++;
+    if (this.__activePlayerIndex >= this.__activePlayerOrder.length) {
+      this.__activePlayerIndex = 0;
+      this.__iterateRound();
+    }
   }
 
   public playerExists(playerId: string): boolean {
