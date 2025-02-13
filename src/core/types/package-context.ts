@@ -1,4 +1,4 @@
 export type PackageContext = {
-  name: string;
-  version?: string;
+  readonly name: string;
+  readonly version?: string;
 };

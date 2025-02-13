@@ -1,9 +1,9 @@
 export type UserStateJson = {
-  id: string;
-  latestGameCompletedAt: number | null;
-  latestGameStartedAt: number | null;
-  totalGamesCompleted: number;
-  totalGamesLost: number;
-  totalGamesStarted: number;
-  totalGamesWon: number;
+  readonly id: string;
+  readonly latestGameCompletedAt: number | null;
+  readonly latestGameStartedAt: number | null;
+  readonly totalGamesCompleted: number;
+  readonly totalGamesLost: number;
+  readonly totalGamesStarted: number;
+  readonly totalGamesWon: number;
 };

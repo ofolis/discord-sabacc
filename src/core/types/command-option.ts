@@ -2,31 +2,31 @@ import { CommandOptionType } from "..";
 
 export type CommandOption =
   | {
-      description: string;
-      isRequired: boolean;
-      name: string;
-      type: CommandOptionType.BOOLEAN;
+      readonly description: string;
+      readonly isRequired: boolean;
+      readonly name: string;
+      readonly type: CommandOptionType.BOOLEAN;
     }
   | {
-      description: string;
-      isRequired: boolean;
-      maxValue: number;
-      minValue: number;
-      name: string;
-      type: CommandOptionType.INTEGER | CommandOptionType.NUMBER;
+      readonly description: string;
+      readonly isRequired: boolean;
+      readonly maxValue: number;
+      readonly minValue: number;
+      readonly name: string;
+      readonly type: CommandOptionType.INTEGER | CommandOptionType.NUMBER;
     }
   | {
-      description: string;
-      isRequired: boolean;
-      maxLength: number;
-      minLength: number;
-      name: string;
-      type: CommandOptionType.STRING;
+      readonly description: string;
+      readonly isRequired: boolean;
+      readonly maxLength: number;
+      readonly minLength: number;
+      readonly name: string;
+      readonly type: CommandOptionType.STRING;
     };
 
 export type CommandOptionTypeMap = {
-  [CommandOptionType.BOOLEAN]: boolean;
-  [CommandOptionType.INTEGER]: number;
-  [CommandOptionType.NUMBER]: number;
-  [CommandOptionType.STRING]: string;
+  readonly [CommandOptionType.BOOLEAN]: boolean;
+  readonly [CommandOptionType.INTEGER]: number;
+  readonly [CommandOptionType.NUMBER]: number;
+  readonly [CommandOptionType.STRING]: string;
 };

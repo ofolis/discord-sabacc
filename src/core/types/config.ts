@@ -1,5 +1,5 @@
 export type Config = {
-  devMode: boolean;
-  discordApplicationId: string;
-  discordBotToken: string;
+  readonly devMode: boolean;
+  readonly discordApplicationId: string;
+  readonly discordBotToken: string;
 };

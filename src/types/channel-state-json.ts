@@ -1,11 +1,11 @@
 import { SessionJson, UserStateJson } from ".";
 
 export type ChannelStateJson = {
-  channelId: string;
-  latestGameCompletedAt: number | null;
-  latestGameStartedAt: number | null;
-  session: SessionJson;
-  totalGamesCompleted: number;
-  totalGamesStarted: number;
-  userStates: Record<string, UserStateJson>;
+  readonly channelId: string;
+  readonly latestGameCompletedAt: number | null;
+  readonly latestGameStartedAt: number | null;
+  readonly session: SessionJson;
+  readonly totalGamesCompleted: number;
+  readonly totalGamesStarted: number;
+  readonly userStates: Record<string, UserStateJson>;
 };
