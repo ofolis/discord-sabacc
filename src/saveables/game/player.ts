@@ -9,17 +9,15 @@ import {
 } from "../../enums";
 import {
   Card,
-  HandResult,
   PlayerCardJson,
   PlayerJson,
+  PlayerScoreable,
   TurnJson,
 } from "../../types";
 export class Player implements Saveable {
   private __avatarId: string | null;
 
   private __cards: PlayerCard[] = [];
-
-  private __handResults: HandResult[] = [];
 
   private __roundTurn: Turn | null = null;
 
@@ -65,10 +63,6 @@ export class Player implements Saveable {
       this.__cards = (
         Utils.getJsonEntry(json, "cards") as PlayerCardJson[]
       ).map(playerCardJson => new PlayerCard(playerCardJson));
-      this.__handResults = Utils.getJsonEntry(
-        json,
-        "handResults",
-      ) as HandResult[];
       const roundTurnJson: TurnJson | null = Utils.getJsonEntry(
         json,
         "roundTurn",
@@ -108,6 +102,54 @@ export class Player implements Saveable {
     }
     this.__roundTurn = new Turn(turnAction);
     return this.__roundTurn;
+  }
+
+  protected _deductTokens(tokenLossTotal: number): void {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot deduct tokens. Player is not currently active.", {
+        status: this.__status,
+      });
+    }
+    this.__tokenTotal = Math.max(this.__tokenTotal - tokenLossTotal, 0);
+    this.__spentTokenTotal = Math.min(
+      this.__spentTokenTotal,
+      this.__tokenTotal,
+    );
+    if (this.__tokenTotal === 0) {
+      this.__status = PlayerStatus.ELIMINATED;
+    }
+  }
+
+  protected _getScorable(): PlayerScoreable {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot get hand result. Player is not currently active.", {
+        status: this.__status,
+      });
+    }
+    const bloodCards: readonly PlayerCard[] = this.getCards(CardSuit.BLOOD);
+    const sandCards: readonly PlayerCard[] = this.getCards(CardSuit.SAND);
+    if (bloodCards.length > 1 || sandCards.length > 1) {
+      Log.throw(
+        "Cannot get hand result. Player does not contain exactly one card of each suit.",
+        {
+          bloodCards,
+          sandCards,
+        },
+      );
+    }
+    const bloodCardValue: number = bloodCards[0].getValue(sandCards[0]);
+    const sandCardValue: number = sandCards[0].getValue(bloodCards[0]);
+    const playerScorable: PlayerScoreable = {
+      bloodCard: bloodCards[0].card,
+      bloodCardValue: bloodCardValue,
+      cardDifference: Math.abs(bloodCardValue - sandCardValue),
+      lowestCardValue: Math.min(bloodCardValue, sandCardValue),
+      playerId: this.id,
+      sandCard: sandCards[0].card,
+      sandCardValue: sandCardValue,
+      spentTokenTotal: this.__spentTokenTotal,
+    };
+    return playerScorable;
   }
 
   protected _removeAllCards(): Card[] {
@@ -188,7 +230,6 @@ export class Player implements Saveable {
       cards: this.__cards.map(playerCard => playerCard.toJson()),
       id: this.id,
       globalName: this.globalName,
-      handResults: this.__handResults,
       roundTurn: this.__roundTurn !== null ? this.__roundTurn.toJson() : null,
       spentTokenTotal: this.__spentTokenTotal,
       status: this.__status,

@@ -1,6 +1,6 @@
 import * as discordJs from "discord.js";
 import { Random } from "random-js";
-import { Player, PlayerCard, Turn } from ".";
+import { HandResult, Player, PlayerCard, Turn } from ".";
 import { DECK } from "../../constants";
 import { Json, Log, Saveable, Utils } from "../../core";
 import {
@@ -10,7 +10,7 @@ import {
   PlayerCardSource,
   TurnAction,
 } from "../../enums";
-import { Card, HandResult, PlayerJson, SessionJson } from "../../types";
+import { Card, HandResultJson, PlayerJson, SessionJson } from "../../types";
 
 export class Session implements Saveable {
   private __activePlayerIndex: number = 0;
@@ -23,7 +23,7 @@ export class Session implements Saveable {
 
   private __handIndex: number = 0;
 
-  private __handResults: HandResult[][] = [];
+  private __handResults: HandResult[] = [];
 
   private __players: Record<string, Player> = {};
 
@@ -113,10 +113,13 @@ export class Session implements Saveable {
       >;
       this.__gameStatus = Utils.getJsonEntry(json, "gameStatus") as GameStatus;
       this.__handIndex = Utils.getJsonEntry(json, "handIndex") as number;
-      this.__handResults = Utils.getJsonEntry(
+      const handResultsJson: HandResultJson[] = Utils.getJsonEntry(
         json,
         "handResults",
-      ) as HandResult[][];
+      ) as HandResultJson[];
+      this.__handResults = handResultsJson.map(
+        handResultJson => new HandResult(handResultJson),
+      );
       this.__players = Object.fromEntries(
         Object.entries(
           Utils.getJsonEntry(json, "players") as Record<string, PlayerJson>,
@@ -133,6 +136,13 @@ export class Session implements Saveable {
         "startingTokenTotal",
       ) as number;
     }
+  }
+
+  private __applyHandResultToPlayers(handResult: HandResult): void {
+    handResult.rankings.forEach(ranking => {
+      const player: Player = this.getPlayerById(ranking.playerId);
+      player["_deductTokens"](ranking.tokenLossTotal);
+    });
   }
 
   private __collectCards(): void {
@@ -380,7 +390,11 @@ export class Session implements Saveable {
         },
       );
     }
-    // TODO: Implement hand scoring logic
+    const handResult: HandResult = new HandResult(
+      Object.values(this.__players),
+    );
+    this.__applyHandResultToPlayers(handResult);
+    this.__handResults.push(handResult);
   }
 
   public startGame(): void {
@@ -406,7 +420,7 @@ export class Session implements Saveable {
       cards: this.__cards,
       gameStatus: this.__gameStatus,
       handIndex: this.__handIndex,
-      handResults: this.__handResults,
+      handResults: this.__handResults.map(handResult => handResult.toJson()),
       players: Object.fromEntries(
         Object.entries(this.__players).map(([playerId, player]) => [
           playerId,

@@ -1,17 +1,17 @@
-import { PlayerJson } from ".";
-import { Card, HandResult } from "..";
+import { HandResultJson, PlayerJson } from ".";
+import { Card } from "..";
 import { CardSuit, DrawSource, GameStatus } from "../../enums";
 
 export type SessionJson = {
-  activePlayerIndex: number;
-  activePlayerOrder: string[];
-  cards: Record<CardSuit, Record<DrawSource, Card[]>>;
-  gameStatus: GameStatus;
-  handIndex: number;
-  handResults: HandResult[][];
-  players: Record<string, PlayerJson>;
-  roundIndex: number;
-  startedAt: number | null;
-  startingPlayerId: string;
-  startingTokenTotal: number;
+  readonly activePlayerIndex: number;
+  readonly activePlayerOrder: string[];
+  readonly cards: Record<CardSuit, Record<DrawSource, Card[]>>;
+  readonly gameStatus: GameStatus;
+  readonly handIndex: number;
+  readonly handResults: HandResultJson[];
+  readonly players: Record<string, PlayerJson>;
+  readonly roundIndex: number;
+  readonly startedAt: number | null;
+  readonly startingPlayerId: string;
+  readonly startingTokenTotal: number;
 };
