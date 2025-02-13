@@ -6,78 +6,69 @@ import { ChannelState, PlayerCard, Turn } from "../saveables";
 import { Card } from "../types";
 
 export class GameController {
-  private static async __endTurn(
-    message: ChannelCommandMessage,
-    channelState: ChannelState,
-  ): Promise<void> {
+  private static async __endTurn(channelState: ChannelState): Promise<void> {
     channelState.session.iterate();
 
     // If all players have played, handle round conclusion
     if (channelState.session.activePlayerIndex === 0) {
-      await this.__handleRoundEnd(message, channelState);
+      await this.__handleRoundEnd(channelState);
 
       // If game has concluded, stop here
       if (channelState.session.gameStatus === GameStatus.COMPLETED) {
-        await this.__handleGameEnd(message, channelState);
+        await this.__handleGameEnd(channelState);
         return;
       }
 
       // Otherwise, start a new round
-      await this.__handleRoundStart(message, channelState);
+      await this.__handleRoundStart(channelState);
     }
 
     // Start next turn
-    await this.__handleTurnStart(message, channelState);
+    await this.__handleTurnStart(channelState);
   }
 
   private static async __handleGameEnd(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
-    await InteractionController.announceGameEnd(message, channelState);
+    await InteractionController.announceGameEnd(channelState);
   }
 
   private static async __handleHandEnd(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     channelState.session.scoreHand();
-    await InteractionController.announceHandEnd(message, channelState);
+    await InteractionController.announceHandEnd(channelState);
   }
 
   private static async __handleHandStart(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     channelState.session.initializeHand();
-    await InteractionController.announceHandStart(message, channelState);
+    await InteractionController.announceHandStart(channelState);
   }
 
   private static async __handleRoundEnd(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     if (channelState.session.roundIndex === 0) {
-      await this.__handleHandEnd(message, channelState);
+      await this.__handleHandEnd(channelState);
     }
   }
 
   private static async __handleRoundStart(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     if (channelState.session.roundIndex === 0) {
-      await this.__handleHandStart(message, channelState);
+      await this.__handleHandStart(channelState);
     } else {
-      await InteractionController.announceRoundStart(message, channelState);
+      await InteractionController.announceRoundStart(channelState);
     }
   }
 
   private static async __handleTurnStart(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
-    await InteractionController.announceTurnStart(message, channelState);
+    await InteractionController.announceTurnStart(channelState);
   }
 
   private static async __resolveTurnDraw(
@@ -118,7 +109,7 @@ export class GameController {
     }
 
     await InteractionController.informTurnComplete(message, channelState);
-    await InteractionController.announceTurnDraw(message, channelState);
+    await InteractionController.announceTurnDraw(channelState);
     return true;
   }
 
@@ -136,7 +127,7 @@ export class GameController {
       return false;
     }
     await InteractionController.informTurnComplete(message, channelState);
-    await InteractionController.announceTurnReveal(message, channelState);
+    await InteractionController.announceTurnReveal(channelState);
     return true;
   }
 
@@ -145,17 +136,14 @@ export class GameController {
     channelState: ChannelState,
   ): Promise<boolean> {
     await InteractionController.informTurnComplete(message, channelState);
-    await InteractionController.announceTurnStand(message, channelState);
+    await InteractionController.announceTurnStand(channelState);
     return true;
   }
 
-  private static async __startGame(
-    message: ChannelCommandMessage,
-    channelState: ChannelState,
-  ): Promise<void> {
+  private static async __startGame(channelState: ChannelState): Promise<void> {
     channelState.session.startGame();
     channelState.session.initializeHand();
-    await InteractionController.announceGameStart(message, channelState);
+    await InteractionController.announceGameStart(channelState);
   }
 
   public static async handleNewGame(
@@ -190,7 +178,7 @@ export class GameController {
 
     // Add players and start game
     channelState.session.addPlayers(joinedUsers);
-    await this.__startGame(message, channelState);
+    await this.__startGame(channelState);
 
     // Save at happy path end
     DataController.saveChannelState(channelState);
@@ -240,7 +228,7 @@ export class GameController {
 
     // End turn if resolved
     if (turnResolved) {
-      await this.__endTurn(message, channelState);
+      await this.__endTurn(channelState);
     }
 
     // Save at happy path end

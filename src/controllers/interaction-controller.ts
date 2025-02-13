@@ -68,63 +68,54 @@ export class InteractionController {
   }
 
   public static async announceGameEnd(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     //TODO: Implement
   }
 
   public static async announceGameStart(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     //TODO: Implement
   }
 
   public static async announceHandEnd(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     //TODO: Implement
   }
 
   public static async announceHandStart(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     //TODO: Implement
   }
 
   public static async announceRoundStart(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     //TODO: Implement
   }
 
   public static async announceTurnDraw(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     //TODO: Implement
   }
 
   public static async announceTurnReveal(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     //TODO: Implement
   }
 
   public static async announceTurnStand(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     //TODO: Implement
   }
 
   public static async announceTurnStart(
-    message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
     //TODO: Implement
@@ -137,13 +128,13 @@ export class InteractionController {
   }
 
   public static async followupGameEnded(
-    message: ChannelCommandMessage,
+    message: ChannelMessage,
   ): Promise<void> {
     //TODO: Implement
   }
 
   public static async followupGameNotEnded(
-    message: ChannelCommandMessage,
+    message: ChannelMessage,
   ): Promise<void> {
     //TODO: Implement
   }
@@ -204,28 +195,28 @@ export class InteractionController {
   }
 
   public static async informTurnComplete(
-    message: ChannelCommandMessage,
+    message: ChannelMessage,
     channelState: ChannelState,
   ): Promise<void> {
     //TODO: Implement
   }
 
   public static async informTurnIncomplete(
-    message: ChannelCommandMessage,
+    message: ChannelMessage,
     channelState: ChannelState,
   ): Promise<void> {
     //TODO: Implement
   }
 
   public static async promptChooseDrawDeck(
-    message: ChannelCommandMessage,
+    message: ChannelMessage,
     channelState: ChannelState,
   ): Promise<[CardSuit, DrawSource] | null> {
     //TODO: Impelment
   }
 
   public static async promptChooseDiscardedCard(
-    message: ChannelCommandMessage,
+    message: ChannelMessage,
     channelState: ChannelState,
   ): Promise<PlayerCard | null> {
     //TODO: Implement
@@ -408,7 +399,7 @@ export class InteractionController {
   }
 
   public static async promptRevealCards(
-    message: ChannelCommandMessage,
+    message: ChannelMessage,
     channelState: ChannelState,
   ): Promise<boolean | null> {
     //TODO: Implement
