@@ -8,6 +8,7 @@ import {
   DrawSource,
   GameStatus,
   PlayerCardSource,
+  PlayerStatus,
   TurnAction,
 } from "../../enums";
 import { Card, HandResultJson, PlayerJson, SessionJson } from "../../types";
@@ -247,6 +248,13 @@ export class Session implements Saveable {
     });
   }
 
+  private __purgeEliminatedPlayersInTurnOrder(): void {
+    const remainingPlayers: Player[] = this.activePlayersInTurnOrder.filter(
+      player => player.status === PlayerStatus.ACTIVE,
+    );
+    this.__activePlayerOrder = remainingPlayers.map(player => player.id);
+  }
+
   private __shuffleDecks(): void {
     const random: Random = new Random();
     random.shuffle(this.__cards[CardSuit.BLOOD][DrawSource.DECK]);
@@ -391,10 +399,15 @@ export class Session implements Saveable {
       );
     }
     const handResult: HandResult = new HandResult(
-      Object.values(this.__players),
+      Object.values(this.activePlayersInTurnOrder),
     );
     this.__applyHandResultToPlayers(handResult);
+    this.__purgeEliminatedPlayersInTurnOrder();
     this.__handResults.push(handResult);
+    // Determine if game is completed
+    if (this.activePlayersInTurnOrder.length === 1) {
+      this.__gameStatus = GameStatus.COMPLETED;
+    }
   }
 
   public startGame(): void {

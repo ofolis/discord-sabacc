@@ -50,6 +50,10 @@ export class Player implements Saveable {
     return this.__roundTurn;
   }
 
+  public get status(): PlayerStatus {
+    return this.__status;
+  }
+
   public constructor(userOrJson: discordJs.User | Json) {
     if (userOrJson instanceof discordJs.User) {
       const user: discordJs.User = userOrJson;
