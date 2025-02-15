@@ -208,7 +208,7 @@ export class Session implements Saveable {
   }
 
   private __discardCard(card: Card): void {
-    this.__cards[card.suit][DrawSource.DISCARD].push(card);
+    this.__cards[card.suit][DrawSource.DISCARD].unshift(card);
   }
 
   private __drawCard(cardSuit: CardSuit, drawSource: DrawSource): Card {
