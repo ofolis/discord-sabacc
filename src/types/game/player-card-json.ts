@@ -3,6 +3,6 @@ import { PlayerCardSource } from "../../enums";
 
 export type PlayerCardJson = {
   card: Card;
-  dieRollValues: number[];
+  dieRolls: number[];
   source: PlayerCardSource;
 };

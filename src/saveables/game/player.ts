@@ -156,6 +156,24 @@ export class Player implements Saveable {
     return playerScorable;
   }
 
+  protected _hasPlayerCard(playerCard: PlayerCard): boolean {
+    if (this.__cards.indexOf(playerCard) !== -1) {
+      return true;
+    }
+    return false;
+  }
+
+  protected _initialize(tokenTotal: number): void {
+    if (this.__status !== PlayerStatus.UNINITIALIZED) {
+      Log.throw(
+        "Cannot initialize player. Player is not currently uninitialized.",
+        { status: this.__status },
+      );
+    }
+    this.__tokenTotal = tokenTotal;
+    this.__status = PlayerStatus.ACTIVE;
+  }
+
   protected _removeAllCards(): Card[] {
     if (this.__status !== PlayerStatus.ACTIVE) {
       Log.throw("Cannot remove all cards. Player is not currently active.", {
@@ -200,17 +218,6 @@ export class Player implements Saveable {
       );
     }
     this.__roundTurn["_resolve"]();
-  }
-
-  protected _initialize(tokenTotal: number): void {
-    if (this.__status !== PlayerStatus.UNINITIALIZED) {
-      Log.throw(
-        "Cannot initialize player. Player is not currently uninitialized.",
-        { status: this.__status },
-      );
-    }
-    this.__tokenTotal = tokenTotal;
-    this.__status = PlayerStatus.ACTIVE;
   }
 
   public getCards(cardSuit?: CardSuit): readonly PlayerCard[] {

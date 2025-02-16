@@ -1,7 +1,14 @@
 import * as discordJs from "discord.js";
+import { Random } from "random-js";
 import { DataController, InteractionController } from ".";
 import { ChannelCommandMessage, Log } from "../core";
-import { CardSuit, DrawSource, GameStatus, TurnAction } from "../enums";
+import {
+  CardSuit,
+  CardType,
+  DrawSource,
+  GameStatus,
+  TurnAction,
+} from "../enums";
 import { ChannelState, PlayerCard, Turn } from "../saveables";
 import { Card } from "../types";
 
@@ -45,6 +52,39 @@ export class GameController {
   ): Promise<void> {
     channelState.session.initializeHand();
     await InteractionController.announceHandStart(channelState);
+  }
+
+  private static async __handleImposterCard(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+    playerCard: PlayerCard,
+  ): Promise<boolean> {
+    const random: Random = new Random();
+
+    if (playerCard.dieRolls.length === 0) {
+      const rollDice: boolean | null =
+        await InteractionController.promptRollDice(message, playerCard);
+      if (rollDice === null) return false;
+      if (!rollDice) {
+        await InteractionController.followupTurnIncomplete(message);
+        return false;
+      }
+      channelState.session.setPlayerCardDieRollsForCurrentPlayer(playerCard, [
+        random.die(6),
+        random.die(6),
+      ]);
+    }
+
+    if (playerCard.dieRolls.length > 1) {
+      const selectedDieRoll: number | null =
+        await InteractionController.promptChooseDieRoll(message, playerCard);
+      if (selectedDieRoll === null) return false;
+      channelState.session.setPlayerCardDieRollsForCurrentPlayer(playerCard, [
+        selectedDieRoll,
+      ]);
+    }
+
+    return true;
   }
 
   private static async __handleRoundEnd(
@@ -108,7 +148,7 @@ export class GameController {
       channelState.session.discardCardForCurrentPlayer(discardedCard);
     }
 
-    await InteractionController.informTurnComplete(message, channelState);
+    await InteractionController.followupTurnComplete(message);
     await InteractionController.announceTurnDraw(channelState);
     return true;
   }
@@ -118,15 +158,31 @@ export class GameController {
     channelState: ChannelState,
   ): Promise<boolean> {
     const revealCards: boolean | null =
-      await InteractionController.promptRevealCards(message, channelState);
+      await InteractionController.promptRevealCards(message);
     if (revealCards === null) {
       return false;
     }
     if (!revealCards) {
-      await InteractionController.informTurnIncomplete(message, channelState);
+      await InteractionController.followupTurnIncomplete(message);
       return false;
     }
-    await InteractionController.informTurnComplete(message, channelState);
+
+    const playerCards: readonly PlayerCard[] =
+      channelState.session.currentPlayer.getCards();
+    for (const playerCard of playerCards) {
+      if (playerCard.card.type === CardType.IMPOSTER) {
+        const imposterCardHandled: boolean = await this.__handleImposterCard(
+          message,
+          channelState,
+          playerCard,
+        );
+        if (!imposterCardHandled) {
+          return false;
+        }
+      }
+    }
+
+    await InteractionController.followupTurnComplete(message);
     await InteractionController.announceTurnReveal(channelState);
     return true;
   }
@@ -135,7 +191,7 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
-    await InteractionController.informTurnComplete(message, channelState);
+    await InteractionController.followupTurnComplete(message);
     await InteractionController.announceTurnStand(channelState);
     return true;
   }

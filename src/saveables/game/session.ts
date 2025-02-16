@@ -308,6 +308,54 @@ export class Session implements Saveable {
     return card;
   }
 
+  public getDiscardOptionsForCurrentPlayer(): [PlayerCard, PlayerCard] {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw(
+        "Cannot get dicard card options for current player. Game is not active.",
+        {
+          gameStatus: this.__gameStatus,
+        },
+      );
+    }
+    const playerBloodCards: readonly PlayerCard[] = this.currentPlayer.getCards(
+      CardSuit.BLOOD,
+    );
+    const playerSandCards: readonly PlayerCard[] = this.currentPlayer.getCards(
+      CardSuit.SAND,
+    );
+    if (playerBloodCards.length < 2 && playerSandCards.length < 2) {
+      Log.throw(
+        "Cannot get dicard card options for current player. Player does not require a discard.",
+        {
+          bloodCards: playerBloodCards,
+          sandCards: playerSandCards,
+        },
+      );
+    }
+    if (playerBloodCards.length >= 2 && playerSandCards.length >= 2) {
+      Log.throw(
+        "Cannot get dicard card options for current player. Player requires a discard from both suits.",
+        {
+          bloodCards: playerBloodCards,
+          sandCards: playerSandCards,
+        },
+      );
+    }
+    if (playerBloodCards.length === 2) {
+      return [playerBloodCards[0], playerBloodCards[1]];
+    }
+    if (playerSandCards.length === 2) {
+      return [playerSandCards[0], playerSandCards[1]];
+    }
+    Log.throw(
+      "Cannot get dicard card options for current player. Player has more than 2 cards in discard options.",
+      {
+        bloodCards: playerBloodCards,
+        sandCards: playerSandCards,
+      },
+    );
+  }
+
   public getPlayerById(id: string): Player {
     if (this.__gameStatus !== GameStatus.ACTIVE) {
       Log.throw("Cannot get player state. Game is not active.", {
@@ -321,6 +369,13 @@ export class Session implements Saveable {
       );
     }
     return this.__players[id];
+  }
+
+  public getTopDiscardCard(cardSuit: CardSuit): Card | null {
+    if (this.__cards[cardSuit][DrawSource.DISCARD].length > 0) {
+      return this.__cards[cardSuit][DrawSource.DISCARD][0];
+    }
+    return null;
   }
 
   public initializeHand(): void {
@@ -404,9 +459,70 @@ export class Session implements Saveable {
     this.__applyHandResultToPlayers(handResult);
     this.__purgeEliminatedPlayersInTurnOrder();
     this.__handResults.push(handResult);
-    // Determine if game is completed
     if (this.activePlayersInTurnOrder.length === 1) {
       this.__gameStatus = GameStatus.COMPLETED;
+    }
+  }
+
+  public setPlayerCardDieRollsForCurrentPlayer(
+    playerCard: PlayerCard,
+    dieRolls: number[],
+  ): void {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw(
+        "Cannot set player card die rolls for current player. Game is not active.",
+        {
+          gameStatus: this.__gameStatus,
+        },
+      );
+    }
+    if (!this.currentPlayer["_hasPlayerCard"](playerCard)) {
+      Log.throw(
+        "Cannot set player card die rolls for current player. Player does not have the specified card.",
+        {
+          playerCard,
+          player: this.currentPlayer,
+        },
+      );
+    }
+    if (dieRolls.length === 2) {
+      if (playerCard.dieRolls.length !== 0) {
+        Log.throw(
+          "Cannot set player card die rolls for current player. New die rolls length is 2 but existing die rolls length is not 0.",
+          {
+            dieRolls,
+            playerCard,
+          },
+        );
+      }
+      playerCard["_dieRolls"] = dieRolls;
+    } else if (dieRolls.length === 1) {
+      if (playerCard.dieRolls.length !== 2) {
+        Log.throw(
+          "Cannot set player card die rolls for current player. New die rolls length is 1 but existing die rolls length is not 2.",
+          {
+            dieRolls,
+            playerCard,
+          },
+        );
+      }
+      if (playerCard.dieRolls.indexOf(dieRolls[0]) === -1) {
+        Log.throw(
+          "Cannot set player card die rolls for current player. Specified die roll is not in the existing die roll set.",
+          {
+            dieRolls,
+            playerCard,
+          },
+        );
+      }
+      playerCard["_dieRolls"] = dieRolls;
+    } else {
+      Log.throw(
+        "Cannot set player card die rolls for current player. Die rolls length is not 1 or 2.",
+        {
+          dieRolls,
+        },
+      );
     }
   }
 
