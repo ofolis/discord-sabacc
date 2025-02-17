@@ -407,7 +407,7 @@ export class InteractionController {
     if (topSandDiscardCard !== null) {
       buttonBuilders.unshift(
         new discordJs.ButtonBuilder({
-          customId: "bloodDiscard",
+          customId: "sandDiscard",
           label: this.__formatCardString(topSandDiscardCard),
           style: discordJs.ButtonStyle.Primary,
         }),
