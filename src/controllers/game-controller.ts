@@ -44,6 +44,8 @@ export class GameController {
     channelState: ChannelState,
   ): Promise<void> {
     channelState.session.scoreHand();
+    channelState.session.applyHandResult();
+
     await InteractionController.announceHandEnd(channelState);
   }
 
@@ -98,6 +100,7 @@ export class GameController {
   private static async __handleRoundStart(
     channelState: ChannelState,
   ): Promise<void> {
+    channelState.session.clearPlayerRoundTurns();
     if (channelState.session.roundIndex === 0) {
       await this.__handleHandStart(channelState);
     } else {
@@ -200,6 +203,7 @@ export class GameController {
     channelState.session.startGame();
     channelState.session.initializeHand();
     await InteractionController.announceGameStart(channelState);
+    await this.__handleTurnStart(channelState);
   }
 
   public static async handleNewGame(

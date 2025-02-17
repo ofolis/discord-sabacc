@@ -1,5 +1,5 @@
 import { Player } from ".";
-import { Json, Saveable, Utils } from "../../core";
+import { Json, Log, Saveable, Utils } from "../../core";
 import {
   HandResultJson,
   PlayerScoreable,
@@ -61,7 +61,13 @@ export class HandResult implements Saveable {
     });
   }
 
+  private __isAppliedToPlayers: boolean = false;
+
   public readonly rankings: RankedPlayerScorable[];
+
+  protected get _isAppliedToPlayers(): boolean {
+    return this.__isAppliedToPlayers;
+  }
 
   public constructor(playersOrJson: Player[] | Json) {
     if (Array.isArray(playersOrJson)) {
@@ -77,6 +83,15 @@ export class HandResult implements Saveable {
         "rankings",
       ) as RankedPlayerScorable[];
     }
+  }
+
+  protected _markAsAppliedToPlayers(): void {
+    if (this.__isAppliedToPlayers) {
+      Log.throw(
+        "Cannot mark hand result as applied to players. Hand result was already marked as applied.",
+      );
+    }
+    this.__isAppliedToPlayers = true;
   }
 
   public toJson(): HandResultJson {

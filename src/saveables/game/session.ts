@@ -139,13 +139,6 @@ export class Session implements Saveable {
     }
   }
 
-  private __applyHandResultToPlayers(handResult: HandResult): void {
-    handResult.rankings.forEach(ranking => {
-      const player: Player = this.getPlayerById(ranking.playerId);
-      player["_deductTokens"](ranking.tokenLossTotal);
-    });
-  }
-
   private __collectCards(): void {
     // Collect discard
     this.__cards[CardSuit.BLOOD][DrawSource.DECK].push(
@@ -272,6 +265,67 @@ export class Session implements Saveable {
     });
   }
 
+  public applyHandResult(): void {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot apply hand results. Game is not active.", {
+        gameStatus: this.__gameStatus,
+      });
+    }
+    if (this.__roundIndex !== 0 || this.__activePlayerIndex !== 0) {
+      Log.throw(
+        "Cannot apply hand results. Round index and active player index are not currently 0.",
+        {
+          roundIndex: this.__roundIndex,
+          activePlayerIndex: this.__activePlayerIndex,
+        },
+      );
+    }
+    const currentHandResult: HandResult = this.__handResults[0];
+    if (currentHandResult["_isAppliedToPlayers"]) {
+      Log.throw(
+        "Cannot apply hand results. Hand has already been applied to players.",
+        { currentHandResult },
+      );
+    }
+    let remainingPlayerTotal: number = 0;
+    currentHandResult.rankings.forEach(ranking => {
+      const player: Player = this.getPlayerById(ranking.playerId);
+      player["_deductTokens"](ranking.tokenLossTotal);
+      if (player.status === PlayerStatus.ACTIVE) {
+        remainingPlayerTotal++;
+      }
+    });
+    currentHandResult["_markAsAppliedToPlayers"]();
+    if (remainingPlayerTotal === 0) {
+      Log.throw(
+        "Cannot apply hand results. Zero players remained after results were applied.",
+        { currentHandResult },
+      );
+    }
+    if (remainingPlayerTotal === 1) {
+      this.__gameStatus = GameStatus.COMPLETED;
+    }
+  }
+
+  public clearPlayerRoundTurns(): void {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot clear player round turns. Game is not active.", {
+        gameStatus: this.__gameStatus,
+      });
+    }
+    if (this.__activePlayerIndex !== 0) {
+      Log.throw(
+        "Cannot clear player round turns. Active player index is not currently 0.",
+        {
+          activePlayerIndex: this.__activePlayerIndex,
+        },
+      );
+    }
+    this.activePlayersInTurnOrder.forEach(activePlayer => {
+      activePlayer["_clearRoundTurn"]();
+    });
+  }
+
   public createRoundTurnForCurrentPlayer(turnAction: TurnAction): Turn {
     if (this.__gameStatus !== GameStatus.ACTIVE) {
       Log.throw(
@@ -301,6 +355,7 @@ export class Session implements Saveable {
         gameStatus: this.__gameStatus,
       });
     }
+    this.currentPlayer["_spendToken"]();
     const card: Card = this.__drawCard(cardSuit, drawSource);
     const playerCardSource: PlayerCardSource =
       this.__drawSourceToPlayerCardSource(drawSource);
@@ -393,6 +448,7 @@ export class Session implements Saveable {
         },
       );
     }
+    this.__purgeEliminatedPlayersInTurnOrder();
     this.__collectCards();
     this.__shuffleDecks();
     this.__dealCardsToPlayers();
@@ -456,12 +512,7 @@ export class Session implements Saveable {
     const handResult: HandResult = new HandResult(
       Object.values(this.activePlayersInTurnOrder),
     );
-    this.__applyHandResultToPlayers(handResult);
-    this.__purgeEliminatedPlayersInTurnOrder();
     this.__handResults.push(handResult);
-    if (this.activePlayersInTurnOrder.length === 1) {
-      this.__gameStatus = GameStatus.COMPLETED;
-    }
   }
 
   public setPlayerCardDieRollsForCurrentPlayer(

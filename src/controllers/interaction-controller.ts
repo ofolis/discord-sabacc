@@ -182,7 +182,7 @@ export class InteractionController {
     channelState: ChannelState,
   ): Promise<void> {
     await Discord.sendChannelMessage(channelState.channelId, {
-      content: "Player turn has started.",
+      content: `${this.__formatPlayerNameString(channelState.session.currentPlayer)}'s turn has started.`,
     });
   }
 

@@ -95,6 +95,20 @@ export class Player implements Saveable {
     this.__cards.push(playerCard);
   }
 
+  protected _clearRoundTurn(): void {
+    if (this.__roundTurn === null) {
+      Log.throw(
+        "Cannot clear round turn. Player does not have a round turn defined.",
+      );
+    }
+    if (!this.__roundTurn.isResolved) {
+      Log.throw("Cannot clear round turn. Round turn has not been resolved.", {
+        roundTurn: this.__roundTurn,
+      });
+    }
+    this.__roundTurn = null;
+  }
+
   protected _createRoundTurn(turnAction: TurnAction): Turn {
     if (this.__status !== PlayerStatus.ACTIVE) {
       Log.throw("Cannot create turn. Player is not currently active.", {
@@ -218,6 +232,18 @@ export class Player implements Saveable {
       );
     }
     this.__roundTurn["_resolve"]();
+  }
+
+  protected _spendToken(): void {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot spend token. Player is not currently active.", {
+        status: this.__status,
+      });
+    }
+    if (this.currentTokenTotal === 0) {
+      Log.throw("Cannot spend token. Player has no remaining tokens.");
+    }
+    this.__spentTokenTotal++;
   }
 
   public getCards(cardSuit?: CardSuit): readonly PlayerCard[] {
