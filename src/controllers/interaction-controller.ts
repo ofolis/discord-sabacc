@@ -241,12 +241,12 @@ export class InteractionController {
       [
         new discordJs.ButtonBuilder({
           customId: "firstCard",
-          label: this.__formatCardString(discardOptions[0]),
+          label: this.__formatCardString(discardOptions[0], false),
           style: discordJs.ButtonStyle.Primary,
         }),
         new discordJs.ButtonBuilder({
           customId: "secondCard",
-          label: this.__formatCardString(discardOptions[1]),
+          label: this.__formatCardString(discardOptions[1], false),
           style: discordJs.ButtonStyle.Primary,
         }),
       ],
@@ -295,7 +295,7 @@ export class InteractionController {
       buttonBuilders.push(
         new discordJs.ButtonBuilder({
           customId: "bloodDiscard",
-          label: this.__formatCardString(topBloodDiscardCard),
+          label: this.__formatCardString(topBloodDiscardCard, false),
           style: discordJs.ButtonStyle.Primary,
         }),
       );
@@ -306,7 +306,7 @@ export class InteractionController {
       buttonBuilders.unshift(
         new discordJs.ButtonBuilder({
           customId: "sandDiscard",
-          label: this.__formatCardString(topSandDiscardCard),
+          label: this.__formatCardString(topSandDiscardCard, false),
           style: discordJs.ButtonStyle.Primary,
         }),
       );
