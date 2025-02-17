@@ -3,6 +3,18 @@ import { DirectMessage } from ".";
 import { CommandOptionType, CommandOptionTypeMap, Log } from "../..";
 
 export class DirectCommandMessage extends DirectMessage {
+  private __commandOptions: discordJs.CommandInteractionOption[] | undefined;
+
+  private constructor(
+    interactionResponse: discordJs.InteractionResponse,
+    user: discordJs.User,
+    commandOptions?: discordJs.CommandInteractionOption[],
+  ) {
+    super(interactionResponse, user);
+    this.__commandOptions = commandOptions;
+    Log.debug("Direct command message context added.");
+  }
+
   public static async create(
     commandInteraction: discordJs.CommandInteraction,
     isPrivate: boolean,
@@ -16,18 +28,6 @@ export class DirectCommandMessage extends DirectMessage {
       commandInteraction.user,
       [...commandInteraction.options.data],
     );
-  }
-
-  private __commandOptions: discordJs.CommandInteractionOption[] | undefined;
-
-  private constructor(
-    interactionResponse: discordJs.InteractionResponse,
-    user: discordJs.User,
-    commandOptions?: discordJs.CommandInteractionOption[],
-  ) {
-    super(interactionResponse, user);
-    this.__commandOptions = commandOptions;
-    Log.debug("Direct command message context added.");
   }
 
   public getCommandOption<T extends CommandOptionType>(

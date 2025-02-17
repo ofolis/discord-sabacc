@@ -4,6 +4,8 @@ import { Json, Saveable, Utils } from "../core";
 import { UserStateJson } from "../types";
 
 export class UserState implements Saveable {
+  public readonly id: string;
+
   private __latestGameCompletedAt: number | null = null;
 
   private __latestGameStartedAt: number | null = null;
@@ -15,8 +17,6 @@ export class UserState implements Saveable {
   private __totalGamesStarted: number = 0;
 
   private __totalGamesWon: number = 0;
-
-  public readonly id: string;
 
   public constructor(userOrPlayerOrJson: discordJs.User | Player | Json) {
     if (
@@ -55,11 +55,6 @@ export class UserState implements Saveable {
     }
   }
 
-  private __logGameCompleted(): void {
-    this.__latestGameCompletedAt = Date.now();
-    this.__totalGamesCompleted++;
-  }
-
   public logGameLost(): void {
     this.__totalGamesLost++;
     this.__logGameCompleted();
@@ -85,5 +80,10 @@ export class UserState implements Saveable {
       totalGamesStarted: this.__totalGamesStarted,
       totalGamesWon: this.__totalGamesWon,
     };
+  }
+
+  private __logGameCompleted(): void {
+    this.__latestGameCompletedAt = Date.now();
+    this.__totalGamesCompleted++;
   }
 }

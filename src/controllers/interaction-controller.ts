@@ -12,108 +12,6 @@ import { ChannelState, Player, PlayerCard } from "../saveables";
 import { Card } from "../types";
 
 export class InteractionController {
-  private static async __createChannelMessageEmbed(
-    channelId: string,
-    embedData: discordJs.EmbedData,
-    buttons?: discordJs.ButtonBuilder[],
-  ): Promise<ChannelMessage> {
-    return await Discord.sendChannelMessage(
-      channelId,
-      this.__createEmbedBaseMessageOptions(embedData, buttons),
-    );
-  }
-
-  private static __createEmbedBaseMessageOptions(
-    embedData: discordJs.EmbedData,
-    buttons?: discordJs.ButtonBuilder[],
-  ): discordJs.BaseMessageOptions {
-    const components: discordJs.ActionRowBuilder<discordJs.ButtonBuilder>[] =
-      buttons !== undefined && buttons.length > 0
-        ? [
-            new discordJs.ActionRowBuilder<discordJs.ButtonBuilder>({
-              components: buttons,
-            }),
-          ]
-        : [];
-    return {
-      embeds: [new discordJs.EmbedBuilder(embedData)],
-      components: components.length > 0 ? components : undefined,
-    };
-  }
-
-  private static __formatCardSuitIcon(cardSuit: CardSuit): string {
-    switch (cardSuit) {
-      case CardSuit.BLOOD:
-        return "🟥";
-      case CardSuit.SAND:
-        return "🟨";
-      default:
-        Log.throw("Cannot format card suit icon. Unknown card suit.", {
-          cardSuit,
-        });
-    }
-  }
-
-  private static __formatCardString(
-    card: Card | PlayerCard,
-    includeCodeQuotes: boolean = true,
-  ): string {
-    const playerCard: PlayerCard | null = "card" in card ? card : null;
-    const actualCard: Card = "card" in card ? card.card : card;
-    const suitIcon: string = this.__formatCardSuitIcon(actualCard.suit);
-    let typeLabel: string;
-    switch (actualCard.type) {
-      case CardType.IMPOSTER:
-        typeLabel = "Imposter";
-        break;
-      case CardType.NUMBER:
-        typeLabel = actualCard.value.toString();
-        break;
-      case CardType.SYLOP:
-        typeLabel = "Sylop";
-        break;
-      default:
-        Log.throw("Cannot format card string. Unknown card type.", actualCard);
-    }
-    if (
-      playerCard !== null &&
-      actualCard.type === CardType.IMPOSTER &&
-      playerCard.dieRolls.length === 1
-    ) {
-      typeLabel = `${playerCard.dieRolls[0].toString()} (${typeLabel})`;
-    }
-    return includeCodeQuotes
-      ? `\`${suitIcon}${typeLabel}\``
-      : `${suitIcon}${typeLabel}`;
-  }
-
-  private static __formatPlayerNameString(
-    playerOrUser: Player | discordJs.User,
-  ): string {
-    return (playerOrUser.globalName ?? playerOrUser.username).toUpperCase();
-  }
-
-  private static async __setChannelMessageEmbed(
-    message: ChannelMessage,
-    embedData: discordJs.EmbedData,
-    buttons?: discordJs.ButtonBuilder[],
-  ): Promise<void> {
-    await message.update(
-      this.__createEmbedBaseMessageOptions(embedData, buttons),
-    );
-  }
-
-  private static async __setChannelMessageFollowup(
-    message: ChannelMessage,
-    content: string,
-  ): Promise<void> {
-    await message.update({
-      embeds: [], // Clear any embed
-      components: [], // Clear any buttons
-      content: `*${content}*`,
-    });
-  }
-
   public static async announceGameEnd(
     channelState: ChannelState,
   ): Promise<void> {
@@ -623,6 +521,47 @@ export class InteractionController {
     return userAccumulator;
   }
 
+  public static async promptRevealCards(
+    message: ChannelMessage,
+  ): Promise<boolean | null> {
+    await this.__setChannelMessageEmbed(
+      message,
+      {
+        description: "Do you want to reveal your cards and end your hand?",
+        title: "Reveal Cards",
+      },
+      [
+        new discordJs.ButtonBuilder({
+          customId: "reveal",
+          label: "Reveal Cards",
+          style: discordJs.ButtonStyle.Primary,
+        }),
+        new discordJs.ButtonBuilder({
+          customId: "cancel",
+          label: "Cancel",
+          style: discordJs.ButtonStyle.Secondary,
+        }),
+      ],
+    );
+    const buttonInteraction: discordJs.ButtonInteraction | null =
+      await message.awaitButtonInteraction();
+    if (buttonInteraction === null) {
+      await this.__setChannelMessageFollowup(message, "Card reveal timed out.");
+      return null;
+    }
+    switch (buttonInteraction.customId) {
+      case "reveal":
+        return true;
+      case "cancel":
+        return false;
+      default:
+        Log.throw(
+          "Could not resolve reveal cards prompt. Unknown button interaction custom ID.",
+          { buttonInteraction },
+        );
+    }
+  }
+
   public static async promptRollDice(
     message: ChannelMessage,
     playerCard: PlayerCard,
@@ -665,44 +604,105 @@ export class InteractionController {
     }
   }
 
-  public static async promptRevealCards(
-    message: ChannelMessage,
-  ): Promise<boolean | null> {
-    await this.__setChannelMessageEmbed(
-      message,
-      {
-        description: "Do you want to reveal your cards and end your hand?",
-        title: "Reveal Cards",
-      },
-      [
-        new discordJs.ButtonBuilder({
-          customId: "reveal",
-          label: "Reveal Cards",
-          style: discordJs.ButtonStyle.Primary,
-        }),
-        new discordJs.ButtonBuilder({
-          customId: "cancel",
-          label: "Cancel",
-          style: discordJs.ButtonStyle.Secondary,
-        }),
-      ],
+  private static async __createChannelMessageEmbed(
+    channelId: string,
+    embedData: discordJs.EmbedData,
+    buttons?: discordJs.ButtonBuilder[],
+  ): Promise<ChannelMessage> {
+    return await Discord.sendChannelMessage(
+      channelId,
+      this.__createEmbedBaseMessageOptions(embedData, buttons),
     );
-    const buttonInteraction: discordJs.ButtonInteraction | null =
-      await message.awaitButtonInteraction();
-    if (buttonInteraction === null) {
-      await this.__setChannelMessageFollowup(message, "Card reveal timed out.");
-      return null;
-    }
-    switch (buttonInteraction.customId) {
-      case "reveal":
-        return true;
-      case "cancel":
-        return false;
+  }
+
+  private static __createEmbedBaseMessageOptions(
+    embedData: discordJs.EmbedData,
+    buttons?: discordJs.ButtonBuilder[],
+  ): discordJs.BaseMessageOptions {
+    const components: discordJs.ActionRowBuilder<discordJs.ButtonBuilder>[] =
+      buttons !== undefined && buttons.length > 0
+        ? [
+            new discordJs.ActionRowBuilder<discordJs.ButtonBuilder>({
+              components: buttons,
+            }),
+          ]
+        : [];
+    return {
+      embeds: [new discordJs.EmbedBuilder(embedData)],
+      components: components.length > 0 ? components : undefined,
+    };
+  }
+
+  private static __formatCardString(
+    card: Card | PlayerCard,
+    includeCodeQuotes: boolean = true,
+  ): string {
+    const playerCard: PlayerCard | null = "card" in card ? card : null;
+    const actualCard: Card = "card" in card ? card.card : card;
+    const suitIcon: string = this.__formatCardSuitIcon(actualCard.suit);
+    let typeLabel: string;
+    switch (actualCard.type) {
+      case CardType.IMPOSTER:
+        typeLabel = "Imposter";
+        break;
+      case CardType.NUMBER:
+        typeLabel = actualCard.value.toString();
+        break;
+      case CardType.SYLOP:
+        typeLabel = "Sylop";
+        break;
       default:
-        Log.throw(
-          "Could not resolve reveal cards prompt. Unknown button interaction custom ID.",
-          { buttonInteraction },
-        );
+        Log.throw("Cannot format card string. Unknown card type.", actualCard);
     }
+    if (
+      playerCard !== null &&
+      actualCard.type === CardType.IMPOSTER &&
+      playerCard.dieRolls.length === 1
+    ) {
+      typeLabel = `${playerCard.dieRolls[0].toString()} (${typeLabel})`;
+    }
+    return includeCodeQuotes
+      ? `\`${suitIcon}${typeLabel}\``
+      : `${suitIcon}${typeLabel}`;
+  }
+
+  private static __formatCardSuitIcon(cardSuit: CardSuit): string {
+    switch (cardSuit) {
+      case CardSuit.BLOOD:
+        return "🟥";
+      case CardSuit.SAND:
+        return "🟨";
+      default:
+        Log.throw("Cannot format card suit icon. Unknown card suit.", {
+          cardSuit,
+        });
+    }
+  }
+
+  private static __formatPlayerNameString(
+    playerOrUser: Player | discordJs.User,
+  ): string {
+    return (playerOrUser.globalName ?? playerOrUser.username).toUpperCase();
+  }
+
+  private static async __setChannelMessageEmbed(
+    message: ChannelMessage,
+    embedData: discordJs.EmbedData,
+    buttons?: discordJs.ButtonBuilder[],
+  ): Promise<void> {
+    await message.update(
+      this.__createEmbedBaseMessageOptions(embedData, buttons),
+    );
+  }
+
+  private static async __setChannelMessageFollowup(
+    message: ChannelMessage,
+    content: string,
+  ): Promise<void> {
+    await message.update({
+      embeds: [], // Clear any embed
+      components: [], // Clear any buttons
+      content: `*${content}*`,
+    });
   }
 }

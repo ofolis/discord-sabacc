@@ -13,6 +13,8 @@ import { GameStatus } from "../enums";
 import { ChannelStateJson, SessionJson, UserStateJson } from "../types";
 
 export class ChannelState implements Saveable {
+  public readonly channelId: string;
+
   private __lastSessionGameStatus: GameStatus;
 
   private __latestGameCompletedAt: number | null = null;
@@ -26,12 +28,6 @@ export class ChannelState implements Saveable {
   private __totalGamesStarted: number = 0;
 
   private __userStates: Record<string, UserState> = {};
-
-  public readonly channelId: string;
-
-  public get session(): Session {
-    return this.__session;
-  }
 
   public constructor(
     privateChannelMessageOrJson: ChannelCommandMessage | Json,
@@ -87,6 +83,40 @@ export class ChannelState implements Saveable {
     }
     // Store the current session game status for future comparison
     this.__lastSessionGameStatus = this.__session.gameStatus;
+  }
+
+  public get session(): Session {
+    return this.__session;
+  }
+
+  public createSession(privateChannelMessage: ChannelCommandMessage): void {
+    const startingTokenTotal: number =
+      privateChannelMessage.getCommandOption<CommandOptionType.INTEGER>(
+        "tokens",
+        CommandOptionType.INTEGER,
+      ) ?? TOKEN_DEFAULT;
+    this.__session = new Session(
+      privateChannelMessage.user,
+      startingTokenTotal,
+    );
+  }
+
+  public toJson(): ChannelStateJson {
+    this.__updateUserStates();
+    return {
+      channelId: this.channelId,
+      latestGameCompletedAt: this.__latestGameCompletedAt,
+      latestGameStartedAt: this.__latestGameStartedAt,
+      session: this.__session.toJson(),
+      totalGamesCompleted: this.__totalGamesCompleted,
+      totalGamesStarted: this.__totalGamesStarted,
+      userStates: Object.fromEntries(
+        Object.entries(this.__userStates).map(([userStateId, userState]) => [
+          userStateId,
+          userState.toJson(),
+        ]),
+      ),
+    };
   }
 
   private __createUserState(userOrPlayer: discordJs.User | Player): void {
@@ -145,35 +175,5 @@ export class ChannelState implements Saveable {
         }
       }
     });
-  }
-
-  public createSession(privateChannelMessage: ChannelCommandMessage): void {
-    const startingTokenTotal: number =
-      privateChannelMessage.getCommandOption<CommandOptionType.INTEGER>(
-        "tokens",
-        CommandOptionType.INTEGER,
-      ) ?? TOKEN_DEFAULT;
-    this.__session = new Session(
-      privateChannelMessage.user,
-      startingTokenTotal,
-    );
-  }
-
-  public toJson(): ChannelStateJson {
-    this.__updateUserStates();
-    return {
-      channelId: this.channelId,
-      latestGameCompletedAt: this.__latestGameCompletedAt,
-      latestGameStartedAt: this.__latestGameStartedAt,
-      session: this.__session.toJson(),
-      totalGamesCompleted: this.__totalGamesCompleted,
-      totalGamesStarted: this.__totalGamesStarted,
-      userStates: Object.fromEntries(
-        Object.entries(this.__userStates).map(([userStateId, userState]) => [
-          userStateId,
-          userState.toJson(),
-        ]),
-      ),
-    };
   }
 }

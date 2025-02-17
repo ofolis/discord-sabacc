@@ -3,19 +3,11 @@ import { CardType, PlayerCardSource } from "../../enums";
 import { Card, PlayerCardJson } from "../../types";
 
 export class PlayerCard implements Saveable {
+  protected _dieRolls: number[] = [];
+
   private __card: Card;
 
   private __source: PlayerCardSource;
-
-  protected _dieRolls: number[] = [];
-
-  public get card(): Card {
-    return this.__card;
-  }
-
-  public get dieRolls(): readonly number[] {
-    return this._dieRolls;
-  }
 
   public constructor(card: Card, source: PlayerCardSource);
 
@@ -37,6 +29,14 @@ export class PlayerCard implements Saveable {
       this._dieRolls = Utils.getJsonEntry(json, "dieRolls") as number[];
       this.__source = Utils.getJsonEntry(json, "source") as PlayerCardSource;
     }
+  }
+
+  public get card(): Card {
+    return this.__card;
+  }
+
+  public get dieRolls(): readonly number[] {
+    return this._dieRolls;
   }
 
   public getValue(secondaryPlayerCard?: PlayerCard): number {

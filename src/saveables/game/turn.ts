@@ -3,25 +3,13 @@ import { TurnAction } from "../../enums";
 import { Card, TurnJson } from "../../types";
 
 export class Turn implements Saveable {
+  public readonly action: TurnAction;
+
   private __discardedCard: Card | null = null;
 
   private __drawnCard: Card | null = null;
 
   private __isResolved: boolean = false;
-
-  public readonly action: TurnAction;
-
-  public get discardedCard(): Card | null {
-    return this.__discardedCard;
-  }
-
-  public get drawnCard(): Card | null {
-    return this.__drawnCard;
-  }
-
-  public get isResolved(): boolean {
-    return this.__isResolved;
-  }
 
   public constructor(turnActionOrjson: TurnAction | Json) {
     if (typeof turnActionOrjson !== "object") {
@@ -36,11 +24,16 @@ export class Turn implements Saveable {
     }
   }
 
-  protected _resolve(): void {
-    if (this.__isResolved) {
-      Log.throw("Cannot resolve turn. Turn is already resolved.");
-    }
-    this.__isResolved = true;
+  public get discardedCard(): Card | null {
+    return this.__discardedCard;
+  }
+
+  public get drawnCard(): Card | null {
+    return this.__drawnCard;
+  }
+
+  public get isResolved(): boolean {
+    return this.__isResolved;
   }
 
   public toJson(): TurnJson {
@@ -50,5 +43,12 @@ export class Turn implements Saveable {
       drawnCard: this.__drawnCard,
       isResolved: this.__isResolved,
     };
+  }
+
+  protected _resolve(): void {
+    if (this.__isResolved) {
+      Log.throw("Cannot resolve turn. Turn is already resolved.");
+    }
+    this.__isResolved = true;
   }
 }

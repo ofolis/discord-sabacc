@@ -18,67 +18,6 @@ export class Discord {
     return this.__client;
   }
 
-  private static async __deployGlobalCommands(
-    rest: discordJs.REST,
-    commands: discordJs.SlashCommandBuilder[],
-  ): Promise<void> {
-    Log.debug("Deploying global commands to Discord...", { commands });
-    await rest.put(
-      discordJs.Routes.applicationCommands(
-        Environment.config.discordApplicationId,
-      ),
-      {
-        body: commands,
-      },
-    );
-    Log.debug("Discord global commands deployed successfully.");
-  }
-
-  private static async __deployGuildCommands(
-    rest: discordJs.REST,
-    commands: discordJs.SlashCommandBuilder[],
-    guildIds: string[],
-  ): Promise<void> {
-    Log.debug("Deploying commands to Discord guilds...", {
-      commands,
-      guildIds,
-    });
-    await Promise.all(
-      guildIds.map(guildId =>
-        rest.put(
-          discordJs.Routes.applicationGuildCommands(
-            Environment.config.discordApplicationId,
-            guildId,
-          ),
-          {
-            body: commands,
-          },
-        ),
-      ),
-    );
-    Log.debug("Discord guild commands deployed successfully.");
-  }
-
-  private static __getChannel(channelId: string): discordJs.TextChannel {
-    Log.debug("Retrieving Discord channel...", { channelId });
-    const channel: discordJs.Channel | undefined =
-      this.client.channels.cache.get(channelId);
-    if (channel === undefined) {
-      Log.throw(
-        "Cannot get Discord channel. ID was not found in the channel cache.",
-        { channelId },
-      );
-    }
-    if (channel.type !== discordJs.ChannelType.GuildText) {
-      Log.throw(
-        "Cannot get Discord channel. Channel at ID was not a guild text channel.",
-        { channel },
-      );
-    }
-    Log.debug("Discord channel retrieved successfully.", { channel });
-    return channel;
-  }
-
   public static async deployCommands(
     commandList: Command[],
     guildIds?: string[],
@@ -185,5 +124,66 @@ export class Discord {
       channelId,
     );
     return channelMessage;
+  }
+
+  private static async __deployGlobalCommands(
+    rest: discordJs.REST,
+    commands: discordJs.SlashCommandBuilder[],
+  ): Promise<void> {
+    Log.debug("Deploying global commands to Discord...", { commands });
+    await rest.put(
+      discordJs.Routes.applicationCommands(
+        Environment.config.discordApplicationId,
+      ),
+      {
+        body: commands,
+      },
+    );
+    Log.debug("Discord global commands deployed successfully.");
+  }
+
+  private static async __deployGuildCommands(
+    rest: discordJs.REST,
+    commands: discordJs.SlashCommandBuilder[],
+    guildIds: string[],
+  ): Promise<void> {
+    Log.debug("Deploying commands to Discord guilds...", {
+      commands,
+      guildIds,
+    });
+    await Promise.all(
+      guildIds.map(guildId =>
+        rest.put(
+          discordJs.Routes.applicationGuildCommands(
+            Environment.config.discordApplicationId,
+            guildId,
+          ),
+          {
+            body: commands,
+          },
+        ),
+      ),
+    );
+    Log.debug("Discord guild commands deployed successfully.");
+  }
+
+  private static __getChannel(channelId: string): discordJs.TextChannel {
+    Log.debug("Retrieving Discord channel...", { channelId });
+    const channel: discordJs.Channel | undefined =
+      this.client.channels.cache.get(channelId);
+    if (channel === undefined) {
+      Log.throw(
+        "Cannot get Discord channel. ID was not found in the channel cache.",
+        { channelId },
+      );
+    }
+    if (channel.type !== discordJs.ChannelType.GuildText) {
+      Log.throw(
+        "Cannot get Discord channel. Channel at ID was not a guild text channel.",
+        { channel },
+      );
+    }
+    Log.debug("Discord channel retrieved successfully.", { channel });
+    return channel;
   }
 }

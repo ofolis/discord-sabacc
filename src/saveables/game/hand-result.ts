@@ -6,6 +6,30 @@ import {
   RankedPlayerScorable,
 } from "../../types";
 export class HandResult implements Saveable {
+  public readonly rankings: RankedPlayerScorable[];
+
+  private __isAppliedToPlayers: boolean = false;
+
+  public constructor(playersOrJson: Player[] | Json) {
+    if (Array.isArray(playersOrJson)) {
+      const players: Player[] = playersOrJson;
+      const playerScorables: PlayerScoreable[] = players.map(player =>
+        player["_getScorable"](),
+      );
+      this.rankings = HandResult.__rankPlayers(playerScorables);
+    } else {
+      const json: Json = playersOrJson;
+      this.rankings = Utils.getJsonEntry(
+        json,
+        "rankings",
+      ) as RankedPlayerScorable[];
+    }
+  }
+
+  protected get _isAppliedToPlayers(): boolean {
+    return this.__isAppliedToPlayers;
+  }
+
   private static __calculateTokenLoss(
     playerScorable: PlayerScoreable,
     rankIndex: number,
@@ -61,28 +85,10 @@ export class HandResult implements Saveable {
     });
   }
 
-  private __isAppliedToPlayers: boolean = false;
-
-  public readonly rankings: RankedPlayerScorable[];
-
-  protected get _isAppliedToPlayers(): boolean {
-    return this.__isAppliedToPlayers;
-  }
-
-  public constructor(playersOrJson: Player[] | Json) {
-    if (Array.isArray(playersOrJson)) {
-      const players: Player[] = playersOrJson;
-      const playerScorables: PlayerScoreable[] = players.map(player =>
-        player["_getScorable"](),
-      );
-      this.rankings = HandResult.__rankPlayers(playerScorables);
-    } else {
-      const json: Json = playersOrJson;
-      this.rankings = Utils.getJsonEntry(
-        json,
-        "rankings",
-      ) as RankedPlayerScorable[];
-    }
+  public toJson(): HandResultJson {
+    return {
+      rankings: this.rankings,
+    };
   }
 
   protected _markAsAppliedToPlayers(): void {
@@ -92,11 +98,5 @@ export class HandResult implements Saveable {
       );
     }
     this.__isAppliedToPlayers = true;
-  }
-
-  public toJson(): HandResultJson {
-    return {
-      rankings: this.rankings,
-    };
   }
 }

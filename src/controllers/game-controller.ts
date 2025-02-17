@@ -13,6 +13,95 @@ import { ChannelState, PlayerCard, Turn } from "../saveables";
 import { Card } from "../types";
 
 export class GameController {
+  public static async handleNewGame(
+    message: ChannelCommandMessage,
+    channelState: ChannelState | null,
+  ): Promise<void> {
+    // Ensure channel state exists with a new session
+    if (channelState === null) {
+      channelState = new ChannelState(message);
+      await InteractionController.followupGameCreated(message);
+    } else {
+      const endCurrentGame: boolean | null =
+        await InteractionController.promptEndCurrentGame(message);
+      if (endCurrentGame === null) {
+        return;
+      }
+      if (endCurrentGame) {
+        channelState.createSession(message);
+        await InteractionController.followupGameEnded(message);
+      } else {
+        await InteractionController.followupGameNotEnded(message);
+        return;
+      }
+    }
+
+    // Prompt for players to join
+    const joinedUsers: discordJs.User[] | null =
+      await InteractionController.promptJoinGame(message);
+    if (joinedUsers === null) {
+      return;
+    }
+
+    // Add players and start game
+    channelState.session.addPlayers(joinedUsers);
+    await this.__startGame(channelState);
+
+    // Save at happy path end
+    DataController.saveChannelState(channelState);
+  }
+
+  public static async handlePlayTurn(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<void> {
+    // Get current turn
+    let turn: Turn | null = channelState.session.currentPlayer.roundTurn;
+    if (turn === null) {
+      const turnAction: TurnAction | null =
+        await InteractionController.promptChooseTurnAction(
+          message,
+          channelState,
+        );
+      if (turnAction === null) {
+        return;
+      }
+      turn = channelState.session.createRoundTurnForCurrentPlayer(turnAction);
+    }
+
+    // Resolve turn action if not already resolved
+    let turnResolved: boolean = turn.isResolved;
+    if (!turnResolved) {
+      switch (turn.action) {
+        case TurnAction.DRAW:
+          turnResolved = await this.__resolveTurnDraw(message, channelState);
+          break;
+        case TurnAction.REVEAL:
+          turnResolved = await this.__resolveTurnReveal(message, channelState);
+          break;
+        case TurnAction.STAND:
+          turnResolved = await this.__resolveTurnStand(message, channelState);
+          break;
+        default:
+          Log.throw("Cannot handle play turn. Unknown turn action.", {
+            turnAction: turn.action,
+            player: channelState.session.currentPlayer,
+          });
+      }
+      if (turnResolved) {
+        channelState.session.resolveRoundTurnForCurrentPlayer();
+      }
+    }
+
+    // End turn if resolved
+    if (turnResolved) {
+      await this.__endTurn(channelState);
+    }
+
+    // Save at happy path end
+    DataController.saveChannelState(channelState);
+  }
+
   private static async __endTurn(channelState: ChannelState): Promise<void> {
     channelState.session.iterate();
 
@@ -204,94 +293,5 @@ export class GameController {
     channelState.session.initializeHand();
     await InteractionController.announceGameStart(channelState);
     await this.__handleTurnStart(channelState);
-  }
-
-  public static async handleNewGame(
-    message: ChannelCommandMessage,
-    channelState: ChannelState | null,
-  ): Promise<void> {
-    // Ensure channel state exists with a new session
-    if (channelState === null) {
-      channelState = new ChannelState(message);
-      await InteractionController.followupGameCreated(message);
-    } else {
-      const endCurrentGame: boolean | null =
-        await InteractionController.promptEndCurrentGame(message);
-      if (endCurrentGame === null) {
-        return;
-      }
-      if (endCurrentGame) {
-        channelState.createSession(message);
-        await InteractionController.followupGameEnded(message);
-      } else {
-        await InteractionController.followupGameNotEnded(message);
-        return;
-      }
-    }
-
-    // Prompt for players to join
-    const joinedUsers: discordJs.User[] | null =
-      await InteractionController.promptJoinGame(message);
-    if (joinedUsers === null) {
-      return;
-    }
-
-    // Add players and start game
-    channelState.session.addPlayers(joinedUsers);
-    await this.__startGame(channelState);
-
-    // Save at happy path end
-    DataController.saveChannelState(channelState);
-  }
-
-  public static async handlePlayTurn(
-    message: ChannelCommandMessage,
-    channelState: ChannelState,
-  ): Promise<void> {
-    // Get current turn
-    let turn: Turn | null = channelState.session.currentPlayer.roundTurn;
-    if (turn === null) {
-      const turnAction: TurnAction | null =
-        await InteractionController.promptChooseTurnAction(
-          message,
-          channelState,
-        );
-      if (turnAction === null) {
-        return;
-      }
-      turn = channelState.session.createRoundTurnForCurrentPlayer(turnAction);
-    }
-
-    // Resolve turn action if not already resolved
-    let turnResolved: boolean = turn.isResolved;
-    if (!turnResolved) {
-      switch (turn.action) {
-        case TurnAction.DRAW:
-          turnResolved = await this.__resolveTurnDraw(message, channelState);
-          break;
-        case TurnAction.REVEAL:
-          turnResolved = await this.__resolveTurnReveal(message, channelState);
-          break;
-        case TurnAction.STAND:
-          turnResolved = await this.__resolveTurnStand(message, channelState);
-          break;
-        default:
-          Log.throw("Cannot handle play turn. Unknown turn action.", {
-            turnAction: turn.action,
-            player: channelState.session.currentPlayer,
-          });
-      }
-      if (turnResolved) {
-        channelState.session.resolveRoundTurnForCurrentPlayer();
-      }
-    }
-
-    // End turn if resolved
-    if (turnResolved) {
-      await this.__endTurn(channelState);
-    }
-
-    // Save at happy path end
-    DataController.saveChannelState(channelState);
   }
 }

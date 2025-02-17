@@ -15,6 +15,12 @@ import {
   TurnJson,
 } from "../../types";
 export class Player implements Saveable {
+  public readonly globalName: string | null;
+
+  public readonly id: string;
+
+  public readonly username: string;
+
   private __avatarId: string | null;
 
   private __cards: PlayerCard[] = [];
@@ -26,33 +32,6 @@ export class Player implements Saveable {
   private __status: PlayerStatus = PlayerStatus.UNINITIALIZED;
 
   private __tokenTotal: number = 0;
-
-  public readonly globalName: string | null;
-
-  public readonly id: string;
-
-  public readonly username: string;
-
-  public get cardTotal(): number {
-    if (this.__status !== PlayerStatus.ACTIVE) {
-      Log.throw("Cannot get card total. Player is not currently active.", {
-        status: this.__status,
-      });
-    }
-    return this.__cards.length;
-  }
-
-  public get currentTokenTotal(): number {
-    return this.__tokenTotal - this.__spentTokenTotal;
-  }
-
-  public get roundTurn(): Turn | null {
-    return this.__roundTurn;
-  }
-
-  public get status(): PlayerStatus {
-    return this.__status;
-  }
 
   public constructor(userOrJson: discordJs.User | Json) {
     if (userOrJson instanceof discordJs.User) {
@@ -83,6 +62,56 @@ export class Player implements Saveable {
       this.id = Utils.getJsonEntry(json, "id") as string;
       this.username = Utils.getJsonEntry(json, "username") as string;
     }
+  }
+
+  public get cardTotal(): number {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot get card total. Player is not currently active.", {
+        status: this.__status,
+      });
+    }
+    return this.__cards.length;
+  }
+
+  public get currentTokenTotal(): number {
+    return this.__tokenTotal - this.__spentTokenTotal;
+  }
+
+  public get roundTurn(): Turn | null {
+    return this.__roundTurn;
+  }
+
+  public get status(): PlayerStatus {
+    return this.__status;
+  }
+
+  public getCards(cardSuit?: CardSuit): readonly PlayerCard[] {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot get cards. Player is not currently active.", {
+        status: this.__status,
+      });
+    }
+    if (cardSuit === undefined) {
+      return this.__cards;
+    } else {
+      return this.__cards.filter(
+        playerCard => playerCard.card.suit === cardSuit,
+      );
+    }
+  }
+
+  public toJson(): PlayerJson {
+    return {
+      avatarId: this.__avatarId,
+      cards: this.__cards.map(playerCard => playerCard.toJson()),
+      id: this.id,
+      globalName: this.globalName,
+      roundTurn: this.__roundTurn !== null ? this.__roundTurn.toJson() : null,
+      spentTokenTotal: this.__spentTokenTotal,
+      status: this.__status,
+      tokenTotal: this.__tokenTotal,
+      username: this.username,
+    };
   }
 
   protected _addCard(card: Card, playerCardSource: PlayerCardSource): void {
@@ -244,34 +273,5 @@ export class Player implements Saveable {
       Log.throw("Cannot spend token. Player has no remaining tokens.");
     }
     this.__spentTokenTotal++;
-  }
-
-  public getCards(cardSuit?: CardSuit): readonly PlayerCard[] {
-    if (this.__status !== PlayerStatus.ACTIVE) {
-      Log.throw("Cannot get cards. Player is not currently active.", {
-        status: this.__status,
-      });
-    }
-    if (cardSuit === undefined) {
-      return this.__cards;
-    } else {
-      return this.__cards.filter(
-        playerCard => playerCard.card.suit === cardSuit,
-      );
-    }
-  }
-
-  public toJson(): PlayerJson {
-    return {
-      avatarId: this.__avatarId,
-      cards: this.__cards.map(playerCard => playerCard.toJson()),
-      id: this.id,
-      globalName: this.globalName,
-      roundTurn: this.__roundTurn !== null ? this.__roundTurn.toJson() : null,
-      spentTokenTotal: this.__spentTokenTotal,
-      status: this.__status,
-      tokenTotal: this.__tokenTotal,
-      username: this.username,
-    };
   }
 }

@@ -4,10 +4,6 @@ import { Log } from "./log";
 import { Json } from "./types";
 
 export class IO {
-  private static __getDataFilePath(id: string): string {
-    return `${Environment.dataPath}/${id}.json`;
-  }
-
   public static loadData(id: string): Json | null {
     Log.debug("Loading data at ID...", { id });
     const filePath: string = this.__getDataFilePath(id);
@@ -30,5 +26,9 @@ export class IO {
       encoding: "utf8",
     });
     Log.debug("Data saved successfully.");
+  }
+
+  private static __getDataFilePath(id: string): string {
+    return `${Environment.dataPath}/${id}.json`;
   }
 }

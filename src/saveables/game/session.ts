@@ -36,39 +36,6 @@ export class Session implements Saveable {
 
   private __startingTokenTotal: number;
 
-  public get activePlayerIndex(): number {
-    return this.__activePlayerIndex;
-  }
-
-  public get activePlayersInTurnOrder(): readonly Player[] {
-    return this.__activePlayerOrder.map(playerId => this.__players[playerId]);
-  }
-
-  public get allPlayers(): readonly Player[] {
-    return Object.values(this.__players);
-  }
-
-  public get currentPlayer(): Player {
-    if (this.__gameStatus !== GameStatus.ACTIVE) {
-      Log.throw("Cannot get current player. Game is not active.", {
-        gameStatus: this.__gameStatus,
-      });
-    }
-    return this.__players[this.__activePlayerOrder[this.__activePlayerIndex]];
-  }
-
-  public get gameStatus(): GameStatus {
-    return this.__gameStatus;
-  }
-
-  public get handIndex(): number {
-    return this.__handIndex;
-  }
-
-  public get roundIndex(): number {
-    return this.__roundIndex;
-  }
-
   public constructor(user: discordJs.User, startingTokenTotal: number);
 
   public constructor(json: Json);
@@ -139,119 +106,37 @@ export class Session implements Saveable {
     }
   }
 
-  private __collectCards(): void {
-    // Collect discard
-    this.__cards[CardSuit.BLOOD][DrawSource.DECK].push(
-      ...this.__cards[CardSuit.BLOOD][DrawSource.DISCARD],
-    );
-    Utils.emptyArray(this.__cards[CardSuit.BLOOD][DrawSource.DISCARD]);
-    this.__cards[CardSuit.SAND][DrawSource.DECK].push(
-      ...this.__cards[CardSuit.SAND][DrawSource.DISCARD],
-    );
-    Utils.emptyArray(this.__cards[CardSuit.SAND][DrawSource.DISCARD]);
-    // Collect player cards
-    Object.values(this.__players).forEach(player => {
-      const removedCards: Card[] = player["_removeAllCards"]();
-      removedCards.forEach(card => {
-        this.__cards[card.suit][DrawSource.DECK].push(card);
-      });
-    });
+  public get activePlayerIndex(): number {
+    return this.__activePlayerIndex;
   }
 
-  private __createPlayer(user: discordJs.User): Player {
-    if (user.id in this.__players) {
-      Log.throw(
-        "Cannot create player. A player already exists with the provided ID.",
-        { players: this.__players, user },
-      );
-    }
-    this.__players[user.id] = new Player(user);
-    return this.__players[user.id];
+  public get activePlayersInTurnOrder(): readonly Player[] {
+    return this.__activePlayerOrder.map(playerId => this.__players[playerId]);
   }
 
-  private __dealCardsToPlayers(): void {
-    Object.values(this.__players).forEach(player => {
-      if (player.cardTotal !== 0) {
-        Log.throw(
-          "Cannot deal cards to players. One or more players still contain cards.",
-          { players: this.__players },
-        );
-      }
-    });
-    if (
-      this.__cards[CardSuit.BLOOD][DrawSource.DISCARD].length !== 0 ||
-      this.__cards[CardSuit.SAND][DrawSource.DISCARD].length !== 0
-    ) {
-      Log.throw("Cannot deal cards to players. Discard still contains cards.", {
-        cards: this.__cards,
+  public get allPlayers(): readonly Player[] {
+    return Object.values(this.__players);
+  }
+
+  public get currentPlayer(): Player {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot get current player. Game is not active.", {
+        gameStatus: this.__gameStatus,
       });
     }
-    this.activePlayersInTurnOrder.forEach(player => {
-      player["_addCard"](
-        this.__drawCard(CardSuit.BLOOD, DrawSource.DECK),
-        PlayerCardSource.DEALT,
-      );
-      player["_addCard"](
-        this.__drawCard(CardSuit.SAND, DrawSource.DECK),
-        PlayerCardSource.DEALT,
-      );
-    });
-    this.__discardCard(this.__drawCard(CardSuit.BLOOD, DrawSource.DECK));
-    this.__discardCard(this.__drawCard(CardSuit.SAND, DrawSource.DECK));
+    return this.__players[this.__activePlayerOrder[this.__activePlayerIndex]];
   }
 
-  private __discardCard(card: Card): void {
-    this.__cards[card.suit][DrawSource.DISCARD].unshift(card);
+  public get gameStatus(): GameStatus {
+    return this.__gameStatus;
   }
 
-  private __drawCard(cardSuit: CardSuit, drawSource: DrawSource): Card {
-    if (this.__cards[cardSuit][drawSource].length === 0) {
-      Log.throw("Cannot draw card. Requested deck is empty.", {
-        cardSuit,
-        drawSource,
-        cards: this.__cards,
-      });
-    }
-    return Utils.removeTopArrayItem(this.__cards[cardSuit][drawSource]);
+  public get handIndex(): number {
+    return this.__handIndex;
   }
 
-  private __drawSourceToPlayerCardSource(
-    drawSource: DrawSource,
-  ): PlayerCardSource {
-    switch (drawSource) {
-      case DrawSource.DECK:
-        return PlayerCardSource.DECK_DRAW;
-      case DrawSource.DISCARD:
-        return PlayerCardSource.DISCARD_DRAW;
-      default:
-        Log.throw(
-          "Cannot convert draw source to player card source. Unknown draw source.",
-          {
-            drawSource,
-          },
-        );
-    }
-  }
-
-  private __initializePlayers(): void {
-    this.__activePlayerOrder = Object.keys(this.__players);
-    new Random().shuffle(this.__activePlayerOrder);
-    this.allPlayers.forEach(player => {
-      player["_initialize"](this.__startingTokenTotal);
-    });
-  }
-
-  private __purgeEliminatedPlayersInTurnOrder(): void {
-    const remainingPlayers: Player[] = this.activePlayersInTurnOrder.filter(
-      player => player.status === PlayerStatus.ACTIVE,
-    );
-    this.__activePlayerOrder = remainingPlayers.map(player => player.id);
-  }
-
-  private __shuffleDecks(): void {
-    const random: Random = new Random();
-    random.shuffle(this.__cards[CardSuit.BLOOD][DrawSource.DECK]);
-    random.shuffle(this.__cards[CardSuit.SAND][DrawSource.DECK]);
+  public get roundIndex(): number {
+    return this.__roundIndex;
   }
 
   public addPlayers(users: discordJs.User[]): void {
@@ -612,5 +497,120 @@ export class Session implements Saveable {
       startingPlayerId: this.__startingPlayerId,
       startingTokenTotal: this.__startingTokenTotal,
     };
+  }
+
+  private __collectCards(): void {
+    // Collect discard
+    this.__cards[CardSuit.BLOOD][DrawSource.DECK].push(
+      ...this.__cards[CardSuit.BLOOD][DrawSource.DISCARD],
+    );
+    Utils.emptyArray(this.__cards[CardSuit.BLOOD][DrawSource.DISCARD]);
+    this.__cards[CardSuit.SAND][DrawSource.DECK].push(
+      ...this.__cards[CardSuit.SAND][DrawSource.DISCARD],
+    );
+    Utils.emptyArray(this.__cards[CardSuit.SAND][DrawSource.DISCARD]);
+    // Collect player cards
+    Object.values(this.__players).forEach(player => {
+      const removedCards: Card[] = player["_removeAllCards"]();
+      removedCards.forEach(card => {
+        this.__cards[card.suit][DrawSource.DECK].push(card);
+      });
+    });
+  }
+
+  private __createPlayer(user: discordJs.User): Player {
+    if (user.id in this.__players) {
+      Log.throw(
+        "Cannot create player. A player already exists with the provided ID.",
+        { players: this.__players, user },
+      );
+    }
+    this.__players[user.id] = new Player(user);
+    return this.__players[user.id];
+  }
+
+  private __dealCardsToPlayers(): void {
+    Object.values(this.__players).forEach(player => {
+      if (player.cardTotal !== 0) {
+        Log.throw(
+          "Cannot deal cards to players. One or more players still contain cards.",
+          { players: this.__players },
+        );
+      }
+    });
+    if (
+      this.__cards[CardSuit.BLOOD][DrawSource.DISCARD].length !== 0 ||
+      this.__cards[CardSuit.SAND][DrawSource.DISCARD].length !== 0
+    ) {
+      Log.throw("Cannot deal cards to players. Discard still contains cards.", {
+        cards: this.__cards,
+      });
+    }
+    this.activePlayersInTurnOrder.forEach(player => {
+      player["_addCard"](
+        this.__drawCard(CardSuit.BLOOD, DrawSource.DECK),
+        PlayerCardSource.DEALT,
+      );
+      player["_addCard"](
+        this.__drawCard(CardSuit.SAND, DrawSource.DECK),
+        PlayerCardSource.DEALT,
+      );
+    });
+    this.__discardCard(this.__drawCard(CardSuit.BLOOD, DrawSource.DECK));
+    this.__discardCard(this.__drawCard(CardSuit.SAND, DrawSource.DECK));
+  }
+
+  private __discardCard(card: Card): void {
+    this.__cards[card.suit][DrawSource.DISCARD].unshift(card);
+  }
+
+  private __drawCard(cardSuit: CardSuit, drawSource: DrawSource): Card {
+    if (this.__cards[cardSuit][drawSource].length === 0) {
+      Log.throw("Cannot draw card. Requested deck is empty.", {
+        cardSuit,
+        drawSource,
+        cards: this.__cards,
+      });
+    }
+    return Utils.removeTopArrayItem(this.__cards[cardSuit][drawSource]);
+  }
+
+  private __drawSourceToPlayerCardSource(
+    drawSource: DrawSource,
+  ): PlayerCardSource {
+    switch (drawSource) {
+      case DrawSource.DECK:
+        return PlayerCardSource.DECK_DRAW;
+      case DrawSource.DISCARD:
+        return PlayerCardSource.DISCARD_DRAW;
+      default:
+        Log.throw(
+          "Cannot convert draw source to player card source. Unknown draw source.",
+          {
+            drawSource,
+          },
+        );
+    }
+  }
+
+  private __initializePlayers(): void {
+    this.__activePlayerOrder = Object.keys(this.__players);
+    new Random().shuffle(this.__activePlayerOrder);
+    this.allPlayers.forEach(player => {
+      player["_initialize"](this.__startingTokenTotal);
+    });
+  }
+
+  private __purgeEliminatedPlayersInTurnOrder(): void {
+    const remainingPlayers: Player[] = this.activePlayersInTurnOrder.filter(
+      player => player.status === PlayerStatus.ACTIVE,
+    );
+    this.__activePlayerOrder = remainingPlayers.map(player => player.id);
+  }
+
+  private __shuffleDecks(): void {
+    const random: Random = new Random();
+    random.shuffle(this.__cards[CardSuit.BLOOD][DrawSource.DECK]);
+    random.shuffle(this.__cards[CardSuit.SAND][DrawSource.DECK]);
   }
 }

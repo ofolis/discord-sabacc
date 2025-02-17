@@ -3,6 +3,28 @@ import { ChannelMessage } from ".";
 import { CommandOptionType, CommandOptionTypeMap, Log } from "../..";
 
 export class ChannelCommandMessage extends ChannelMessage {
+  private __commandOptions: discordJs.CommandInteractionOption[] | undefined;
+
+  private __user: discordJs.User;
+
+  private constructor(
+    interactionResponse: discordJs.InteractionResponse,
+    channelId: string,
+    user: discordJs.User,
+    commandOptions?: discordJs.CommandInteractionOption[],
+  ) {
+    super(interactionResponse, channelId);
+    this.__commandOptions = commandOptions;
+    this.__user = user;
+    this._buttonInteractionFilter = (i): boolean =>
+      i.user.id === this.__user.id;
+    Log.debug("Channel command message context added.");
+  }
+
+  public get user(): discordJs.User {
+    return this.__user;
+  }
+
   public static async create(
     commandInteraction: discordJs.CommandInteraction,
     isPrivate: boolean,
@@ -17,28 +39,6 @@ export class ChannelCommandMessage extends ChannelMessage {
       commandInteraction.user,
       [...commandInteraction.options.data],
     );
-  }
-
-  private __commandOptions: discordJs.CommandInteractionOption[] | undefined;
-
-  private __user: discordJs.User;
-
-  public get user(): discordJs.User {
-    return this.__user;
-  }
-
-  private constructor(
-    interactionResponse: discordJs.InteractionResponse,
-    channelId: string,
-    user: discordJs.User,
-    commandOptions?: discordJs.CommandInteractionOption[],
-  ) {
-    super(interactionResponse, channelId);
-    this.__commandOptions = commandOptions;
-    this.__user = user;
-    this._buttonInteractionFilter = (i): boolean =>
-      i.user.id === this.__user.id;
-    Log.debug("Channel command message context added.");
   }
 
   public getCommandOption<T extends CommandOptionType>(

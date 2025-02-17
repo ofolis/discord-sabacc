@@ -1,5 +1,10 @@
 {
   "arrowParens": "avoid",
   "bracketSpacing": true,
-  "plugins": ["prettier-plugin-organize-imports"]
+  "keepGettersAndSettersTogether": true,
+  "plugins": [
+    "prettier-plugin-organize-imports",
+    "prettier-plugin-sort-members"
+  ],
+  "sortMembersAlphabetically": true
 }
