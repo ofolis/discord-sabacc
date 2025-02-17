@@ -39,32 +39,36 @@ export class InteractionController {
         url: channelState.session.winningPlayer.avatarUrl,
       };
     }
-    await this.__createChannelMessageEmbed(channelState.channelId, embedData);
+    await this.__createChannelMessageEmbed(channelState.channelId, [
+      new discordJs.EmbedBuilder(embedData),
+    ]);
   }
 
   public static async announceGameStart(
     channelState: ChannelState,
   ): Promise<void> {
-    await this.__createChannelMessageEmbed(channelState.channelId, {
-      description: `A ${channelState.session.allPlayers.length.toString()}-player Sabacc game has begun!`,
-      fields: [
-        {
-          inline: true,
-          name: "Players",
-          value: Utils.linesToString(
-            channelState.session.activePlayersInTurnOrder.map(
-              player => `- ${player.nameString}`,
+    await this.__createChannelMessageEmbed(channelState.channelId, [
+      new discordJs.EmbedBuilder({
+        description: `A ${channelState.session.allPlayers.length.toString()}-player Sabacc game has begun!`,
+        fields: [
+          {
+            inline: true,
+            name: "Players",
+            value: Utils.linesToString(
+              channelState.session.activePlayersInTurnOrder.map(
+                player => `- ${player.nameString}`,
+              ),
             ),
-          ),
-        },
-        {
-          inline: true,
-          name: "Starting Tokens",
-          value: channelState.session.startingTokenTotal.toString(),
-        },
-      ],
-      title: "Game Started",
-    });
+          },
+          {
+            inline: true,
+            name: "Starting Tokens",
+            value: channelState.session.startingTokenTotal.toString(),
+          },
+        ],
+        title: "Game Started",
+      }),
+    ]);
   }
 
   public static async announceHandEnd(
@@ -119,32 +123,40 @@ export class InteractionController {
         value: Utils.linesToString(previouslyEliminatedLines),
       });
     }
-    await this.__createChannelMessageEmbed(channelState.channelId, {
-      description: "Here are the results...",
-      fields,
-      title: `Ended Hand ${(channelState.session.handIndex + 1).toString()}`,
-    });
+    await this.__createChannelMessageEmbed(channelState.channelId, [
+      new discordJs.EmbedBuilder({
+        description: "Here are the results...",
+        fields,
+        title: `Ended Hand ${(channelState.session.handIndex + 1).toString()}`,
+      }),
+    ]);
   }
 
   public static async announceHandStart(
     channelState: ChannelState,
   ): Promise<void> {
-    await this.__createChannelMessageEmbed(channelState.channelId, {
-      title: `Starting Hand ${(channelState.session.handIndex + 1).toString()}`,
-    });
+    await this.__createChannelMessageEmbed(channelState.channelId, [
+      new discordJs.EmbedBuilder({
+        title: `Starting Hand ${(channelState.session.handIndex + 1).toString()}`,
+      }),
+    ]);
   }
 
   public static async announceRoundStart(
     channelState: ChannelState,
   ): Promise<void> {
     if (channelState.session.roundIndex < 3) {
-      await this.__createChannelMessageEmbed(channelState.channelId, {
-        title: `Starting Round ${(channelState.session.roundIndex + 1).toString()}`,
-      });
+      await this.__createChannelMessageEmbed(channelState.channelId, [
+        new discordJs.EmbedBuilder({
+          title: `Starting Round ${(channelState.session.roundIndex + 1).toString()}`,
+        }),
+      ]);
     } else {
-      await this.__createChannelMessageEmbed(channelState.channelId, {
-        title: "Starting Reveal Round",
-      });
+      await this.__createChannelMessageEmbed(channelState.channelId, [
+        new discordJs.EmbedBuilder({
+          title: "Starting Reveal Round",
+        }),
+      ]);
     }
   }
 
@@ -181,10 +193,12 @@ export class InteractionController {
           turn,
         });
     }
-    await this.__createChannelMessageEmbed(channelState.channelId, {
-      description,
-      title: `${player.nameString} Drew A Card`,
-    });
+    await this.__createChannelMessageEmbed(channelState.channelId, [
+      new discordJs.EmbedBuilder({
+        description,
+        title: `${player.nameString} Drew A Card`,
+      }),
+    ]);
   }
 
   public static async announceTurnReveal(
@@ -208,13 +222,15 @@ export class InteractionController {
         { bloodCards, sandCards },
       );
     }
-    await this.__createChannelMessageEmbed(channelState.channelId, {
-      description: Utils.linesToString([
-        "Here are their final cards...",
-        `# ${this.__formatCardString(sandCards[0])} ${this.__formatCardString(bloodCards[0])}`,
-      ]),
-      title: `${player.nameString} Completed Their Hand`,
-    });
+    await this.__createChannelMessageEmbed(channelState.channelId, [
+      new discordJs.EmbedBuilder({
+        description: Utils.linesToString([
+          "Here are their final cards...",
+          `# ${this.__formatCardString(sandCards[0])} ${this.__formatCardString(bloodCards[0])}`,
+        ]),
+        title: `${player.nameString} Completed Their Hand`,
+      }),
+    ]);
   }
 
   public static async announceTurnStand(
@@ -230,19 +246,23 @@ export class InteractionController {
         "Cannot announce turn stand. Player does not contain a completed stand turn.",
       );
     }
-    await this.__createChannelMessageEmbed(channelState.channelId, {
-      description: "No card was drawn or discarded.",
-      title: `${player.nameString} Stood`,
-    });
+    await this.__createChannelMessageEmbed(channelState.channelId, [
+      new discordJs.EmbedBuilder({
+        description: "No card was drawn or discarded.",
+        title: `${player.nameString} Stood`,
+      }),
+    ]);
   }
 
   public static async announceTurnStart(
     channelState: ChannelState,
   ): Promise<void> {
-    await this.__createChannelMessageEmbed(channelState.channelId, {
-      description: `${channelState.session.currentPlayer.tagString} use the **/play** command to take your turn.`,
-      title: `${channelState.session.currentPlayer.nameString}'s Turn`,
-    });
+    await this.__createChannelMessageEmbed(channelState.channelId, [
+      new discordJs.EmbedBuilder({
+        description: `${channelState.session.currentPlayer.tagString} use the **/play** command to take your turn.`,
+        title: `${channelState.session.currentPlayer.nameString}'s Turn`,
+      }),
+    ]);
   }
 
   public static async followupGameCreated(
@@ -286,27 +306,33 @@ export class InteractionController {
       "There is no game currently active in this channel.",
       "-# Use the **/new** command to start a new game.",
     ];
-    await this.__setChannelMessageEmbed(message, {
-      description: Utils.linesToString(contentLines),
-      title: "No Game",
-    });
+    await this.__setChannelMessageEmbed(message, [
+      new discordJs.EmbedBuilder({
+        description: Utils.linesToString(contentLines),
+        title: "No Game",
+      }),
+    ]);
   }
 
   public static async informNotPlaying(message: ChannelMessage): Promise<void> {
-    await this.__setChannelMessageEmbed(message, {
-      description: "You are not playing in the current game.",
-      title: "Not Playing",
-    });
+    await this.__setChannelMessageEmbed(message, [
+      new discordJs.EmbedBuilder({
+        description: "You are not playing in the current game.",
+        title: "Not Playing",
+      }),
+    ]);
   }
 
   public static async informNotTurn(
     message: ChannelMessage,
     channelState: ChannelState,
   ): Promise<void> {
-    await this.__setChannelMessageEmbed(message, {
-      description: `It is currently ${channelState.session.currentPlayer.nameString}'s turn.`,
-      title: "Not Your Turn",
-    });
+    await this.__setChannelMessageEmbed(message, [
+      new discordJs.EmbedBuilder({
+        description: `It is currently ${channelState.session.currentPlayer.nameString}'s turn.`,
+        title: "Not Your Turn",
+      }),
+    ]);
   }
 
   public static async informPlayerInfo(
@@ -315,38 +341,40 @@ export class InteractionController {
     playerId: string,
   ): Promise<void> {
     const player: Player = channelState.session.getPlayerById(playerId);
-    await this.__setChannelMessageEmbed(message, {
-      fields: [
-        {
-          inline: true,
-          name: "Hand",
-          value: (channelState.session.handIndex + 1).toString(),
-        },
-        {
-          inline: true,
-          name: "Round",
-          value: (channelState.session.roundIndex + 1).toString(),
-        },
-        {
-          inline: true,
-          name: "\u200B",
-          value: "\u200B",
-        },
-        {
-          inline: true,
-          name: "Cards",
-          value: this.__formatPlayerCardsString(player),
-        },
-        {
-          inline: true,
-          name: "Tokens",
-          value: this.__formatTokenStateString(
-            player.availableTokenTotal,
-            player.spentTokenTotal,
-          ),
-        },
-      ],
-    });
+    await this.__setChannelMessageEmbed(message, [
+      new discordJs.EmbedBuilder({
+        fields: [
+          {
+            inline: true,
+            name: "Hand",
+            value: (channelState.session.handIndex + 1).toString(),
+          },
+          {
+            inline: true,
+            name: "Round",
+            value: (channelState.session.roundIndex + 1).toString(),
+          },
+        ],
+      }),
+      new discordJs.EmbedBuilder({
+        fields: [
+          {
+            inline: true,
+            name: "Cards",
+            value: this.__formatPlayerCardsString(player),
+          },
+          {
+            inline: true,
+            name: "Tokens",
+            value: this.__formatTokenStateString(
+              player.availableTokenTotal,
+              player.spentTokenTotal,
+            ),
+          },
+        ],
+        title: "Your Items",
+      }),
+    ]);
   }
 
   public static async promptChooseDieRoll(
@@ -361,10 +389,12 @@ export class InteractionController {
     }
     await this.__setChannelMessageEmbed(
       message,
-      {
-        description: "Choose the die roll value.",
-        title: "Die Roll Selection",
-      },
+      [
+        new discordJs.EmbedBuilder({
+          description: "Choose the die roll value.",
+          title: "Die Roll Selection",
+        }),
+      ],
       [
         new discordJs.ButtonBuilder({
           customId: "firstDie",
@@ -408,10 +438,12 @@ export class InteractionController {
       channelState.session.getDiscardOptionsForCurrentPlayer();
     await this.__setChannelMessageEmbed(
       message,
-      {
-        description: "Choose the card to keep.",
-        title: "Discard",
-      },
+      [
+        new discordJs.EmbedBuilder({
+          description: "Choose the card to keep.",
+          title: "Discard",
+        }),
+      ],
       [
         new discordJs.ButtonBuilder({
           customId: "firstCard",
@@ -487,10 +519,12 @@ export class InteractionController {
     }
     await this.__setChannelMessageEmbed(
       message,
-      {
-        description: "Choose what you would like to draw.",
-        title: "Draw Selection",
-      },
+      [
+        new discordJs.EmbedBuilder({
+          description: "Choose what you would like to draw.",
+          title: "Draw Selection",
+        }),
+      ],
       buttonBuilders,
     );
     const buttonInteraction: discordJs.ButtonInteraction | null =
@@ -526,10 +560,12 @@ export class InteractionController {
     const player: Player = channelState.session.getPlayerById(message.user.id);
     await this.__setChannelMessageEmbed(
       message,
-      {
-        description: "Choose your turn action.",
-        title: "Turn Action",
-      },
+      [
+        new discordJs.EmbedBuilder({
+          description: "Choose your turn action.",
+          title: "Turn Action",
+        }),
+      ],
       [
         new discordJs.ButtonBuilder({
           customId: "draw",
@@ -571,10 +607,13 @@ export class InteractionController {
   ): Promise<boolean | null> {
     await this.__setChannelMessageEmbed(
       message,
-      {
-        description: "Do you want to end the current game and start a new one?",
-        title: "Game In Progress",
-      },
+      [
+        new discordJs.EmbedBuilder({
+          description:
+            "Do you want to end the current game and start a new one?",
+          title: "Game In Progress",
+        }),
+      ],
       [
         new discordJs.ButtonBuilder({
           customId: "endGame",
@@ -616,7 +655,7 @@ export class InteractionController {
     let channelMessage: ChannelMessage | null = null;
     const userAccumulator: discordJs.User[] = [];
     while (userAccumulator.length + 1 < PLAYER_MAXIMUM) {
-      const embedData: discordJs.EmbedData = {
+      const embed: discordJs.EmbedBuilder = new discordJs.EmbedBuilder({
         description: "JOIN!",
         fields: [
           {
@@ -627,7 +666,7 @@ export class InteractionController {
           },
         ],
         title: "JOIN",
-      };
+      });
       const buttons: discordJs.ButtonBuilder[] = [
         new discordJs.ButtonBuilder({
           customId: "join",
@@ -644,11 +683,11 @@ export class InteractionController {
       if (channelMessage === null) {
         channelMessage = await this.__createChannelMessageEmbed(
           message.channelId,
-          embedData,
+          [embed],
           buttons,
         );
       } else {
-        await this.__setChannelMessageEmbed(channelMessage, embedData, buttons);
+        await this.__setChannelMessageEmbed(channelMessage, [embed], buttons);
       }
       const buttonInteraction: discordJs.ButtonInteraction | null =
         await channelMessage.awaitButtonInteraction();
@@ -700,10 +739,12 @@ export class InteractionController {
   ): Promise<boolean | null> {
     await this.__setChannelMessageEmbed(
       message,
-      {
-        description: "Do you want to reveal your cards and end your hand?",
-        title: "Reveal Cards",
-      },
+      [
+        new discordJs.EmbedBuilder({
+          description: "Do you want to reveal your cards and end your hand?",
+          title: "Reveal Cards",
+        }),
+      ],
       [
         new discordJs.ButtonBuilder({
           customId: "reveal",
@@ -742,10 +783,12 @@ export class InteractionController {
   ): Promise<boolean | null> {
     await this.__setChannelMessageEmbed(
       message,
-      {
-        description: `Roll the dice for ${this.__formatCardString(playerCard)}?`,
-        title: "Roll Dice",
-      },
+      [
+        new discordJs.EmbedBuilder({
+          description: `Roll the dice for ${this.__formatCardString(playerCard)}?`,
+          title: "Roll Dice",
+        }),
+      ],
       [
         new discordJs.ButtonBuilder({
           customId: "roll",
@@ -780,17 +823,17 @@ export class InteractionController {
 
   private static async __createChannelMessageEmbed(
     channelId: string,
-    embedData: discordJs.EmbedData,
+    embeds: discordJs.EmbedBuilder[],
     buttons?: discordJs.ButtonBuilder[],
   ): Promise<ChannelMessage> {
     return await Discord.sendChannelMessage(
       channelId,
-      this.__createEmbedBaseMessageOptions(embedData, buttons),
+      this.__createEmbedBaseMessageOptions(embeds, buttons),
     );
   }
 
   private static __createEmbedBaseMessageOptions(
-    embedData: discordJs.EmbedData,
+    embeds: discordJs.EmbedBuilder[],
     buttons?: discordJs.ButtonBuilder[],
   ): discordJs.BaseMessageOptions {
     const components: discordJs.ActionRowBuilder<discordJs.ButtonBuilder>[] =
@@ -802,7 +845,7 @@ export class InteractionController {
           ]
         : [];
     return {
-      embeds: [new discordJs.EmbedBuilder(embedData)],
+      embeds: embeds.length > 0 ? embeds : undefined,
       components: components.length > 0 ? components : undefined,
     };
   }
@@ -891,12 +934,10 @@ export class InteractionController {
 
   private static async __setChannelMessageEmbed(
     message: ChannelMessage,
-    embedData: discordJs.EmbedData,
+    embeds: discordJs.EmbedBuilder[],
     buttons?: discordJs.ButtonBuilder[],
   ): Promise<void> {
-    await message.update(
-      this.__createEmbedBaseMessageOptions(embedData, buttons),
-    );
+    await message.update(this.__createEmbedBaseMessageOptions(embeds, buttons));
   }
 
   private static async __setChannelMessageFollowup(
