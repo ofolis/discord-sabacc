@@ -1,7 +1,6 @@
 import * as discordJs from "discord.js";
-import { Random } from "random-js";
 import { DataController, InteractionController } from ".";
-import { ChannelCommandMessage, Log } from "../core";
+import { ChannelCommandMessage, Environment, Log } from "../core";
 import {
   CardSuit,
   CardType,
@@ -58,15 +57,21 @@ export class GameController {
     // Get current turn
     let turn: Turn | null = channelState.session.currentPlayer.roundTurn;
     if (turn === null) {
-      const turnAction: TurnAction | null =
-        await InteractionController.promptChooseTurnAction(
-          message,
-          channelState,
+      if (channelState.session.roundIndex < 3) {
+        const turnAction: TurnAction | null =
+          await InteractionController.promptChooseTurnAction(
+            message,
+            channelState,
+          );
+        if (turnAction === null) {
+          return;
+        }
+        turn = channelState.session.createRoundTurnForCurrentPlayer(turnAction);
+      } else {
+        turn = channelState.session.createRoundTurnForCurrentPlayer(
+          TurnAction.REVEAL,
         );
-      if (turnAction === null) {
-        return;
       }
-      turn = channelState.session.createRoundTurnForCurrentPlayer(turnAction);
     }
 
     // Resolve turn action if not already resolved
@@ -80,7 +85,7 @@ export class GameController {
           turnResolved = await this.__resolveTurnReveal(message, channelState);
           break;
         case TurnAction.STAND:
-          turnResolved = await this.__resolveTurnStand(message, channelState);
+          turnResolved = this.__resolveTurnStand();
           break;
         default:
           Log.throw("Cannot handle play turn. Unknown turn action.", {
@@ -88,13 +93,12 @@ export class GameController {
             player: channelState.session.currentPlayer,
           });
       }
-      if (turnResolved) {
-        channelState.session.resolveRoundTurnForCurrentPlayer();
-      }
     }
 
     // End turn if resolved
     if (turnResolved) {
+      channelState.session.resolveRoundTurnForCurrentPlayer();
+      await InteractionController.followupTurnComplete(message);
       await this.__endTurn(channelState);
     }
 
@@ -103,10 +107,38 @@ export class GameController {
   }
 
   private static async __endTurn(channelState: ChannelState): Promise<void> {
-    channelState.session.iterate();
+    // Get current turn
+    const turn: Turn | null = channelState.session.currentPlayer.roundTurn;
+    if (turn === null) {
+      Log.throw(
+        "Cannot end turn. No round turn exists on the current player.",
+        { currentPlayer: channelState.session.currentPlayer },
+      );
+    }
+
+    // Announce turn result
+    switch (turn.action) {
+      case TurnAction.DRAW:
+        await InteractionController.announceTurnDraw(channelState);
+        break;
+      case TurnAction.REVEAL:
+        await InteractionController.announceTurnReveal(channelState);
+        break;
+      case TurnAction.STAND:
+        await InteractionController.announceTurnStand(channelState);
+        break;
+      default:
+        Log.throw("Cannot handle play turn. Unknown turn action.", {
+          turnAction: turn.action,
+          player: channelState.session.currentPlayer,
+        });
+    }
 
     // If all players have played, handle round conclusion
-    if (channelState.session.activePlayerIndex === 0) {
+    if (
+      channelState.session.activePlayerIndex ===
+      channelState.session.activePlayersInTurnOrder.length - 1
+    ) {
       await this.__handleRoundEnd(channelState);
 
       // If game has concluded, stop here
@@ -114,8 +146,12 @@ export class GameController {
         await this.__handleGameEnd(channelState);
         return;
       }
+    }
 
-      // Otherwise, start a new round
+    channelState.session.iterate();
+
+    // If the first player is up, handle new round
+    if (channelState.session.activePlayerIndex === 0) {
       await this.__handleRoundStart(channelState);
     }
 
@@ -132,9 +168,7 @@ export class GameController {
   private static async __handleHandEnd(
     channelState: ChannelState,
   ): Promise<void> {
-    channelState.session.scoreHand();
-    channelState.session.applyHandResult();
-
+    channelState.session.finalizeHand();
     await InteractionController.announceHandEnd(channelState);
   }
 
@@ -150,8 +184,6 @@ export class GameController {
     channelState: ChannelState,
     playerCard: PlayerCard,
   ): Promise<boolean> {
-    const random: Random = new Random();
-
     if (playerCard.dieRolls.length === 0) {
       const rollDice: boolean | null =
         await InteractionController.promptRollDice(message, playerCard);
@@ -161,8 +193,8 @@ export class GameController {
         return false;
       }
       channelState.session.setPlayerCardDieRollsForCurrentPlayer(playerCard, [
-        random.die(6),
-        random.die(6),
+        Environment.random.die(6),
+        Environment.random.die(6),
       ]);
     }
 
@@ -181,7 +213,8 @@ export class GameController {
   private static async __handleRoundEnd(
     channelState: ChannelState,
   ): Promise<void> {
-    if (channelState.session.roundIndex === 0) {
+    // If the last round has ended, handle hand conclusion
+    if (channelState.session.roundIndex === 3) {
       await this.__handleHandEnd(channelState);
     }
   }
@@ -239,9 +272,6 @@ export class GameController {
       }
       channelState.session.discardCardForCurrentPlayer(discardedCard);
     }
-
-    await InteractionController.followupTurnComplete(message);
-    await InteractionController.announceTurnDraw(channelState);
     return true;
   }
 
@@ -273,18 +303,10 @@ export class GameController {
         }
       }
     }
-
-    await InteractionController.followupTurnComplete(message);
-    await InteractionController.announceTurnReveal(channelState);
     return true;
   }
 
-  private static async __resolveTurnStand(
-    message: ChannelCommandMessage,
-    channelState: ChannelState,
-  ): Promise<boolean> {
-    await InteractionController.followupTurnComplete(message);
-    await InteractionController.announceTurnStand(channelState);
+  private static __resolveTurnStand(): boolean {
     return true;
   }
 

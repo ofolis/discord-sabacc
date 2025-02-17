@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { MersenneTwister19937, Random } from "random-js";
 import * as packageJson from "../../package.json";
 import { Log } from "../core";
 import type { Config, PackageContext } from "./types";
@@ -7,6 +8,10 @@ export class Environment {
   private static __config: Config | null = null;
 
   private static __packageContext: PackageContext | null = null;
+
+  private static readonly __random: Random = new Random(
+    MersenneTwister19937.autoSeed(),
+  );
 
   public static get config(): Config {
     if (this.__config === null) {
@@ -38,6 +43,10 @@ export class Environment {
       };
     }
     return this.__packageContext;
+  }
+
+  public static get random(): Random {
+    return this.__random;
   }
 
   private static __getEnvVariable(key: string, required: boolean): string {

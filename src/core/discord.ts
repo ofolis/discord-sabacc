@@ -108,6 +108,28 @@ export class Discord {
     Log.debug("Discord commands deployed successfully.");
   }
 
+  public static formatAvatarUrl(
+    user: Pick<discordJs.User, "avatar" | "id">,
+  ): string | null {
+    if (user.avatar === null) {
+      return null;
+    }
+    return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.webp?size=240`;
+  }
+
+  public static formatUserMentionString(
+    user: Pick<discordJs.User, "id">,
+  ): string {
+    return `<@${user.id}>`;
+  }
+
+  public static formatUserNameString(
+    user: Pick<discordJs.User, "globalName" | "username">,
+  ): string {
+    // TODO: Enhance to use server nickname if available
+    return (user.globalName ?? user.username).toUpperCase();
+  }
+
   public static async sendChannelMessage(
     channelId: string,
     messageCreateOptions: discordJs.MessageCreateOptions,

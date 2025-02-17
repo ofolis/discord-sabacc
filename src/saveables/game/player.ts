@@ -1,8 +1,9 @@
 import * as discordJs from "discord.js";
 import { PlayerCard, Turn } from ".";
-import { Json, Log, Saveable, Utils } from "../../core";
+import { Discord, Json, Log, Saveable, Utils } from "../../core";
 import {
   CardSuit,
+  DrawSource,
   PlayerCardSource,
   PlayerStatus,
   TurnAction,
@@ -15,15 +16,15 @@ import {
   TurnJson,
 } from "../../types";
 export class Player implements Saveable {
-  public readonly globalName: string | null;
-
   public readonly id: string;
-
-  public readonly username: string;
 
   private __avatarId: string | null;
 
   private __cards: PlayerCard[] = [];
+
+  private __globalName: string | null;
+
+  private __previousRoundTurns: Turn[] = [];
 
   private __roundTurn: Turn | null = null;
 
@@ -33,19 +34,29 @@ export class Player implements Saveable {
 
   private __tokenTotal: number = 0;
 
+  private __username: string;
+
   public constructor(userOrJson: discordJs.User | Json) {
     if (userOrJson instanceof discordJs.User) {
       const user: discordJs.User = userOrJson;
       this.__avatarId = user.avatar;
-      this.globalName = user.globalName;
+      this.__globalName = user.globalName;
+      this.__username = user.username;
       this.id = user.id;
-      this.username = user.username;
     } else {
       const json: Json = userOrJson;
       this.__avatarId = Utils.getJsonEntry(json, "avatarId") as string;
       this.__cards = (
         Utils.getJsonEntry(json, "cards") as PlayerCardJson[]
       ).map(playerCardJson => new PlayerCard(playerCardJson));
+      this.__globalName = Utils.getJsonEntry(json, "globalName") as string;
+      const previousRoundTurnsJson: TurnJson[] = Utils.getJsonEntry(
+        json,
+        "previousRoundTurns",
+      ) as TurnJson[];
+      this.__previousRoundTurns = previousRoundTurnsJson.map(
+        turnJson => new Turn(turnJson),
+      );
       const roundTurnJson: TurnJson | null = Utils.getJsonEntry(
         json,
         "roundTurn",
@@ -58,10 +69,13 @@ export class Player implements Saveable {
       ) as number;
       this.__status = Utils.getJsonEntry(json, "status") as PlayerStatus;
       this.__tokenTotal = Utils.getJsonEntry(json, "tokenTotal") as number;
-      this.globalName = Utils.getJsonEntry(json, "globalName") as string;
+      this.__username = Utils.getJsonEntry(json, "username") as string;
       this.id = Utils.getJsonEntry(json, "id") as string;
-      this.username = Utils.getJsonEntry(json, "username") as string;
     }
+  }
+
+  public get avatarUrl(): string | null {
+    return Discord.formatAvatarUrl({ avatar: this.__avatarId, id: this.id });
   }
 
   public get cardTotal(): number {
@@ -77,12 +91,24 @@ export class Player implements Saveable {
     return this.__tokenTotal - this.__spentTokenTotal;
   }
 
+  public get nameString(): string {
+    // TODO: Enhance to use server nickname if available
+    return Discord.formatUserNameString({
+      globalName: this.__globalName,
+      username: this.__username,
+    });
+  }
+
   public get roundTurn(): Turn | null {
     return this.__roundTurn;
   }
 
   public get status(): PlayerStatus {
     return this.__status;
+  }
+
+  public get tagString(): string {
+    return Discord.formatUserMentionString({ id: this.id });
   }
 
   public getCards(cardSuit?: CardSuit): readonly PlayerCard[] {
@@ -104,13 +130,14 @@ export class Player implements Saveable {
     return {
       avatarId: this.__avatarId,
       cards: this.__cards.map(playerCard => playerCard.toJson()),
+      globalName: this.__globalName,
       id: this.id,
-      globalName: this.globalName,
+      previousRoundTurns: this.__previousRoundTurns.map(turn => turn.toJson()),
       roundTurn: this.__roundTurn !== null ? this.__roundTurn.toJson() : null,
       spentTokenTotal: this.__spentTokenTotal,
       status: this.__status,
       tokenTotal: this.__tokenTotal,
-      username: this.username,
+      username: this.__username,
     };
   }
 
@@ -135,6 +162,7 @@ export class Player implements Saveable {
         roundTurn: this.__roundTurn,
       });
     }
+    this.__previousRoundTurns.push(this.__roundTurn);
     this.__roundTurn = null;
   }
 
@@ -165,6 +193,48 @@ export class Player implements Saveable {
     if (this.__tokenTotal === 0) {
       this.__status = PlayerStatus.ELIMINATED;
     }
+  }
+
+  protected _discardCard(card: PlayerCard): void {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot discard card. Player is not currently active.", {
+        status: this.__status,
+      });
+    }
+    if (this.__roundTurn === null) {
+      Log.throw(
+        "Cannot discard card. Player does not have a round turn defined.",
+      );
+    }
+    const cardIndex: number = this.__cards.indexOf(card);
+    if (cardIndex === -1) {
+      Log.throw(
+        "Cannot discard card. Player does not have the specified card.",
+        {
+          card,
+          cards: this.__cards,
+        },
+      );
+    }
+    this.__cards.splice(cardIndex, 1);
+    this.__roundTurn["_setDiscardedCard"](card.card);
+  }
+
+  protected _drawCard(card: Card, drawSource: DrawSource): void {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot draw card. Player is not currently active.", {
+        status: this.__status,
+      });
+    }
+    if (this.__roundTurn === null) {
+      Log.throw("Cannot draw card. Player does not have a round turn defined.");
+    }
+    const playerCardSource: PlayerCardSource =
+      drawSource === DrawSource.DECK
+        ? PlayerCardSource.DECK_DRAW
+        : PlayerCardSource.DISCARD_DRAW;
+    this._addCard(card, playerCardSource);
+    this.__roundTurn["_setDrawnCard"](card, drawSource);
   }
 
   protected _getScorable(): PlayerScoreable {
@@ -228,27 +298,6 @@ export class Player implements Saveable {
     return cards;
   }
 
-  protected _removeCard(playerCard: PlayerCard): Card {
-    if (this.__status !== PlayerStatus.ACTIVE) {
-      Log.throw("Cannot remove card. Player is not currently active.", {
-        status: this.__status,
-      });
-    }
-    const playerCardIndex: number = this.__cards.indexOf(playerCard);
-    if (playerCardIndex === -1) {
-      Log.throw(
-        "Cannot remove card. Player does not have the specified card.",
-        {
-          card: playerCard,
-          cards: this.__cards,
-        },
-      );
-    }
-    const card: Card = playerCard.card;
-    this.__cards.splice(playerCardIndex, 1);
-    return card;
-  }
-
   protected _resolveRoundTurn(): void {
     if (this.__status !== PlayerStatus.ACTIVE) {
       Log.throw("Cannot resolve turn. Player is not currently active.", {
@@ -269,9 +318,15 @@ export class Player implements Saveable {
         status: this.__status,
       });
     }
+    if (this.__roundTurn === null) {
+      Log.throw(
+        "Cannot spend token. Player does not have a round turn defined.",
+      );
+    }
     if (this.currentTokenTotal === 0) {
       Log.throw("Cannot spend token. Player has no remaining tokens.");
     }
     this.__spentTokenTotal++;
+    this.__roundTurn["_addSpentTokens"](1);
   }
 }

@@ -7,80 +7,242 @@ import {
   Log,
   Utils,
 } from "../core";
-import { CardSuit, CardType, DrawSource, TurnAction } from "../enums";
-import { ChannelState, Player, PlayerCard } from "../saveables";
+import {
+  CardSuit,
+  CardType,
+  DrawSource,
+  PlayerStatus,
+  TurnAction,
+} from "../enums";
+import {
+  ChannelState,
+  HandResult,
+  Player,
+  PlayerCard,
+  Turn,
+} from "../saveables";
 import { Card } from "../types";
 
 export class InteractionController {
   public static async announceGameEnd(
     channelState: ChannelState,
   ): Promise<void> {
-    await Discord.sendChannelMessage(channelState.channelId, {
-      content: "The game has ended.",
-    });
+    await this.__createChannelMessageEmbed(
+      channelState.channelId,
+      {
+        description: Utils.linesToString([
+          `After ${(channelState.session.handIndex + 1).toString()} hand${channelState.session.handIndex === 0 ? "" : "s"}, the winner is...`,
+          `## ${channelState.session.winningPlayer.tagString} 🎉`,
+        ]),
+        title: "The Game Is Over!",
+      },
+      undefined,
+      channelState.session.winningPlayer.avatarUrl !== null
+        ? channelState.session.winningPlayer.avatarUrl
+        : undefined,
+    );
   }
 
   public static async announceGameStart(
     channelState: ChannelState,
   ): Promise<void> {
-    await Discord.sendChannelMessage(channelState.channelId, {
-      content: "The game has started.",
+    await this.__createChannelMessageEmbed(channelState.channelId, {
+      description: `A ${channelState.session.allPlayers.length.toString()} player Sabacc game has begun!`,
+      fields: [
+        {
+          inline: true,
+          name: "Players",
+          value: Utils.linesToString(
+            channelState.session.activePlayersInTurnOrder.map(
+              player => `- ${player.nameString}`,
+            ),
+          ),
+        },
+        {
+          inline: true,
+          name: "Starting Tokens",
+          value: channelState.session.startingTokenTotal.toString(),
+        },
+      ],
+      title: "Game Started",
     });
   }
 
   public static async announceHandEnd(
     channelState: ChannelState,
   ): Promise<void> {
-    await Discord.sendChannelMessage(channelState.channelId, {
-      content: "The hand has ended.",
+    const currentHandResult: HandResult =
+      channelState.session.getCurrentHandResult();
+    const resultsLines: string[] = [];
+    const usedPlayerIds: string[] = [];
+    currentHandResult.rankings.forEach(ranking => {
+      const player: Player = channelState.session.getPlayerById(
+        ranking.playerId,
+      );
+      const tokenDetailStrings: string[] = [];
+      if (ranking.tokenLossTotal === 0) {
+        tokenDetailStrings.push("Full Refund!");
+      } else {
+        if (ranking.spentTokenTotal > 0) {
+          tokenDetailStrings.push(
+            `\`${ranking.spentTokenTotal.toString()}\` Spent`,
+          );
+        }
+        if (ranking.tokenPenaltyTotal > 0) {
+          tokenDetailStrings.push(
+            `\`${ranking.tokenPenaltyTotal.toString()}\` Penalty`,
+          );
+        }
+      }
+      resultsLines.push(
+        `- \`#${(ranking.rankIndex + 1).toString()}\` ${player.status !== PlayerStatus.ACTIVE ? `~~**${player.nameString}**~~ 💀` : `**${player.nameString}**`}`,
+        `  - Cards: ${this.__formatCardString(ranking.sandCard)} ${this.__formatCardString(ranking.bloodCard)}`,
+        `  - Tokens: \`${this.__formatTokenString(player.currentTokenTotal, ranking.tokenLossTotal, true)}\` `,
+        `    -# ${tokenDetailStrings.join(" + ")}`,
+      );
+      usedPlayerIds.push(ranking.playerId);
+    });
+    const previouslyEliminatedLines: string[] = [];
+    channelState.session.allPlayers.forEach(player => {
+      if (!usedPlayerIds.includes(player.id)) {
+        previouslyEliminatedLines.push(`~~${player.nameString}~~ 💀`);
+      }
+    });
+    const fields: discordJs.APIEmbedField[] = [
+      {
+        name: "Results",
+        value: Utils.linesToString(resultsLines),
+      },
+    ];
+    if (previouslyEliminatedLines.length > 0) {
+      fields.push({
+        name: "Previously Eliminated",
+        value: Utils.linesToString(previouslyEliminatedLines),
+      });
+    }
+    await this.__createChannelMessageEmbed(channelState.channelId, {
+      description: "Here are the results...",
+      fields,
+      title: `Ended Hand ${(channelState.session.handIndex + 1).toString()}`,
     });
   }
 
   public static async announceHandStart(
     channelState: ChannelState,
   ): Promise<void> {
-    await Discord.sendChannelMessage(channelState.channelId, {
-      content: "A new hand has started.",
+    await this.__createChannelMessageEmbed(channelState.channelId, {
+      title: `Starting Hand ${(channelState.session.handIndex + 1).toString()}`,
     });
   }
 
   public static async announceRoundStart(
     channelState: ChannelState,
   ): Promise<void> {
-    await Discord.sendChannelMessage(channelState.channelId, {
-      content: "A new round has started.",
-    });
+    if (channelState.session.roundIndex < 3) {
+      await this.__createChannelMessageEmbed(channelState.channelId, {
+        title: `Starting Round ${(channelState.session.roundIndex + 1).toString()}`,
+      });
+    } else {
+      await this.__createChannelMessageEmbed(channelState.channelId, {
+        title: "Starting Reveal Round",
+      });
+    }
   }
 
   public static async announceTurnDraw(
     channelState: ChannelState,
   ): Promise<void> {
-    await Discord.sendChannelMessage(channelState.channelId, {
-      content: "Draw action occurred.",
+    const player: Player = channelState.session.currentPlayer;
+    if (
+      player.roundTurn === null ||
+      player.roundTurn.action !== TurnAction.DRAW ||
+      !player.roundTurn.isResolved
+    ) {
+      Log.throw(
+        "Cannot announce turn draw. Player does not contain a completed draw turn.",
+      );
+    }
+    const turn: Turn = player.roundTurn;
+    if (turn.drawnCard === null || turn.discardedCard === null) {
+      Log.throw(
+        "Cannot announce turn draw. Player turn record did not contain both a drawn and discarded card.",
+        { turn },
+      );
+    }
+    let description: string;
+    switch (turn.drawnCardSource) {
+      case DrawSource.DECK:
+        description = `A card was drawn from the \`${this.__formatCardSuitIcon(turn.drawnCard.suit)}\` deck and ${this.__formatCardString(turn.discardedCard)} was discarded.`;
+        break;
+      case DrawSource.DISCARD:
+        description = `${this.__formatCardString(turn.drawnCard)} was drawn from the \`${this.__formatCardSuitIcon(turn.drawnCard.suit)}\` discard and ${this.__formatCardString(turn.discardedCard)} was discarded.`;
+        break;
+      default:
+        Log.throw("Cannot announce turn draw. Unknown drawn card source.", {
+          turn,
+        });
+    }
+    await this.__createChannelMessageEmbed(channelState.channelId, {
+      description,
+      title: `${player.nameString} Drew A Card`,
     });
   }
 
   public static async announceTurnReveal(
     channelState: ChannelState,
   ): Promise<void> {
-    await Discord.sendChannelMessage(channelState.channelId, {
-      content: "Reveal action occurred.",
+    const player: Player = channelState.session.currentPlayer;
+    if (
+      player.roundTurn === null ||
+      player.roundTurn.action !== TurnAction.REVEAL ||
+      !player.roundTurn.isResolved
+    ) {
+      Log.throw(
+        "Cannot announce turn reveal. Player does not contain a completed reveal turn.",
+      );
+    }
+    const bloodCards: readonly PlayerCard[] = player.getCards(CardSuit.BLOOD);
+    const sandCards: readonly PlayerCard[] = player.getCards(CardSuit.SAND);
+    if (bloodCards.length !== 1 || sandCards.length !== 1) {
+      Log.throw(
+        "Cannot announce turn reveal. Player does not contain exactly one card of each suit.",
+        { bloodCards, sandCards },
+      );
+    }
+    await this.__createChannelMessageEmbed(channelState.channelId, {
+      description: Utils.linesToString([
+        "Here are their final cards...",
+        `# ${this.__formatCardString(sandCards[0])} ${this.__formatCardString(bloodCards[0])}`,
+      ]),
+      title: `${player.nameString} Completed Their Hand`,
     });
   }
 
   public static async announceTurnStand(
     channelState: ChannelState,
   ): Promise<void> {
-    await Discord.sendChannelMessage(channelState.channelId, {
-      content: "Stand action occurred.",
+    const player: Player = channelState.session.currentPlayer;
+    if (
+      player.roundTurn === null ||
+      player.roundTurn.action !== TurnAction.STAND ||
+      !player.roundTurn.isResolved
+    ) {
+      Log.throw(
+        "Cannot announce turn stand. Player does not contain a completed stand turn.",
+      );
+    }
+    await this.__createChannelMessageEmbed(channelState.channelId, {
+      description: "No card was drawn or discarded.",
+      title: `${player.nameString} Stood`,
     });
   }
 
   public static async announceTurnStart(
     channelState: ChannelState,
   ): Promise<void> {
-    await Discord.sendChannelMessage(channelState.channelId, {
-      content: `${this.__formatPlayerNameString(channelState.session.currentPlayer)}'s turn has started.`,
+    await this.__createChannelMessageEmbed(channelState.channelId, {
+      description: `${channelState.session.currentPlayer.tagString} use the **/play** command to take your turn.`,
+      title: `${channelState.session.currentPlayer.nameString}'s Turn`,
     });
   }
 
@@ -143,7 +305,7 @@ export class InteractionController {
     channelState: ChannelState,
   ): Promise<void> {
     await this.__setChannelMessageEmbed(message, {
-      description: `It is currently ${this.__formatPlayerNameString(channelState.session.currentPlayer)}'s turn.`,
+      description: `It is currently ${channelState.session.currentPlayer.nameString}'s turn.`,
       title: "Not Your Turn",
     });
   }
@@ -448,7 +610,7 @@ export class InteractionController {
           {
             name: "Players",
             value: [message.user, ...userAccumulator]
-              .map(user => this.__formatPlayerNameString(user))
+              .map(user => Discord.formatUserNameString(user))
               .join(","),
           },
         ],
@@ -497,7 +659,7 @@ export class InteractionController {
         case "start":
           await this.__setChannelMessageFollowup(
             channelMessage,
-            `The game was started by ${this.__formatPlayerNameString(buttonInteraction.user)}!`,
+            `The game was started by ${Discord.formatUserNameString(buttonInteraction.user)}!`,
           );
           return userAccumulator;
         default:
@@ -608,11 +770,19 @@ export class InteractionController {
     channelId: string,
     embedData: discordJs.EmbedData,
     buttons?: discordJs.ButtonBuilder[],
+    imageUrl?: string,
   ): Promise<ChannelMessage> {
-    return await Discord.sendChannelMessage(
-      channelId,
-      this.__createEmbedBaseMessageOptions(embedData, buttons),
-    );
+    const messageCreateOptions: discordJs.BaseMessageOptions =
+      this.__createEmbedBaseMessageOptions(embedData, buttons);
+    if (imageUrl !== undefined) {
+      messageCreateOptions.files = [
+        {
+          attachment: imageUrl,
+          name: "image.webp",
+        },
+      ];
+    }
+    return await Discord.sendChannelMessage(channelId, messageCreateOptions);
   }
 
   private static __createEmbedBaseMessageOptions(
@@ -679,10 +849,21 @@ export class InteractionController {
     }
   }
 
-  private static __formatPlayerNameString(
-    playerOrUser: Player | discordJs.User,
+  private static __formatTokenString(
+    baseTotal: number,
+    adjustmentTotal: number,
+    useLossIcon: boolean = false,
   ): string {
-    return (playerOrUser.globalName ?? playerOrUser.username).toUpperCase();
+    if (baseTotal === 0 && adjustmentTotal <= 0) {
+      return "`None`";
+    }
+    const baseTokenString: string = "⚪".repeat(
+      Math.max(baseTotal + (adjustmentTotal <= 0 ? adjustmentTotal : 0), 0),
+    );
+    const reductionTokenString: string = (useLossIcon ? "🔴" : "⚫").repeat(
+      Math.abs(adjustmentTotal),
+    );
+    return `\`${baseTokenString}${reductionTokenString}\``;
   }
 
   private static async __setChannelMessageEmbed(

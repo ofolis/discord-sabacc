@@ -1,8 +1,7 @@
 import * as discordJs from "discord.js";
-import { Random } from "random-js";
 import { HandResult, Player, PlayerCard, Turn } from ".";
 import { DECK } from "../../constants";
-import { Json, Log, Saveable, Utils } from "../../core";
+import { Environment, Json, Log, Saveable, Utils } from "../../core";
 import {
   CardSuit,
   DrawSource,
@@ -35,6 +34,8 @@ export class Session implements Saveable {
   private __startingPlayerId: string;
 
   private __startingTokenTotal: number;
+
+  private __winningPlayerId: string | null = null;
 
   public constructor(user: discordJs.User, startingTokenTotal: number);
 
@@ -139,6 +140,17 @@ export class Session implements Saveable {
     return this.__roundIndex;
   }
 
+  public get startingTokenTotal(): number {
+    return this.__startingTokenTotal;
+  }
+
+  public get winningPlayer(): Player {
+    if (this.__winningPlayerId === null) {
+      Log.throw("Cannot get winning player. No winning player has been set.");
+    }
+    return this.__players[this.__winningPlayerId];
+  }
+
   public addPlayers(users: discordJs.User[]): void {
     if (this.__gameStatus !== GameStatus.PENDING) {
       Log.throw("Cannot add players. Game is not pending.", {
@@ -148,48 +160,6 @@ export class Session implements Saveable {
     users.forEach(user => {
       this.__createPlayer(user);
     });
-  }
-
-  public applyHandResult(): void {
-    if (this.__gameStatus !== GameStatus.ACTIVE) {
-      Log.throw("Cannot apply hand results. Game is not active.", {
-        gameStatus: this.__gameStatus,
-      });
-    }
-    if (this.__roundIndex !== 0 || this.__activePlayerIndex !== 0) {
-      Log.throw(
-        "Cannot apply hand results. Round index and active player index are not currently 0.",
-        {
-          roundIndex: this.__roundIndex,
-          activePlayerIndex: this.__activePlayerIndex,
-        },
-      );
-    }
-    const currentHandResult: HandResult = this.__handResults[0];
-    if (currentHandResult["_isAppliedToPlayers"]) {
-      Log.throw(
-        "Cannot apply hand results. Hand has already been applied to players.",
-        { currentHandResult },
-      );
-    }
-    let remainingPlayerTotal: number = 0;
-    currentHandResult.rankings.forEach(ranking => {
-      const player: Player = this.getPlayerById(ranking.playerId);
-      player["_deductTokens"](ranking.tokenLossTotal);
-      if (player.status === PlayerStatus.ACTIVE) {
-        remainingPlayerTotal++;
-      }
-    });
-    currentHandResult["_markAsAppliedToPlayers"]();
-    if (remainingPlayerTotal === 0) {
-      Log.throw(
-        "Cannot apply hand results. Zero players remained after results were applied.",
-        { currentHandResult },
-      );
-    }
-    if (remainingPlayerTotal === 1) {
-      this.__gameStatus = GameStatus.COMPLETED;
-    }
   }
 
   public clearPlayerRoundTurns(): void {
@@ -221,14 +191,14 @@ export class Session implements Saveable {
     return this.currentPlayer["_createRoundTurn"](turnAction);
   }
 
-  public discardCardForCurrentPlayer(playerCard: PlayerCard): void {
+  public discardCardForCurrentPlayer(card: PlayerCard): void {
     if (this.__gameStatus !== GameStatus.ACTIVE) {
       Log.throw("Cannot discard card for current player. Game is not active.", {
         gameStatus: this.__gameStatus,
       });
     }
-    const card: Card = this.currentPlayer["_removeCard"](playerCard);
-    this.__discardCard(card);
+    this.currentPlayer["_discardCard"](card);
+    this.__addCardToDiscard(card.card);
   }
 
   public drawCardForCurrentPlayer(
@@ -242,10 +212,90 @@ export class Session implements Saveable {
     }
     this.currentPlayer["_spendToken"]();
     const card: Card = this.__drawCard(cardSuit, drawSource);
-    const playerCardSource: PlayerCardSource =
-      this.__drawSourceToPlayerCardSource(drawSource);
-    this.currentPlayer["_addCard"](card, playerCardSource);
+    this.currentPlayer["_drawCard"](card, drawSource);
     return card;
+  }
+
+  public finalizeHand(): void {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot finalize hand. Game is not active.", {
+        gameStatus: this.__gameStatus,
+      });
+    }
+    if (
+      this.__roundIndex !== 3 ||
+      this.__activePlayerIndex !== this.activePlayersInTurnOrder.length - 1
+    ) {
+      Log.throw(
+        "Cannot finalize hand. This is not the last player in the last round of the hand.",
+        {
+          roundIndex: this.__roundIndex,
+          activePlayerIndex: this.__activePlayerIndex,
+        },
+      );
+    }
+    if (this.__handResults.length !== this.__handIndex) {
+      Log.throw(
+        "Cannot finalize hand. The current hand result count is not equal to the hand index.",
+        {
+          handIndex: this.__handIndex,
+          handResults: this.__handResults,
+        },
+      );
+    }
+
+    // Score the hand
+    const handResult: HandResult = new HandResult(
+      Object.values(this.activePlayersInTurnOrder),
+    );
+    this.__handResults.push(handResult);
+
+    // Apply hand results
+    const remainingPlayerIds: string[] = [];
+    handResult.rankings.forEach(ranking => {
+      const player: Player = this.getPlayerById(ranking.playerId);
+      player["_deductTokens"](ranking.tokenLossTotal);
+      if (player.status === PlayerStatus.ACTIVE) {
+        remainingPlayerIds.push(player.id);
+      }
+    });
+
+    handResult["_markAsAppliedToPlayers"]();
+
+    if (remainingPlayerIds.length === 0) {
+      Log.throw(
+        "Cannot finalize hand. Zero players remained after results were applied.",
+        { handResult },
+      );
+    }
+    if (remainingPlayerIds.length === 1) {
+      this.__gameStatus = GameStatus.COMPLETED;
+      this.__winningPlayerId = remainingPlayerIds[0];
+    }
+  }
+
+  public getCurrentHandResult(): HandResult {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot get current hand result. Game is not active.", {
+        gameStatus: this.__gameStatus,
+      });
+    }
+    if (this.__handResults.length === 0) {
+      Log.throw(
+        "Cannot get current hand result. No hand results have been recorded.",
+        { handIndex: this.__handIndex },
+      );
+    }
+    if (this.__handResults.length !== this.__handIndex + 1) {
+      Log.throw(
+        "Cannot get current hand result. The current hand result count is not one greater than the hand index.",
+        {
+          handIndex: this.__handIndex,
+          handResults: this.__handResults,
+        },
+      );
+    }
+    return this.__handResults[this.__handIndex];
   }
 
   public getDiscardOptionsForCurrentPlayer(): [PlayerCard, PlayerCard] {
@@ -370,36 +420,6 @@ export class Session implements Saveable {
     this.currentPlayer["_resolveRoundTurn"]();
   }
 
-  public scoreHand(): void {
-    if (this.__gameStatus !== GameStatus.ACTIVE) {
-      Log.throw("Cannot score hand. Game is not active.", {
-        gameStatus: this.__gameStatus,
-      });
-    }
-    if (this.__roundIndex !== 0 || this.__activePlayerIndex !== 0) {
-      Log.throw(
-        "Cannot score hand. Round index and active player index are not currently 0.",
-        {
-          roundIndex: this.__roundIndex,
-          activePlayerIndex: this.__activePlayerIndex,
-        },
-      );
-    }
-    if (this.__handResults.length !== this.__handIndex - 1) {
-      Log.throw(
-        "Cannot score hand. The current hand result count is incorrect.",
-        {
-          handIndex: this.__handIndex,
-          handResults: this.__handResults,
-        },
-      );
-    }
-    const handResult: HandResult = new HandResult(
-      Object.values(this.activePlayersInTurnOrder),
-    );
-    this.__handResults.push(handResult);
-  }
-
   public setPlayerCardDieRollsForCurrentPlayer(
     playerCard: PlayerCard,
     dieRolls: number[],
@@ -499,6 +519,10 @@ export class Session implements Saveable {
     };
   }
 
+  private __addCardToDiscard(card: Card): void {
+    this.__cards[card.suit][DrawSource.DISCARD].unshift(card);
+  }
+
   private __collectCards(): void {
     // Collect discard
     this.__cards[CardSuit.BLOOD][DrawSource.DECK].push(
@@ -556,12 +580,8 @@ export class Session implements Saveable {
         PlayerCardSource.DEALT,
       );
     });
-    this.__discardCard(this.__drawCard(CardSuit.BLOOD, DrawSource.DECK));
-    this.__discardCard(this.__drawCard(CardSuit.SAND, DrawSource.DECK));
-  }
-
-  private __discardCard(card: Card): void {
-    this.__cards[card.suit][DrawSource.DISCARD].unshift(card);
+    this.__addCardToDiscard(this.__drawCard(CardSuit.BLOOD, DrawSource.DECK));
+    this.__addCardToDiscard(this.__drawCard(CardSuit.SAND, DrawSource.DECK));
   }
 
   private __drawCard(cardSuit: CardSuit, drawSource: DrawSource): Card {
@@ -575,27 +595,9 @@ export class Session implements Saveable {
     return Utils.removeTopArrayItem(this.__cards[cardSuit][drawSource]);
   }
 
-  private __drawSourceToPlayerCardSource(
-    drawSource: DrawSource,
-  ): PlayerCardSource {
-    switch (drawSource) {
-      case DrawSource.DECK:
-        return PlayerCardSource.DECK_DRAW;
-      case DrawSource.DISCARD:
-        return PlayerCardSource.DISCARD_DRAW;
-      default:
-        Log.throw(
-          "Cannot convert draw source to player card source. Unknown draw source.",
-          {
-            drawSource,
-          },
-        );
-    }
-  }
-
   private __initializePlayers(): void {
     this.__activePlayerOrder = Object.keys(this.__players);
-    new Random().shuffle(this.__activePlayerOrder);
+    Environment.random.shuffle(this.__activePlayerOrder);
     this.allPlayers.forEach(player => {
       player["_initialize"](this.__startingTokenTotal);
     });
@@ -609,8 +611,7 @@ export class Session implements Saveable {
   }
 
   private __shuffleDecks(): void {
-    const random: Random = new Random();
-    random.shuffle(this.__cards[CardSuit.BLOOD][DrawSource.DECK]);
-    random.shuffle(this.__cards[CardSuit.SAND][DrawSource.DECK]);
+    Environment.random.shuffle(this.__cards[CardSuit.BLOOD][DrawSource.DECK]);
+    Environment.random.shuffle(this.__cards[CardSuit.SAND][DrawSource.DECK]);
   }
 }

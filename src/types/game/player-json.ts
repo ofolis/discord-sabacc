@@ -6,6 +6,7 @@ export type PlayerJson = {
   readonly cards: PlayerCardJson[];
   readonly globalName: string | null;
   readonly id: string;
+  readonly previousRoundTurns: TurnJson[];
   readonly roundTurn: TurnJson | null;
   readonly spentTokenTotal: number;
   readonly status: PlayerStatus;
