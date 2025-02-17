@@ -224,7 +224,7 @@ export class Session implements Saveable {
     }
     if (
       this.__roundIndex !== 3 ||
-      this.__activePlayerIndex !== this.activePlayersInTurnOrder.length - 1
+      this.__activePlayerIndex !== this.__activePlayerOrder.length - 1
     ) {
       Log.throw(
         "Cannot finalize hand. This is not the last player in the last round of the hand.",
@@ -260,7 +260,8 @@ export class Session implements Saveable {
       }
     });
 
-    handResult["_markAsAppliedToPlayers"]();
+    handResult["_setRemainingPlayerIds"](remainingPlayerIds);
+    this.__purgeEliminatedPlayersInTurnOrder();
 
     if (remainingPlayerIds.length === 0) {
       Log.throw(
@@ -383,10 +384,10 @@ export class Session implements Saveable {
         },
       );
     }
-    this.__purgeEliminatedPlayersInTurnOrder();
     this.__collectCards();
     this.__shuffleDecks();
     this.__dealCardsToPlayers();
+    this.__resetPlayerTokens();
   }
 
   public iterate(): void {
@@ -555,7 +556,8 @@ export class Session implements Saveable {
 
   private __dealCardsToPlayers(): void {
     Object.values(this.__players).forEach(player => {
-      if (player.cardTotal !== 0) {
+      const playerCardTotal: number = player.getCards().length;
+      if (playerCardTotal !== 0) {
         Log.throw(
           "Cannot deal cards to players. One or more players still contain cards.",
           { players: this.__players },
@@ -608,6 +610,12 @@ export class Session implements Saveable {
       player => player.status === PlayerStatus.ACTIVE,
     );
     this.__activePlayerOrder = remainingPlayers.map(player => player.id);
+  }
+
+  private __resetPlayerTokens(): void {
+    Object.values(this.__players).forEach(player => {
+      player["_resetTokens"]();
+    });
   }
 
   private __shuffleDecks(): void {

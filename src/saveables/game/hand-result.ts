@@ -8,7 +8,7 @@ import {
 export class HandResult implements Saveable {
   public readonly rankings: RankedPlayerScorable[];
 
-  private __isAppliedToPlayers: boolean = false;
+  private __remainingPlayerIds: string[] | null = null;
 
   public constructor(playersOrJson: Player[] | Json) {
     if (Array.isArray(playersOrJson)) {
@@ -19,6 +19,10 @@ export class HandResult implements Saveable {
       this.rankings = HandResult.__rankPlayers(playerScorables);
     } else {
       const json: Json = playersOrJson;
+      this.__remainingPlayerIds = Utils.getJsonEntry(
+        json,
+        "remainingPlayerIds",
+      ) as string[] | null;
       this.rankings = Utils.getJsonEntry(
         json,
         "rankings",
@@ -26,8 +30,13 @@ export class HandResult implements Saveable {
     }
   }
 
-  protected get _isAppliedToPlayers(): boolean {
-    return this.__isAppliedToPlayers;
+  public get remainingPlayerIds(): string[] {
+    if (this.__remainingPlayerIds === null) {
+      Log.throw(
+        "Cannot get remaining player IDs. Remaining player IDs has not been set.",
+      );
+    }
+    return this.__remainingPlayerIds;
   }
 
   private static __calculateTokenLoss(
@@ -88,15 +97,16 @@ export class HandResult implements Saveable {
   public toJson(): HandResultJson {
     return {
       rankings: this.rankings,
+      remainingPlayerIds: this.__remainingPlayerIds,
     };
   }
 
-  protected _markAsAppliedToPlayers(): void {
-    if (this.__isAppliedToPlayers) {
+  protected _setRemainingPlayerIds(remainingPlayerIds: string[]): void {
+    if (this.__remainingPlayerIds !== null) {
       Log.throw(
-        "Cannot mark hand result as applied to players. Hand result was already marked as applied.",
+        "Cannot set remaining player IDs. Remaining player IDs have already been set.",
       );
     }
-    this.__isAppliedToPlayers = true;
+    this.__remainingPlayerIds = remainingPlayerIds;
   }
 }

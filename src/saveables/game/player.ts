@@ -74,21 +74,12 @@ export class Player implements Saveable {
     }
   }
 
+  public get availableTokenTotal(): number {
+    return this.__tokenTotal - this.__spentTokenTotal;
+  }
+
   public get avatarUrl(): string | null {
     return Discord.formatAvatarUrl({ avatar: this.__avatarId, id: this.id });
-  }
-
-  public get cardTotal(): number {
-    if (this.__status !== PlayerStatus.ACTIVE) {
-      Log.throw("Cannot get card total. Player is not currently active.", {
-        status: this.__status,
-      });
-    }
-    return this.__cards.length;
-  }
-
-  public get currentTokenTotal(): number {
-    return this.__tokenTotal - this.__spentTokenTotal;
   }
 
   public get nameString(): string {
@@ -103,12 +94,20 @@ export class Player implements Saveable {
     return this.__roundTurn;
   }
 
+  public get spentTokenTotal(): number {
+    return this.__spentTokenTotal;
+  }
+
   public get status(): PlayerStatus {
     return this.__status;
   }
 
   public get tagString(): string {
     return Discord.formatUserMentionString({ id: this.id });
+  }
+
+  public get tokenTotal(): number {
+    return this.__tokenTotal;
   }
 
   public getCards(cardSuit?: CardSuit): readonly PlayerCard[] {
@@ -298,6 +297,15 @@ export class Player implements Saveable {
     return cards;
   }
 
+  protected _resetTokens(): void {
+    if (this.__status !== PlayerStatus.ACTIVE) {
+      Log.throw("Cannot reset tokens. Player is not currently active.", {
+        status: this.__status,
+      });
+    }
+    this.__spentTokenTotal = 0;
+  }
+
   protected _resolveRoundTurn(): void {
     if (this.__status !== PlayerStatus.ACTIVE) {
       Log.throw("Cannot resolve turn. Player is not currently active.", {
@@ -323,7 +331,7 @@ export class Player implements Saveable {
         "Cannot spend token. Player does not have a round turn defined.",
       );
     }
-    if (this.currentTokenTotal === 0) {
+    if (this.availableTokenTotal === 0) {
       Log.throw("Cannot spend token. Player has no remaining tokens.");
     }
     this.__spentTokenTotal++;

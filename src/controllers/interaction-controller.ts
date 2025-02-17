@@ -27,27 +27,26 @@ export class InteractionController {
   public static async announceGameEnd(
     channelState: ChannelState,
   ): Promise<void> {
-    await this.__createChannelMessageEmbed(
-      channelState.channelId,
-      {
-        description: Utils.linesToString([
-          `After ${(channelState.session.handIndex + 1).toString()} hand${channelState.session.handIndex === 0 ? "" : "s"}, the winner is...`,
-          `## ${channelState.session.winningPlayer.tagString} 🎉`,
-        ]),
-        title: "The Game Is Over!",
-      },
-      undefined,
-      channelState.session.winningPlayer.avatarUrl !== null
-        ? channelState.session.winningPlayer.avatarUrl
-        : undefined,
-    );
+    const embedData: discordJs.EmbedData = {
+      description: Utils.linesToString([
+        `After ${(channelState.session.handIndex + 1).toString()} hand${channelState.session.handIndex === 0 ? "" : "s"}, the winner is...`,
+        `## ${channelState.session.winningPlayer.tagString} 🎉`,
+      ]),
+      title: "The Game Is Over!",
+    };
+    if (channelState.session.winningPlayer.avatarUrl !== null) {
+      embedData.image = {
+        url: channelState.session.winningPlayer.avatarUrl,
+      };
+    }
+    await this.__createChannelMessageEmbed(channelState.channelId, embedData);
   }
 
   public static async announceGameStart(
     channelState: ChannelState,
   ): Promise<void> {
     await this.__createChannelMessageEmbed(channelState.channelId, {
-      description: `A ${channelState.session.allPlayers.length.toString()} player Sabacc game has begun!`,
+      description: `A ${channelState.session.allPlayers.length.toString()}-player Sabacc game has begun!`,
       fields: [
         {
           inline: true,
@@ -97,7 +96,7 @@ export class InteractionController {
       resultsLines.push(
         `- \`#${(ranking.rankIndex + 1).toString()}\` ${player.status !== PlayerStatus.ACTIVE ? `~~**${player.nameString}**~~ 💀` : `**${player.nameString}**`}`,
         `  - Cards: ${this.__formatCardString(ranking.sandCard)} ${this.__formatCardString(ranking.bloodCard)}`,
-        `  - Tokens: \`${this.__formatTokenString(player.currentTokenTotal, ranking.tokenLossTotal, true)}\` `,
+        `  - Tokens: \`${this.__formatTokenResultString(player.tokenTotal, ranking.tokenLossTotal)}\` `,
         `    -# ${tokenDetailStrings.join(" + ")}`,
       );
       usedPlayerIds.push(ranking.playerId);
@@ -329,9 +328,22 @@ export class InteractionController {
           value: (channelState.session.roundIndex + 1).toString(),
         },
         {
-          inline: false,
-          name: "Player ID",
-          value: player.id,
+          inline: true,
+          name: "\u200B",
+          value: "\u200B",
+        },
+        {
+          inline: true,
+          name: "Cards",
+          value: this.__formatPlayerCardsString(player),
+        },
+        {
+          inline: true,
+          name: "Tokens",
+          value: this.__formatTokenStateString(
+            player.availableTokenTotal,
+            player.spentTokenTotal,
+          ),
         },
       ],
     });
@@ -523,7 +535,7 @@ export class InteractionController {
           customId: "draw",
           label: "Draw",
           style: discordJs.ButtonStyle.Primary,
-          disabled: player.currentTokenTotal === 0,
+          disabled: player.availableTokenTotal === 0,
         }),
         new discordJs.ButtonBuilder({
           customId: "stand",
@@ -770,19 +782,11 @@ export class InteractionController {
     channelId: string,
     embedData: discordJs.EmbedData,
     buttons?: discordJs.ButtonBuilder[],
-    imageUrl?: string,
   ): Promise<ChannelMessage> {
-    const messageCreateOptions: discordJs.BaseMessageOptions =
-      this.__createEmbedBaseMessageOptions(embedData, buttons);
-    if (imageUrl !== undefined) {
-      messageCreateOptions.files = [
-        {
-          attachment: imageUrl,
-          name: "image.webp",
-        },
-      ];
-    }
-    return await Discord.sendChannelMessage(channelId, messageCreateOptions);
+    return await Discord.sendChannelMessage(
+      channelId,
+      this.__createEmbedBaseMessageOptions(embedData, buttons),
+    );
   }
 
   private static __createEmbedBaseMessageOptions(
@@ -849,21 +853,40 @@ export class InteractionController {
     }
   }
 
-  private static __formatTokenString(
-    baseTotal: number,
-    adjustmentTotal: number,
-    useLossIcon: boolean = false,
+  private static __formatPlayerCardsString(player: Player): string {
+    const bloodCards: readonly PlayerCard[] = player.getCards(CardSuit.BLOOD);
+    const sandCards: readonly PlayerCard[] = player.getCards(CardSuit.SAND);
+    const bloodCardStrings: string[] = bloodCards.map(card =>
+      this.__formatCardString(card),
+    );
+    const sandCardStrings: string[] = sandCards.map(card =>
+      this.__formatCardString(card),
+    );
+    return [...sandCardStrings, ...bloodCardStrings].join(" ");
+  }
+
+  private static __formatTokenResultString(
+    tokenTotal: number,
+    tokenLossTotal: number,
   ): string {
-    if (baseTotal === 0 && adjustmentTotal <= 0) {
+    if (tokenTotal + tokenLossTotal === 0) {
       return "`None`";
     }
-    const baseTokenString: string = "⚪".repeat(
-      Math.max(baseTotal + (adjustmentTotal <= 0 ? adjustmentTotal : 0), 0),
-    );
-    const reductionTokenString: string = (useLossIcon ? "🔴" : "⚫").repeat(
-      Math.abs(adjustmentTotal),
-    );
-    return `\`${baseTokenString}${reductionTokenString}\``;
+    const tokenTotalString: string = "⚪".repeat(tokenTotal);
+    const tokenLossString: string = "🔴".repeat(tokenLossTotal);
+    return `\`${tokenTotalString}${tokenLossString}\``;
+  }
+
+  private static __formatTokenStateString(
+    availableTokenTotal: number,
+    spentTokenTotal: number,
+  ): string {
+    if (availableTokenTotal + spentTokenTotal === 0) {
+      return "`None`";
+    }
+    const availableTokenString: string = "⚪".repeat(availableTokenTotal);
+    const spentTokenString: string = "⚫".repeat(spentTokenTotal);
+    return `\`${availableTokenString}${spentTokenString}\``;
   }
 
   private static async __setChannelMessageEmbed(
