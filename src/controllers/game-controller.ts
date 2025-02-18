@@ -186,7 +186,11 @@ export class GameController {
   ): Promise<boolean> {
     if (playerCard.dieRolls.length === 0) {
       const rollDice: boolean | null =
-        await InteractionController.promptRollDice(message, playerCard);
+        await InteractionController.promptRollDice(
+          message,
+          channelState,
+          playerCard,
+        );
       if (rollDice === null) return false;
       if (!rollDice) {
         await InteractionController.followupTurnIncomplete(message);
@@ -200,7 +204,11 @@ export class GameController {
 
     if (playerCard.dieRolls.length > 1) {
       const selectedDieRoll: number | null =
-        await InteractionController.promptChooseDieRoll(message, playerCard);
+        await InteractionController.promptChooseDieRoll(
+          message,
+          channelState,
+          playerCard,
+        );
       if (selectedDieRoll === null) return false;
       channelState.session.setPlayerCardDieRollsForCurrentPlayer(playerCard, [
         selectedDieRoll,
@@ -280,7 +288,7 @@ export class GameController {
     channelState: ChannelState,
   ): Promise<boolean> {
     const revealCards: boolean | null =
-      await InteractionController.promptRevealCards(message);
+      await InteractionController.promptRevealCards(message, channelState);
     if (revealCards === null) {
       return false;
     }
