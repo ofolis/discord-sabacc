@@ -276,10 +276,8 @@ export class Session implements Saveable {
   }
 
   public getCurrentHandResult(): HandResult {
-    if (this.__gameStatus !== GameStatus.ACTIVE) {
-      Log.throw("Cannot get current hand result. Game is not active.", {
-        gameStatus: this.__gameStatus,
-      });
+    if (this.__gameStatus === GameStatus.PENDING) {
+      Log.throw("Cannot get current hand result. Game is pending.");
     }
     if (this.__handResults.length === 0) {
       Log.throw(
@@ -348,10 +346,8 @@ export class Session implements Saveable {
   }
 
   public getPlayerById(id: string): Player {
-    if (this.__gameStatus !== GameStatus.ACTIVE) {
-      Log.throw("Cannot get player state. Game is not active.", {
-        gameStatus: this.__gameStatus,
-      });
+    if (this.__gameStatus === GameStatus.PENDING) {
+      Log.throw("Cannot get player state. Game is pending.");
     }
     if (!(id in this.__players)) {
       Log.throw(
