@@ -1,4 +1,4 @@
-import { PrivateChannelMessage } from ".";
+import { ChannelCommandMessage } from ".";
 import { CommandOption } from "../types";
 
 export abstract class Command {
@@ -14,5 +14,5 @@ export abstract class Command {
 
   abstract options: CommandOption[];
 
-  abstract execute(privateChannelMessage: PrivateChannelMessage): Promise<void>;
+  abstract execute(message: ChannelCommandMessage): Promise<void>;
 }
