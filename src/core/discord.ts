@@ -117,6 +117,10 @@ export class Discord {
     return `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.webp?size=240`;
   }
 
+  public static formatChannelMentionString(): string {
+    return "@everyone";
+  }
+
   public static formatUserMentionString(
     user: Pick<discordJs.User, "id">,
   ): string {
