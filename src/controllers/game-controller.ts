@@ -17,8 +17,15 @@ export class GameController {
     channelState: ChannelState | null,
   ): Promise<void> {
     // Ensure channel state exists with a new session
-    if (channelState === null) {
-      channelState = new ChannelState(message);
+    if (
+      channelState === null ||
+      channelState.session.gameStatus === GameStatus.COMPLETED
+    ) {
+      if (channelState === null) {
+        channelState = new ChannelState(message);
+      } else {
+        channelState.createSession(message);
+      }
       await InteractionController.followupGameCreated(message);
     } else {
       const endCurrentGame: boolean | null =
