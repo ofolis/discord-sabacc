@@ -116,6 +116,12 @@ export class Player implements Saveable {
         status: this.__status,
       });
     }
+    this.__cards.sort((a, b) => {
+      if (a.createdAt !== b.createdAt) {
+        return b.createdAt - a.createdAt; // Newer cards first
+      }
+      return a.card.suit === CardSuit.SAND ? -1 : 1; // `SAND` first
+    });
     if (cardSuit === undefined) {
       return this.__cards;
     } else {
@@ -264,6 +270,7 @@ export class Player implements Saveable {
       sandCard: sandCards[0].card,
       sandCardValue: sandCardValue,
       spentTokenTotal: this.__spentTokenTotal,
+      tokenTotal: this.__tokenTotal,
     };
     return playerScorable;
   }

@@ -217,6 +217,7 @@ export class Session implements Saveable {
   }
 
   public finalizeHand(): void {
+    // TODO: Account for zero players remaining (we can't assume win/loss based on player count)
     if (this.__gameStatus !== GameStatus.ACTIVE) {
       Log.throw("Cannot finalize hand. Game is not active.", {
         gameStatus: this.__gameStatus,
@@ -390,6 +391,7 @@ export class Session implements Saveable {
   }
 
   public iterate(): void {
+    // TODO: Skip rounds if no players have tokens
     if (this.__gameStatus !== GameStatus.ACTIVE) {
       Log.throw("Cannot iterate session. Game is not active.", {
         gameStatus: this.__gameStatus,

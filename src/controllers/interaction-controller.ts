@@ -135,37 +135,28 @@ export class InteractionController {
   public static async announceHandStart(
     channelState: ChannelState,
   ): Promise<void> {
-    const tableStateEmbed: discordJs.EmbedBuilder = this.__getTableStateEmbed(
-      channelState,
-      true,
-      true,
-    );
-    tableStateEmbed.setTitle(
-      `Starting Hand ${(channelState.session.handIndex + 1).toString()}`,
-    );
     await this.__createChannelMessageEmbed(channelState.channelId, [
-      tableStateEmbed,
+      new discordJs.EmbedBuilder({
+        description: `${channelState.session.activePlayersInTurnOrder[0].nameString} is now the first player.`,
+        title: `Starting Hand ${(channelState.session.handIndex + 1).toString()}`,
+      }),
     ]);
   }
 
   public static async announceRoundStart(
     channelState: ChannelState,
   ): Promise<void> {
-    const tableStateEmbed: discordJs.EmbedBuilder = this.__getTableStateEmbed(
-      channelState,
-      true,
-      true,
-    );
+    let embed: discordJs.EmbedBuilder;
     if (channelState.session.roundIndex < 3) {
-      tableStateEmbed.setTitle(
-        `Starting Round ${(channelState.session.roundIndex + 1).toString()}`,
-      );
+      embed = new discordJs.EmbedBuilder({
+        title: `Starting Round ${(channelState.session.roundIndex + 1).toString()}`,
+      });
     } else {
-      tableStateEmbed.setTitle("Starting Reveal Round");
+      embed = new discordJs.EmbedBuilder({
+        title: "Starting Reveal Round",
+      });
     }
-    await this.__createChannelMessageEmbed(channelState.channelId, [
-      tableStateEmbed,
-    ]);
+    await this.__createChannelMessageEmbed(channelState.channelId, [embed]);
   }
 
   public static async announceTurnDraw(
@@ -356,42 +347,51 @@ export class InteractionController {
     channelState: ChannelState,
   ): Promise<void> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
-    await this.__setChannelMessageEmbed(message, [
-      this.__getTableStateEmbed(channelState),
-      this.__getPlayerItemsEmbed(player),
-    ]);
+    const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
+      channelState,
+      false,
+      false,
+      player,
+    );
+    await this.__setChannelMessageEmbed(message, [stateEmbed]);
   }
 
   public static async promptChooseDieRoll(
     message: ChannelCommandMessage,
     channelState: ChannelState,
-    playerCard: PlayerCard,
+    imposterCard: PlayerCard,
   ): Promise<number | null> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
-    if (playerCard.dieRolls.length !== 2) {
+    if (imposterCard.dieRolls.length !== 2) {
       Log.throw(
         "Could not resolve choose die roll prompt. There are not exactly 2 die rolls on the player card.",
-        { playerCard },
+        { imposterCard },
       );
     }
+    const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
+      channelState,
+      true,
+      true,
+      player,
+    );
     await this.__setChannelMessageEmbed(
       message,
       [
+        stateEmbed,
         new discordJs.EmbedBuilder({
-          description: "Choose the die roll value.",
+          description: `Choose a die roll value to use for your ${this.__formatCardString(imposterCard)}.`,
           title: "Die Roll Selection",
         }),
-        this.__getPlayerItemsEmbed(player),
       ],
       [
         new discordJs.ButtonBuilder({
           customId: "firstDie",
-          label: playerCard.dieRolls[0].toString(),
+          label: imposterCard.dieRolls[0].toString(),
           style: discordJs.ButtonStyle.Primary,
         }),
         new discordJs.ButtonBuilder({
           customId: "secondDie",
-          label: playerCard.dieRolls[1].toString(),
+          label: imposterCard.dieRolls[1].toString(),
           style: discordJs.ButtonStyle.Primary,
         }),
       ],
@@ -407,9 +407,9 @@ export class InteractionController {
     }
     switch (buttonInteraction.customId) {
       case "firstDie":
-        return playerCard.dieRolls[0];
+        return imposterCard.dieRolls[0];
       case "secondDie":
-        return playerCard.dieRolls[1];
+        return imposterCard.dieRolls[1];
       default:
         Log.throw(
           "Could not resolve choose die roll prompt. Unknown button interaction custom ID.",
@@ -421,18 +421,25 @@ export class InteractionController {
   public static async promptChooseDiscardedCard(
     message: ChannelCommandMessage,
     channelState: ChannelState,
+    drawnCard: Card,
   ): Promise<PlayerCard | null> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const discardOptions: [PlayerCard, PlayerCard] =
       channelState.session.getDiscardOptionsForCurrentPlayer();
+    const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
+      channelState,
+      true,
+      true,
+      player,
+    );
     await this.__setChannelMessageEmbed(
       message,
       [
+        stateEmbed,
         new discordJs.EmbedBuilder({
-          description: "Choose the card you'd like to keep.",
-          title: "Select Card",
+          description: `You drew ${this.__formatCardString(drawnCard)}. Choose the card you would like to keep.`,
+          title: "Card Selection",
         }),
-        this.__getPlayerItemsEmbed(player),
       ],
       [
         new discordJs.ButtonBuilder({
@@ -508,14 +515,20 @@ export class InteractionController {
         }),
       );
     }
+    const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
+      channelState,
+      true,
+      true,
+      player,
+    );
     await this.__setChannelMessageEmbed(
       message,
       [
+        stateEmbed,
         new discordJs.EmbedBuilder({
           description: "Choose what you would like to draw.",
           title: "Draw Selection",
         }),
-        this.__getPlayerItemsEmbed(player),
       ],
       buttonBuilders,
     );
@@ -550,14 +563,26 @@ export class InteractionController {
     channelState: ChannelState,
   ): Promise<TurnAction | null> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
+    const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
+      channelState,
+      false,
+      true,
+      player,
+    );
+    const descriptionLines: string[] = ["Choose your turn action."];
+    if (player.availableTokenTotal === 0) {
+      descriptionLines.push(
+        "-# **Draw** is disabled because you have no remaining tokens.",
+      );
+    }
     await this.__setChannelMessageEmbed(
       message,
       [
+        stateEmbed,
         new discordJs.EmbedBuilder({
-          description: "Choose your turn action.",
-          title: "Turn Action",
+          description: Utils.linesToString(descriptionLines),
+          title: "Action Selection",
         }),
-        this.__getPlayerItemsEmbed(player),
       ],
       [
         new discordJs.ButtonBuilder({
@@ -649,7 +674,7 @@ export class InteractionController {
     const userAccumulator: discordJs.User[] = [];
     while (userAccumulator.length + 1 < PLAYER_MAXIMUM) {
       const embed: discordJs.EmbedBuilder = new discordJs.EmbedBuilder({
-        description: `Hey ${Discord.formatChannelMentionString()}! A new game was started by ${Discord.formatUserNameString(message.user)}.`,
+        description: `Hey ${Discord.formatChannelMentionString()}! A new Sabacc game was started by ${Discord.formatUserNameString(message.user)}.`,
         fields: [
           {
             name: "Players",
@@ -734,14 +759,20 @@ export class InteractionController {
     channelState: ChannelState,
   ): Promise<boolean | null> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
+    const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
+      channelState,
+      false,
+      true,
+      player,
+    );
     await this.__setChannelMessageEmbed(
       message,
       [
+        stateEmbed,
         new discordJs.EmbedBuilder({
-          description: "Do you want to reveal your cards and end your hand?",
+          description: "Reveal your cards and end your hand.",
           title: "Reveal Cards",
         }),
-        this.__getPlayerItemsEmbed(player),
       ],
       [
         new discordJs.ButtonBuilder({
@@ -781,14 +812,20 @@ export class InteractionController {
     playerCard: PlayerCard,
   ): Promise<boolean | null> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
+    const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
+      channelState,
+      false,
+      true,
+      player,
+    );
     await this.__setChannelMessageEmbed(
       message,
       [
+        stateEmbed,
         new discordJs.EmbedBuilder({
-          description: `Roll the dice for ${this.__formatCardString(playerCard)}?`,
+          description: `Roll the dice for your ${this.__formatCardString(playerCard)}.`,
           title: "Roll Dice",
         }),
-        this.__getPlayerItemsEmbed(player),
       ],
       [
         new discordJs.ButtonBuilder({
@@ -967,7 +1004,7 @@ export class InteractionController {
     const playersLines: string[] = [];
     channelState.session.activePlayersInTurnOrder.forEach((player, index) =>
       playersLines.push(
-        `- **${player.nameString}**${index === channelState.session.activePlayerIndex ? " 👤" : ""}`,
+        `- ${player.nameString}${index === channelState.session.activePlayerIndex ? " 👤" : ""}`,
         `  - Tokens: ${this.__formatTokenStateString(player.availableTokenTotal, player.spentTokenTotal)}`,
       ),
     );
@@ -982,9 +1019,7 @@ export class InteractionController {
       return "`None`";
     }
     const tokenTotalString: string = "⚪".repeat(tokenTotal);
-    const tokenLossString: string = "🔴".repeat(
-      Math.min(tokenLossTotal, tokenTotal),
-    );
+    const tokenLossString: string = "🔴".repeat(tokenLossTotal);
     return `\`${tokenTotalString}${tokenLossString}\``;
   }
 
@@ -1000,31 +1035,11 @@ export class InteractionController {
     return `\`${availableTokenString}${spentTokenString}\``;
   }
 
-  private static __getPlayerItemsEmbed(player: Player): discordJs.EmbedBuilder {
-    return new discordJs.EmbedBuilder({
-      title: "Your Items",
-      fields: [
-        {
-          inline: true,
-          name: "Cards",
-          value: this.__formatPlayerCardsString(player),
-        },
-        {
-          inline: true,
-          name: "Tokens",
-          value: this.__formatTokenStateString(
-            player.availableTokenTotal,
-            player.spentTokenTotal,
-          ),
-        },
-      ],
-    });
-  }
-
-  private static __getTableStateEmbed(
+  private static __getStateEmbed(
     channelState: ChannelState,
-    hideDiscard: boolean = false,
-    hidePlayers: boolean = false,
+    hideDiscard: boolean,
+    hidePlayers: boolean,
+    player: Player | null = null,
   ): discordJs.EmbedBuilder {
     const fields: discordJs.APIEmbedField[] = [];
     if (!hideDiscard) {
@@ -1039,9 +1054,24 @@ export class InteractionController {
         value: this.__formatTablePlayersString(channelState),
       });
     }
+    if (player !== null) {
+      fields.push({
+        inline: true,
+        name: "Your Cards",
+        value: this.__formatPlayerCardsString(player),
+      });
+      fields.push({
+        inline: true,
+        name: "Your Tokens",
+        value: this.__formatTokenStateString(
+          player.availableTokenTotal,
+          player.spentTokenTotal,
+        ),
+      });
+    }
     return new discordJs.EmbedBuilder({
-      description: this.__formatTableHandRoundString(channelState),
       fields,
+      title: this.__formatTableHandRoundString(channelState),
     });
   }
 

@@ -9,4 +9,5 @@ export type PlayerScoreable = {
   readonly sandCard: Card;
   readonly sandCardValue: number;
   readonly spentTokenTotal: number;
+  readonly tokenTotal: number;
 };

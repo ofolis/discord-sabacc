@@ -281,6 +281,7 @@ export class GameController {
         await InteractionController.promptChooseDiscardedCard(
           message,
           channelState,
+          drawnCard,
         );
       if (discardedCard === null) {
         return false;

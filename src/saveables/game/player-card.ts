@@ -3,6 +3,8 @@ import { CardType, PlayerCardSource } from "../../enums";
 import { Card, PlayerCardJson } from "../../types";
 
 export class PlayerCard implements Saveable {
+  public readonly createdAt: number = Date.now();
+
   protected _dieRolls: number[] = [];
 
   private __card: Card;

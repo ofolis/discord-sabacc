@@ -54,8 +54,10 @@ export class HandResult implements Saveable {
     const tokenPenaltyTotal: number = isSabacc
       ? 1
       : playerScorable.cardDifference;
-    const tokenLossTotal: number =
-      playerScorable.spentTokenTotal + tokenPenaltyTotal;
+    const tokenLossTotal: number = Math.min(
+      playerScorable.spentTokenTotal + tokenPenaltyTotal,
+      playerScorable.tokenTotal,
+    );
     return { tokenLossTotal, tokenPenaltyTotal };
   }
 
