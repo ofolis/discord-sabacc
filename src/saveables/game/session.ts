@@ -382,6 +382,9 @@ export class Session implements Saveable {
     }
     this.__collectCards();
     this.__shuffleDecks();
+    if (this.__handIndex !== 0) {
+      this.__iterateActivePlayerOrder();
+    }
     this.__dealCardsToPlayers();
     this.__resetPlayerTokens();
   }
@@ -599,6 +602,21 @@ export class Session implements Saveable {
     this.allPlayers.forEach(player => {
       player["_initialize"](this.__startingTokenTotal);
     });
+  }
+
+  private __iterateActivePlayerOrder(): void {
+    if (this.__gameStatus !== GameStatus.ACTIVE) {
+      Log.throw("Cannot iterate active player order. Game is not active.", {
+        gameStatus: this.__gameStatus,
+      });
+    }
+    const firstPlayerId: string | undefined = this.__activePlayerOrder.shift();
+    if (firstPlayerId === undefined) {
+      Log.throw(
+        "Cannot iterate active player order. Active player order is empty.",
+      );
+    }
+    this.__activePlayerOrder.push(firstPlayerId);
   }
 
   private __purgeEliminatedPlayersInTurnOrder(): void {
