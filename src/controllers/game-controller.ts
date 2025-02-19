@@ -28,24 +28,22 @@ export class GameController {
       }
       await InteractionController.followupGameCreated(message);
     } else {
-      const endCurrentGame: boolean | null =
+      const endCurrentGame: true | null | undefined =
         await InteractionController.promptEndCurrentGame(message);
-      if (endCurrentGame === null) {
+      if (endCurrentGame === null || endCurrentGame === undefined) {
+        if (endCurrentGame === null) {
+          await InteractionController.followupGameNotEnded(message);
+        }
         return;
       }
-      if (endCurrentGame) {
-        channelState.createSession(message);
-        await InteractionController.followupGameEnded(message);
-      } else {
-        await InteractionController.followupGameNotEnded(message);
-        return;
-      }
+      channelState.createSession(message);
+      await InteractionController.followupGameEnded(message);
     }
 
     // Prompt for players to join
-    const joinedUsers: discordJs.User[] | null =
+    const joinedUsers: discordJs.User[] | undefined =
       await InteractionController.promptJoinGame(message);
-    if (joinedUsers === null) {
+    if (joinedUsers === undefined) {
       return;
     }
 
@@ -65,12 +63,15 @@ export class GameController {
     let turn: Turn | null = channelState.session.currentPlayer.roundTurn;
     if (turn === null) {
       if (channelState.session.roundIndex < 3) {
-        const turnAction: TurnAction | null =
+        const turnAction: TurnAction | null | undefined =
           await InteractionController.promptChooseTurnAction(
             message,
             channelState,
           );
-        if (turnAction === null) {
+        if (turnAction === null || turnAction === undefined) {
+          if (turnAction === null) {
+            await InteractionController.followupTurnIncomplete(message);
+          }
           return;
         }
         turn = channelState.session.createRoundTurnForCurrentPlayer(turnAction);
@@ -92,7 +93,7 @@ export class GameController {
           turnResolved = await this.__resolveTurnReveal(message, channelState);
           break;
         case TurnAction.STAND:
-          turnResolved = this.__resolveTurnStand();
+          turnResolved = await this.__resolveTurnStand(message, channelState);
           break;
         default:
           Log.throw("Cannot handle play turn. Unknown turn action.", {
@@ -192,15 +193,16 @@ export class GameController {
     playerCard: PlayerCard,
   ): Promise<boolean> {
     if (playerCard.dieRolls.length === 0) {
-      const rollDice: boolean | null =
+      const rollDice: true | null | undefined =
         await InteractionController.promptRollDice(
           message,
           channelState,
           playerCard,
         );
-      if (rollDice === null) return false;
-      if (!rollDice) {
-        await InteractionController.followupTurnIncomplete(message);
+      if (rollDice === null || rollDice === undefined) {
+        if (rollDice === null) {
+          await InteractionController.followupTurnIncomplete(message);
+        }
         return false;
       }
       channelState.session.setPlayerCardDieRollsForCurrentPlayer(playerCard, [
@@ -210,13 +212,13 @@ export class GameController {
     }
 
     if (playerCard.dieRolls.length > 1) {
-      const selectedDieRoll: number | null =
+      const selectedDieRoll: number | undefined =
         await InteractionController.promptChooseDieRoll(
           message,
           channelState,
           playerCard,
         );
-      if (selectedDieRoll === null) return false;
+      if (selectedDieRoll === undefined) return false;
       channelState.session.setPlayerCardDieRollsForCurrentPlayer(playerCard, [
         selectedDieRoll,
       ]);
@@ -265,9 +267,13 @@ export class GameController {
 
     let drawnCard: Card | null = roundTurn.drawnCard;
     if (drawnCard === null) {
-      const drawDeck: [CardSuit, DrawSource] | null =
+      const drawDeck: [CardSuit, DrawSource] | null | undefined =
         await InteractionController.promptChooseDrawDeck(message, channelState);
-      if (drawDeck === null) {
+      if (drawDeck === null || drawDeck === undefined) {
+        if (drawDeck === null) {
+          channelState.session.currentPlayer.discardRoundTurn();
+          await this.handlePlayTurn(message, channelState);
+        }
         return false;
       }
       drawnCard = channelState.session.drawCardForCurrentPlayer(
@@ -277,13 +283,13 @@ export class GameController {
     }
 
     if (roundTurn.discardedCard === null) {
-      const discardedCard: PlayerCard | null =
+      const discardedCard: PlayerCard | undefined =
         await InteractionController.promptChooseDiscardedCard(
           message,
           channelState,
           drawnCard,
         );
-      if (discardedCard === null) {
+      if (discardedCard === undefined) {
         return false;
       }
       channelState.session.discardCardForCurrentPlayer(discardedCard);
@@ -295,13 +301,12 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
-    const revealCards: boolean | null =
+    const revealCards: true | null | undefined =
       await InteractionController.promptRevealCards(message, channelState);
-    if (revealCards === null) {
-      return false;
-    }
-    if (!revealCards) {
-      await InteractionController.followupTurnIncomplete(message);
+    if (revealCards === null || revealCards === undefined) {
+      if (revealCards === null) {
+        await InteractionController.followupTurnIncomplete(message);
+      }
       return false;
     }
 
@@ -322,7 +327,19 @@ export class GameController {
     return true;
   }
 
-  private static __resolveTurnStand(): boolean {
+  private static async __resolveTurnStand(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<boolean> {
+    const standConfirmed: boolean | undefined =
+      await InteractionController.promptConfirmStand(message, channelState);
+    if (standConfirmed === false || standConfirmed === undefined) {
+      if (standConfirmed === false) {
+        channelState.session.currentPlayer.discardRoundTurn();
+        await this.handlePlayTurn(message, channelState);
+      }
+      return false;
+    }
     return true;
   }
 

@@ -3,6 +3,7 @@ import { PlayerCard, Turn } from ".";
 import { Discord, Json, Log, Saveable, Utils } from "../../core";
 import {
   CardSuit,
+  CardType,
   DrawSource,
   PlayerCardSource,
   PlayerStatus,
@@ -110,18 +111,48 @@ export class Player implements Saveable {
     return this.__tokenTotal;
   }
 
+  private static __comparePlayerCards(a: PlayerCard, b: PlayerCard): number {
+    // Sort by suit first (SAND before BLOOD)
+    if (a.card.suit !== b.card.suit) {
+      return a.card.suit === CardSuit.SAND ? -1 : 1;
+    }
+    // Sort by type: SYLOP first, then IMPOSTER, then NUMBER
+    const typeOrder: Record<CardType, number> = {
+      [CardType.SYLOP]: 0,
+      [CardType.IMPOSTER]: 1,
+      [CardType.NUMBER]: 2,
+    };
+    if (typeOrder[a.card.type] !== typeOrder[b.card.type]) {
+      return typeOrder[a.card.type] - typeOrder[b.card.type];
+    }
+    // Sort NUMBER cards by value (lowest first)
+    if (a.card.type === CardType.NUMBER && b.card.type === CardType.NUMBER) {
+      return a.card.value - b.card.value;
+    }
+    return 0;
+  }
+
+  public discardRoundTurn(): void {
+    if (this.__roundTurn === null) {
+      Log.throw(
+        "Cannot discard round turn. Player does not have a round turn defined.",
+      );
+    }
+    if (this.__roundTurn.isResolved) {
+      Log.throw("Cannot discard round turn. Round turn has been resolved.", {
+        roundTurn: this.__roundTurn,
+      });
+    }
+    this.__roundTurn = null;
+  }
+
   public getCards(cardSuit?: CardSuit): readonly PlayerCard[] {
     if (this.__status !== PlayerStatus.ACTIVE) {
       Log.throw("Cannot get cards. Player is not currently active.", {
         status: this.__status,
       });
     }
-    this.__cards.sort((a, b) => {
-      if (a.createdAt !== b.createdAt) {
-        return b.createdAt - a.createdAt; // Newer cards first
-      }
-      return a.card.suit === CardSuit.SAND ? -1 : 1; // `SAND` first
-    });
+    this.__cards.sort((a, b) => Player.__comparePlayerCards(a, b));
     if (cardSuit === undefined) {
       return this.__cards;
     } else {
@@ -156,16 +187,19 @@ export class Player implements Saveable {
     this.__cards.push(playerCard);
   }
 
-  protected _clearRoundTurn(): void {
+  protected _archiveRoundTurn(): void {
     if (this.__roundTurn === null) {
       Log.throw(
-        "Cannot clear round turn. Player does not have a round turn defined.",
+        "Cannot archive round turn. Player does not have a round turn defined.",
       );
     }
     if (!this.__roundTurn.isResolved) {
-      Log.throw("Cannot clear round turn. Round turn has not been resolved.", {
-        roundTurn: this.__roundTurn,
-      });
+      Log.throw(
+        "Cannot archive round turn. Round turn has not been resolved.",
+        {
+          roundTurn: this.__roundTurn,
+        },
+      );
     }
     this.__previousRoundTurns.push(this.__roundTurn);
     this.__roundTurn = null;

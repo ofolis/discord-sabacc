@@ -177,7 +177,7 @@ export class Session implements Saveable {
       );
     }
     this.activePlayersInTurnOrder.forEach(activePlayer => {
-      activePlayer["_clearRoundTurn"]();
+      activePlayer["_archiveRoundTurn"]();
     });
   }
 
@@ -217,7 +217,6 @@ export class Session implements Saveable {
   }
 
   public finalizeHand(): void {
-    // TODO: Account for zero players remaining (we can't assume win/loss based on player count)
     if (this.__gameStatus !== GameStatus.ACTIVE) {
       Log.throw("Cannot finalize hand. Game is not active.", {
         gameStatus: this.__gameStatus,
@@ -264,15 +263,9 @@ export class Session implements Saveable {
     handResult["_setRemainingPlayerIds"](remainingPlayerIds);
     this.__purgeEliminatedPlayersInTurnOrder();
 
-    if (remainingPlayerIds.length === 0) {
-      Log.throw(
-        "Cannot finalize hand. Zero players remained after results were applied.",
-        { handResult },
-      );
-    }
-    if (remainingPlayerIds.length === 1) {
+    if (remainingPlayerIds.length <= 1) {
       this.__gameStatus = GameStatus.COMPLETED;
-      this.__winningPlayerId = remainingPlayerIds[0];
+      this.__winningPlayerId = handResult.rankings[0].playerId;
     }
   }
 
@@ -391,7 +384,6 @@ export class Session implements Saveable {
   }
 
   public iterate(): void {
-    // TODO: Skip rounds if no players have tokens
     if (this.__gameStatus !== GameStatus.ACTIVE) {
       Log.throw("Cannot iterate session. Game is not active.", {
         gameStatus: this.__gameStatus,

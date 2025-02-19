@@ -1,4 +1,4 @@
 export enum CardSuit {
-  "BLOOD",
-  "SAND",
+  BLOOD = "BLOOD",
+  SAND = "SAND",
 }

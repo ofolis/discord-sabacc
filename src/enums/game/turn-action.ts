@@ -1,5 +1,5 @@
 export enum TurnAction {
-  "DRAW",
-  "REVEAL",
-  "STAND",
+  DRAW = "DRAW",
+  REVEAL = "REVEAL",
+  STAND = "STAND",
 }

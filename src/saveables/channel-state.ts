@@ -1,16 +1,20 @@
 import * as discordJs from "discord.js";
-import { Player, Session, UserState } from ".";
+import { HandResult, Player, Session, UserState } from ".";
 import { TOKEN_DEFAULT } from "../constants";
 import {
   ChannelCommandMessage,
   CommandOptionType,
   Json,
-  Log,
   Saveable,
   Utils,
 } from "../core";
 import { GameStatus } from "../enums";
-import { ChannelStateJson, SessionJson, UserStateJson } from "../types";
+import {
+  ChannelStateJson,
+  RankedPlayerScorable,
+  SessionJson,
+  UserStateJson,
+} from "../types";
 
 export class ChannelState implements Saveable {
   public readonly channelId: string;
@@ -147,33 +151,36 @@ export class ChannelState implements Saveable {
 
     if (gameStarted) {
       this.__logGameStarted();
-    }
-    if (gameCompleted) {
-      this.__logGameCompleted();
+      this.__session.allPlayers.forEach(player => {
+        if (!(player.id in this.__userStates)) {
+          this.__createUserState(player);
+        }
+        this.__userStates[player.id].logGameStarted();
+      });
     }
 
-    this.__session.allPlayers.forEach(player => {
-      if (!(player.id in this.__userStates)) {
-        this.__createUserState(player);
-      }
-      if (gameStarted) {
-        this.__userStates[player.id].logGameStarted();
-      }
-      if (gameCompleted) {
-        if (this.__session.activePlayersInTurnOrder.length !== 1) {
-          Log.throw(
-            "Cannot update user states. The game ended with multiple active players.",
-            {
-              activePlayers: this.__session.activePlayersInTurnOrder,
-            },
-          );
+    if (gameCompleted) {
+      this.__logGameCompleted();
+      const currentHandResult: HandResult =
+        this.__session.getCurrentHandResult();
+      const playerRankMap: Record<string, number> =
+        currentHandResult.rankings.reduce(
+          (acc: Record<string, number>, ranking: RankedPlayerScorable) => {
+            acc[ranking.playerId] = ranking.rankIndex;
+            return acc;
+          },
+          {},
+        );
+      this.__session.allPlayers.forEach(player => {
+        if (!(player.id in this.__userStates)) {
+          this.__createUserState(player);
         }
-        if (player.id === this.__session.activePlayersInTurnOrder[0].id) {
+        if (player.id in playerRankMap && playerRankMap[player.id] === 0) {
           this.__userStates[player.id].logGameWon();
         } else {
           this.__userStates[player.id].logGameLost();
         }
-      }
-    });
+      });
+    }
   }
 }

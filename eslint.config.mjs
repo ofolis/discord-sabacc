@@ -2,6 +2,7 @@
 // @ts-check
 
 import eslint from "@eslint/js";
+import stylistic from "@stylistic/eslint-plugin";
 import eslintConfigPrettier from "eslint-config-prettier";
 import tseslint from "typescript-eslint";
 import onlyProtectedBracketAccess from "./eslint-rules/only-protected-bracket-access.mjs";
@@ -23,6 +24,7 @@ export default tseslint.config(
       },
     },
     plugins: {
+      "@stylistic": stylistic,
       "custom-rules": {
         rules: {
           "only-protected-bracket-access": onlyProtectedBracketAccess,
@@ -30,6 +32,7 @@ export default tseslint.config(
       },
     },
     rules: {
+      "@stylistic/quote-props": ["error", "as-needed"],
       "@typescript-eslint/consistent-type-definitions": ["error", "type"],
       "@typescript-eslint/explicit-function-return-type": ["error"],
       "@typescript-eslint/naming-convention": [
@@ -74,6 +77,7 @@ export default tseslint.config(
         },
       ],
       "@typescript-eslint/no-inferrable-types": ["off"],
+      "@typescript-eslint/no-mixed-enums": ["error"],
       "@typescript-eslint/no-unused-vars": [
         "error",
         {
@@ -82,6 +86,8 @@ export default tseslint.config(
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      "@typescript-eslint/prefer-enum-initializers": ["error"],
+      "@typescript-eslint/prefer-literal-enum-member": ["error"],
       "@typescript-eslint/strict-boolean-expressions": [
         "error",
         {

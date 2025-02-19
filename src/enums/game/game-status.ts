@@ -1,5 +1,5 @@
 export enum GameStatus {
-  "ACTIVE",
-  "COMPLETED",
-  "PENDING",
+  ACTIVE = "ACTIVE",
+  COMPLETED = "COMPLETED",
+  PENDING = "PENDING",
 }

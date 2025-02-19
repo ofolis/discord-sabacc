@@ -1,5 +1,5 @@
 export enum CardType {
-  "IMPOSTER",
-  "NUMBER",
-  "SYLOP",
+  IMPOSTER = "IMPOSTER",
+  NUMBER = "NUMBER",
+  SYLOP = "SYLOP",
 }

@@ -83,18 +83,20 @@ export class InteractionController {
         ranking.playerId,
       );
       const tokenDetailStrings: string[] = [];
-      if (ranking.tokenLossTotal === 0) {
-        tokenDetailStrings.push("Full Refund!");
-      } else {
-        if (ranking.spentTokenTotal > 0) {
-          tokenDetailStrings.push(
-            `\`${ranking.spentTokenTotal.toString()}\` Spent`,
-          );
-        }
-        if (ranking.tokenPenaltyTotal > 0) {
-          tokenDetailStrings.push(
-            `\`${ranking.tokenPenaltyTotal.toString()}\` Penalty`,
-          );
+      if (ranking.tokenTotal > 0) {
+        if (ranking.tokenLossTotal === 0) {
+          tokenDetailStrings.push("Full Refund!");
+        } else {
+          if (ranking.spentTokenTotal > 0) {
+            tokenDetailStrings.push(
+              `\`${ranking.spentTokenTotal.toString()}\` Spent`,
+            );
+          }
+          if (ranking.tokenPenaltyTotal > 0) {
+            tokenDetailStrings.push(
+              `\`${ranking.tokenPenaltyTotal.toString()}\` Penalty`,
+            );
+          }
         }
       }
       resultsLines.push(
@@ -360,7 +362,7 @@ export class InteractionController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
     imposterCard: PlayerCard,
-  ): Promise<number | null> {
+  ): Promise<number | undefined> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
     if (imposterCard.dieRolls.length !== 2) {
       Log.throw(
@@ -403,7 +405,7 @@ export class InteractionController {
         message,
         "Die roll selection timed out.",
       );
-      return null;
+      return undefined;
     }
     switch (buttonInteraction.customId) {
       case "firstDie":
@@ -422,7 +424,7 @@ export class InteractionController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
     drawnCard: Card,
-  ): Promise<PlayerCard | null> {
+  ): Promise<PlayerCard | undefined> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const discardOptions: [PlayerCard, PlayerCard] =
       channelState.session.getDiscardOptionsForCurrentPlayer();
@@ -461,7 +463,7 @@ export class InteractionController {
         message,
         "Discard card selection timed out.",
       );
-      return null;
+      return undefined;
     }
     switch (buttonInteraction.customId) {
       case "firstCard":
@@ -479,9 +481,9 @@ export class InteractionController {
   public static async promptChooseDrawDeck(
     message: ChannelCommandMessage,
     channelState: ChannelState,
-  ): Promise<[CardSuit, DrawSource] | null> {
+  ): Promise<[CardSuit, DrawSource] | null | undefined> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
-    const buttonBuilders: discordJs.ButtonBuilder[] = [
+    const buttons: discordJs.ButtonBuilder[] = [
       new discordJs.ButtonBuilder({
         customId: "sandDeck",
         label: "🟨 ?",
@@ -496,7 +498,7 @@ export class InteractionController {
     const topBloodDiscardCard: Card | null =
       channelState.session.getTopDiscardCard(CardSuit.BLOOD);
     if (topBloodDiscardCard !== null) {
-      buttonBuilders.push(
+      buttons.push(
         new discordJs.ButtonBuilder({
           customId: "bloodDiscard",
           label: this.__formatCardString(topBloodDiscardCard, false),
@@ -507,7 +509,7 @@ export class InteractionController {
     const topSandDiscardCard: Card | null =
       channelState.session.getTopDiscardCard(CardSuit.SAND);
     if (topSandDiscardCard !== null) {
-      buttonBuilders.unshift(
+      buttons.unshift(
         new discordJs.ButtonBuilder({
           customId: "sandDiscard",
           label: this.__formatCardString(topSandDiscardCard, false),
@@ -515,6 +517,13 @@ export class InteractionController {
         }),
       );
     }
+    buttons.push(
+      new discordJs.ButtonBuilder({
+        customId: "cancel",
+        label: "Cancel",
+        style: discordJs.ButtonStyle.Secondary,
+      }),
+    );
     const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
       channelState,
       true,
@@ -530,7 +539,7 @@ export class InteractionController {
           title: "Draw Selection",
         }),
       ],
-      buttonBuilders,
+      buttons,
     );
     const buttonInteraction: discordJs.ButtonInteraction | null =
       await message.awaitButtonInteraction();
@@ -539,7 +548,7 @@ export class InteractionController {
         message,
         "Turn action selection timed out.",
       );
-      return null;
+      return undefined;
     }
     switch (buttonInteraction.customId) {
       case "bloodDeck":
@@ -550,6 +559,8 @@ export class InteractionController {
         return [CardSuit.SAND, DrawSource.DECK];
       case "sandDiscard":
         return [CardSuit.SAND, DrawSource.DISCARD];
+      case "cancel":
+        return null;
       default:
         Log.throw(
           "Could not resolve choose draw deck prompt. Unknown button interaction custom ID.",
@@ -561,7 +572,7 @@ export class InteractionController {
   public static async promptChooseTurnAction(
     message: ChannelCommandMessage,
     channelState: ChannelState,
-  ): Promise<TurnAction | null> {
+  ): Promise<TurnAction | null | undefined> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
       channelState,
@@ -596,6 +607,11 @@ export class InteractionController {
           label: "Stand",
           style: discordJs.ButtonStyle.Primary,
         }),
+        new discordJs.ButtonBuilder({
+          customId: "cancel",
+          label: "Cancel",
+          style: discordJs.ButtonStyle.Secondary,
+        }),
       ],
     );
     const buttonInteraction: discordJs.ButtonInteraction | null =
@@ -605,13 +621,15 @@ export class InteractionController {
         message,
         "Turn action selection timed out.",
       );
-      return null;
+      return undefined;
     }
     switch (buttonInteraction.customId) {
       case "draw":
         return TurnAction.DRAW;
       case "stand":
         return TurnAction.STAND;
+      case "cancel":
+        return null;
       default:
         Log.throw(
           "Could not resolve choose turn action prompt. Unknown button interaction custom ID.",
@@ -620,9 +638,64 @@ export class InteractionController {
     }
   }
 
+  public static async promptConfirmStand(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<boolean | undefined> {
+    const player: Player = channelState.session.getPlayerById(message.user.id);
+    const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
+      channelState,
+      false,
+      true,
+      player,
+    );
+    await this.__setChannelMessageEmbed(
+      message,
+      [
+        stateEmbed,
+        new discordJs.EmbedBuilder({
+          description: "Are you sure that you want to stand?",
+          title: "Confirm Stand",
+        }),
+      ],
+      [
+        new discordJs.ButtonBuilder({
+          customId: "yes",
+          label: "Yes",
+          style: discordJs.ButtonStyle.Primary,
+        }),
+        new discordJs.ButtonBuilder({
+          customId: "no",
+          label: "No",
+          style: discordJs.ButtonStyle.Secondary,
+        }),
+      ],
+    );
+    const buttonInteraction: discordJs.ButtonInteraction | null =
+      await message.awaitButtonInteraction();
+    if (buttonInteraction === null) {
+      await this.__setChannelMessageFollowup(
+        message,
+        "Stand confirmation timed out.",
+      );
+      return undefined;
+    }
+    switch (buttonInteraction.customId) {
+      case "yes":
+        return true;
+      case "no":
+        return false;
+      default:
+        Log.throw(
+          "Could not resolve confirm stand prompt. Unknown button interaction custom ID.",
+          { buttonInteraction },
+        );
+    }
+  }
+
   public static async promptEndCurrentGame(
     message: ChannelMessage,
-  ): Promise<boolean | null> {
+  ): Promise<true | null | undefined> {
     await this.__setChannelMessageEmbed(
       message,
       [
@@ -652,13 +725,13 @@ export class InteractionController {
         message,
         "New game creation timed out.",
       );
-      return null;
+      return undefined;
     }
     switch (buttonInteraction.customId) {
       case "endGame":
         return true;
       case "cancel":
-        return false;
+        return null;
       default:
         Log.throw(
           "Could not resolve end current game prompt. Unknown button interaction custom ID.",
@@ -669,7 +742,7 @@ export class InteractionController {
 
   public static async promptJoinGame(
     message: ChannelCommandMessage,
-  ): Promise<discordJs.User[] | null> {
+  ): Promise<discordJs.User[] | undefined> {
     let channelMessage: ChannelMessage | null = null;
     const userAccumulator: discordJs.User[] = [];
     while (userAccumulator.length + 1 < PLAYER_MAXIMUM) {
@@ -716,7 +789,7 @@ export class InteractionController {
           channelMessage,
           "Game setup timed out.",
         );
-        return null;
+        return undefined;
       }
       switch (buttonInteraction.customId) {
         case "join":
@@ -757,7 +830,7 @@ export class InteractionController {
   public static async promptRevealCards(
     message: ChannelCommandMessage,
     channelState: ChannelState,
-  ): Promise<boolean | null> {
+  ): Promise<true | null | undefined> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
       channelState,
@@ -791,13 +864,13 @@ export class InteractionController {
       await message.awaitButtonInteraction();
     if (buttonInteraction === null) {
       await this.__setChannelMessageFollowup(message, "Card reveal timed out.");
-      return null;
+      return undefined;
     }
     switch (buttonInteraction.customId) {
       case "reveal":
         return true;
       case "cancel":
-        return false;
+        return null;
       default:
         Log.throw(
           "Could not resolve reveal cards prompt. Unknown button interaction custom ID.",
@@ -810,7 +883,7 @@ export class InteractionController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
     playerCard: PlayerCard,
-  ): Promise<boolean | null> {
+  ): Promise<true | null | undefined> {
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
       channelState,
@@ -844,13 +917,13 @@ export class InteractionController {
       await message.awaitButtonInteraction();
     if (buttonInteraction === null) {
       await this.__setChannelMessageFollowup(message, "Dice roll timed out.");
-      return null;
+      return undefined;
     }
     switch (buttonInteraction.customId) {
       case "roll":
         return true;
       case "cancel":
-        return false;
+        return null;
       default:
         Log.throw(
           "Could not resolve roll dice prompt. Unknown button interaction custom ID.",
@@ -892,8 +965,8 @@ export class InteractionController {
     cardOne: PlayerCard,
     cardTwo: PlayerCard,
   ): string | null {
-    const cardOneValue: number = cardOne.getValue();
-    const cardTwoValue: number = cardTwo.getValue();
+    const cardOneValue: number = cardOne.getValue(cardTwo);
+    const cardTwoValue: number = cardTwo.getValue(cardOne);
     if (cardOneValue === cardTwoValue) {
       switch (cardOneValue) {
         case 0:

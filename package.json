@@ -9,6 +9,7 @@
   "devDependencies": {
     "@commitlint/cli": "^19.6.1",
     "@commitlint/config-conventional": "^19.6.0",
+    "@stylistic/eslint-plugin": "^4.0.0",
     "@types/node": "^22.10.1",
     "@yao-pkg/pkg": "^6.2.0",
     "commitizen": "^4.3.1",

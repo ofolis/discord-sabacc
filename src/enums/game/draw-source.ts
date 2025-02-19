@@ -1,4 +1,4 @@
 export enum DrawSource {
-  "DECK",
-  "DISCARD",
+  DECK = "DECK",
+  DISCARD = "DISCARD",
 }

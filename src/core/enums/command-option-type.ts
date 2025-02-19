@@ -1,6 +1,6 @@
 export enum CommandOptionType {
-  "BOOLEAN",
-  "INTEGER",
-  "NUMBER",
-  "STRING",
+  BOOLEAN = "BOOLEAN",
+  INTEGER = "INTEGER",
+  NUMBER = "NUMBER",
+  STRING = "STRING",
 }
