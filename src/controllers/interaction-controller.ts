@@ -1,5 +1,11 @@
 import * as discordJs from "discord.js";
-import { PLAYER_MAXIMUM, PLAYER_MINIMUM } from "../constants";
+import {
+  PLAYER_MAXIMUM,
+  PLAYER_MINIMUM,
+  RED,
+  WHITE,
+  YELLOW,
+} from "../constants";
 import {
   ChannelCommandMessage,
   ChannelMessage,
@@ -196,6 +202,7 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
+        color: turn.drawnCard.suit === CardSuit.BLOOD ? RED : YELLOW,
         description,
         title: `${player.nameString} Drew A Card`,
       }),
@@ -236,6 +243,7 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
+        color: cardPairNameString !== null ? WHITE : undefined,
         description: Utils.linesToString(descriptionLines),
         title: `${player.nameString} Completed Their Hand`,
       }),
@@ -439,6 +447,7 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
+          color: drawnCard.suit === CardSuit.BLOOD ? RED : YELLOW,
           description: `You drew ${this.__formatCardString(drawnCard)}. Choose the card you would like to keep.`,
           title: "Card Selection",
         }),
