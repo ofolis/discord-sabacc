@@ -31,10 +31,10 @@ export class InteractionController {
   ): Promise<void> {
     const embedData: discordJs.EmbedData = {
       description: Utils.linesToString([
+        "# The Game Is Over!",
         `After ${(channelState.session.handIndex + 1).toString()} hand${channelState.session.handIndex === 0 ? "" : "s"}, the winner is...`,
         `## ${channelState.session.winningPlayer.tagString} 🎉`,
       ]),
-      title: "The Game Is Over!",
     };
     if (channelState.session.winningPlayer.avatarUrl !== null) {
       embedData.image = {
@@ -51,7 +51,7 @@ export class InteractionController {
   ): Promise<void> {
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-        description: `A ${channelState.session.allPlayers.length.toString()}-player Sabacc game has begun!`,
+        description: `# Game Started\nA ${channelState.session.allPlayers.length.toString()}-player Sabacc game has begun!`,
         fields: [
           {
             inline: true,
@@ -68,7 +68,6 @@ export class InteractionController {
             value: channelState.session.startingTokenTotal.toString(),
           },
         ],
-        title: "Game Started",
       }),
     ]);
   }
@@ -131,9 +130,11 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-        description: "Here are the results...",
+        description: Utils.linesToString([
+          `## Ended Hand ${(channelState.session.handIndex + 1).toString()}`,
+          "Here are the results...",
+        ]),
         fields,
-        title: `Ended Hand ${(channelState.session.handIndex + 1).toString()}`,
       }),
     ]);
   }
@@ -143,8 +144,10 @@ export class InteractionController {
   ): Promise<void> {
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-        description: `${channelState.session.activePlayersInTurnOrder[0].nameString} is now the first player.`,
-        title: `Starting Hand ${(channelState.session.handIndex + 1).toString()}`,
+        description: Utils.linesToString([
+          `## Starting Hand ${(channelState.session.handIndex + 1).toString()}`,
+          `${channelState.session.activePlayersInTurnOrder[0].nameString} is now the first player.`,
+        ]),
       }),
     ]);
   }
@@ -155,11 +158,11 @@ export class InteractionController {
     let embed: discordJs.EmbedBuilder;
     if (channelState.session.roundIndex < 3) {
       embed = new discordJs.EmbedBuilder({
-        title: `Starting Round ${(channelState.session.roundIndex + 1).toString()}`,
+        description: `## Starting Round ${(channelState.session.roundIndex + 1).toString()}`,
       });
     } else {
       embed = new discordJs.EmbedBuilder({
-        title: "Starting Reveal Round",
+        description: "## Starting Reveal Round",
       });
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [embed]);
@@ -185,13 +188,17 @@ export class InteractionController {
         { turn },
       );
     }
-    let description: string;
+    const descriptionLines: string[] = [`### ${player.nameString} Drew A Card`];
     switch (turn.drawnCardSource) {
       case DrawSource.DECK:
-        description = `A card was drawn from the \`${this.__formatCardSuitIcon(turn.drawnCard.suit)}\` deck and ${this.__formatCardString(turn.discardedCard)} was discarded.`;
+        descriptionLines.push(
+          `A card was drawn from the \`${this.__formatCardSuitIcon(turn.drawnCard.suit)}\` deck and ${this.__formatCardString(turn.discardedCard)} was discarded.`,
+        );
         break;
       case DrawSource.DISCARD:
-        description = `${this.__formatCardString(turn.drawnCard)} was drawn from the \`${this.__formatCardSuitIcon(turn.drawnCard.suit)}\` discard and ${this.__formatCardString(turn.discardedCard)} was discarded.`;
+        descriptionLines.push(
+          `${this.__formatCardString(turn.drawnCard)} was drawn from the \`${this.__formatCardSuitIcon(turn.drawnCard.suit)}\` discard and ${this.__formatCardString(turn.discardedCard)} was discarded.`,
+        );
         break;
       default:
         Log.throw("Cannot announce turn draw. Unknown drawn card source.", {
@@ -200,10 +207,9 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-          color:
-            turn.drawnCard.suit === CardSuit.BLOOD ? colors.RED : colors.YELLOW,
-        description,
-        title: `${player.nameString} Drew A Card`,
+        color:
+          turn.drawnCard.suit === CardSuit.BLOOD ? colors.RED : colors.YELLOW,
+        description: Utils.linesToString(descriptionLines),
       }),
     ]);
   }
@@ -230,6 +236,7 @@ export class InteractionController {
       );
     }
     const descriptionLines: string[] = [
+      `### ${player.nameString} Completed Their Hand`,
       "Here are their final cards...",
       `# ${this.__formatCardString(sandCards[0])} ${this.__formatCardString(bloodCards[0])}`,
     ];
@@ -242,9 +249,8 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-          color: cardPairNameString !== null ? colors.WHITE : undefined,
+        color: cardPairNameString !== null ? colors.WHITE : undefined,
         description: Utils.linesToString(descriptionLines),
-        title: `${player.nameString} Completed Their Hand`,
       }),
     ]);
   }
@@ -264,8 +270,10 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-        description: "No card was drawn or discarded.",
-        title: `${player.nameString} Stood`,
+        description: Utils.linesToString([
+          `### ${player.nameString} Stood`,
+          "No card was drawn or discarded.",
+        ]),
       }),
     ]);
   }
@@ -275,8 +283,10 @@ export class InteractionController {
   ): Promise<void> {
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-        description: `${channelState.session.currentPlayer.tagString} use the **/play** command to take your turn.`,
-        title: `${channelState.session.currentPlayer.nameString}'s Turn`,
+        description: Utils.linesToString([
+          `### ${channelState.session.currentPlayer.nameString}'s Turn`,
+          `${channelState.session.currentPlayer.tagString} use the **/play** command to take your turn.`,
+        ]),
       }),
     ]);
   }
@@ -318,14 +328,13 @@ export class InteractionController {
   }
 
   public static async informNoGame(message: ChannelMessage): Promise<void> {
-    const descriptionLines: string[] = [
-      "There is no game currently active in this channel.",
-      "-# Use the **/new** command to start a new game.",
-    ];
     await this.__setChannelMessageEmbed(message, [
       new discordJs.EmbedBuilder({
-        description: Utils.linesToString(descriptionLines),
-        title: "No Game",
+        description: Utils.linesToString([
+          "### No Game",
+          "There is no game currently active in this channel.",
+          "-# Use the **/new** command to start a new game.",
+        ]),
       }),
     ]);
   }
@@ -333,8 +342,10 @@ export class InteractionController {
   public static async informNotPlaying(message: ChannelMessage): Promise<void> {
     await this.__setChannelMessageEmbed(message, [
       new discordJs.EmbedBuilder({
-        description: "You are not playing in the current game.",
-        title: "Not Playing",
+        description: Utils.linesToString([
+          "### Not Playing",
+          "You are not playing in the current game.",
+        ]),
       }),
     ]);
   }
@@ -345,8 +356,10 @@ export class InteractionController {
   ): Promise<void> {
     await this.__setChannelMessageEmbed(message, [
       new discordJs.EmbedBuilder({
-        description: `It is currently ${channelState.session.currentPlayer.nameString}'s turn.`,
-        title: "Not Your Turn",
+        description: Utils.linesToString([
+          `### Not Your Turn`,
+          `${channelState.session.currentPlayer.nameString} is currently taking their turn.`,
+        ]),
       }),
     ]);
   }
@@ -388,8 +401,10 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
-          description: `Choose a die roll value to use for your ${this.__formatCardString(imposterCard)}.`,
-          title: "Die Roll Selection",
+          description: Utils.linesToString([
+            "### Die Roll Selection",
+            `Choose a die roll value to use for your ${this.__formatCardString(imposterCard)}.`,
+          ]),
         }),
       ],
       [
@@ -447,8 +462,10 @@ export class InteractionController {
         stateEmbed,
         new discordJs.EmbedBuilder({
           color: drawnCard.suit === CardSuit.BLOOD ? colors.RED : colors.YELLOW,
-          description: `You drew ${this.__formatCardString(drawnCard)}. Choose the card you would like to keep.`,
-          title: "Card Selection",
+          description: Utils.linesToString([
+            "### Card Selection",
+            `You drew ${this.__formatCardString(drawnCard)}. Choose the card you would like to keep.`,
+          ]),
         }),
       ],
       [
@@ -543,8 +560,10 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
-          description: "Choose what you would like to draw.",
-          title: "Draw Selection",
+          description: Utils.linesToString([
+            "### Draw Selection",
+            "Choose what you would like to draw.",
+          ]),
         }),
       ],
       buttons,
@@ -588,7 +607,10 @@ export class InteractionController {
       true,
       player,
     );
-    const descriptionLines: string[] = ["Choose your turn action."];
+    const descriptionLines: string[] = [
+      "### Action Selection",
+      "Choose your turn action.",
+    ];
     if (player.availableTokenTotal === 0) {
       descriptionLines.push(
         "-# **Draw** is disabled because you have no remaining tokens.",
@@ -600,7 +622,6 @@ export class InteractionController {
         stateEmbed,
         new discordJs.EmbedBuilder({
           description: Utils.linesToString(descriptionLines),
-          title: "Action Selection",
         }),
       ],
       [
@@ -662,8 +683,10 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
-          description: "Are you sure that you want to stand?",
-          title: "Confirm Stand",
+          description: Utils.linesToString([
+            "### Confirm Stand",
+            "Are you sure that you want to stand?",
+          ]),
         }),
       ],
       [
@@ -708,9 +731,10 @@ export class InteractionController {
       message,
       [
         new discordJs.EmbedBuilder({
-          description:
+          description: Utils.linesToString([
+            "### Game In Progress",
             "Do you want to end the current game and start a new one?",
-          title: "Game In Progress",
+          ]),
         }),
       ],
       [
@@ -755,7 +779,7 @@ export class InteractionController {
     const userAccumulator: discordJs.User[] = [];
     while (userAccumulator.length + 1 < PLAYER_MAXIMUM) {
       const embed: discordJs.EmbedBuilder = new discordJs.EmbedBuilder({
-        description: `Hey ${Discord.formatChannelMentionString()}! A new Sabacc game was started by ${Discord.formatUserNameString(message.user)}.`,
+        description: `# New Game\nHey ${Discord.formatChannelMentionString()}! A new Sabacc game was started by ${Discord.formatUserNameString(message.user)}.`,
         fields: [
           {
             name: "Players",
@@ -766,7 +790,6 @@ export class InteractionController {
             ),
           },
         ],
-        title: "New Game",
       });
       const buttons: discordJs.ButtonBuilder[] = [
         new discordJs.ButtonBuilder({
@@ -851,8 +874,10 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
-          description: "Reveal your cards and end your hand.",
-          title: "Reveal Cards",
+          description: Utils.linesToString([
+            "### Reveal Cards",
+            "Reveal your cards and end your hand.",
+          ]),
         }),
       ],
       [
@@ -904,8 +929,10 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
-          description: `Roll the dice for your ${this.__formatCardString(playerCard)}.`,
-          title: "Roll Dice",
+          description: Utils.linesToString([
+            "### Roll Dice",
+            `Roll the dice for your ${this.__formatCardString(playerCard)}.`,
+          ]),
         }),
       ],
       [
@@ -1154,7 +1181,7 @@ export class InteractionController {
     }
     return new discordJs.EmbedBuilder({
       fields,
-      title: this.__formatTableHandRoundString(channelState),
+      description: `### ${this.__formatTableHandRoundString(channelState)}`,
     });
   }
 

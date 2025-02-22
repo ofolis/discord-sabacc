@@ -205,6 +205,7 @@ export class GameController {
         }
         return false;
       }
+      // TODO: Sort die rolls
       channelState.session.setPlayerCardDieRollsForCurrentPlayer(playerCard, [
         Environment.random.die(6),
         Environment.random.die(6),
