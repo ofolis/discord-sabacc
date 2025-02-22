@@ -1,11 +1,7 @@
 import * as discordJs from "discord.js";
-import {
-  PLAYER_MAXIMUM,
-  PLAYER_MINIMUM,
-  RED,
-  WHITE,
-  YELLOW,
-} from "../constants";
+import { PLAYER_MAXIMUM, PLAYER_MINIMUM } from "../constants";
+import * as colors from "../constants/colors";
+import * as icons from "../constants/icons";
 import {
   ChannelCommandMessage,
   ChannelMessage,
@@ -106,7 +102,7 @@ export class InteractionController {
         }
       }
       resultsLines.push(
-        `- \`#${(ranking.rankIndex + 1).toString()}\` ${player.status !== PlayerStatus.ACTIVE ? `~~**${player.nameString}**~~ 💀` : `**${player.nameString}**`}`,
+        `- \`#${(ranking.rankIndex + 1).toString()}\` ${player.status !== PlayerStatus.ACTIVE ? `~~**${player.nameString}**~~ ${icons.ELIMINATED}` : `**${player.nameString}**`}`,
         `  - Cards: ${this.__formatCardString(ranking.sandCard)} ${this.__formatCardString(ranking.bloodCard)}`,
         `  - Tokens: \`${this.__formatTokenResultString(player.tokenTotal, ranking.tokenLossTotal)}\` `,
         `    -# ${tokenDetailStrings.join(" + ")}`,
@@ -116,7 +112,9 @@ export class InteractionController {
     const previouslyEliminatedLines: string[] = [];
     channelState.session.allPlayers.forEach(player => {
       if (!usedPlayerIds.includes(player.id)) {
-        previouslyEliminatedLines.push(`~~${player.nameString}~~ 💀`);
+        previouslyEliminatedLines.push(
+          `~~${player.nameString}~~ ${icons.ELIMINATED}`,
+        );
       }
     });
     const fields: discordJs.APIEmbedField[] = [
@@ -202,7 +200,8 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-        color: turn.drawnCard.suit === CardSuit.BLOOD ? RED : YELLOW,
+          color:
+            turn.drawnCard.suit === CardSuit.BLOOD ? colors.RED : colors.YELLOW,
         description,
         title: `${player.nameString} Drew A Card`,
       }),
@@ -243,7 +242,7 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-        color: cardPairNameString !== null ? WHITE : undefined,
+          color: cardPairNameString !== null ? colors.WHITE : undefined,
         description: Utils.linesToString(descriptionLines),
         title: `${player.nameString} Completed Their Hand`,
       }),
@@ -447,7 +446,7 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
-          color: drawnCard.suit === CardSuit.BLOOD ? RED : YELLOW,
+          color: drawnCard.suit === CardSuit.BLOOD ? colors.RED : colors.YELLOW,
           description: `You drew ${this.__formatCardString(drawnCard)}. Choose the card you would like to keep.`,
           title: "Card Selection",
         }),
@@ -495,12 +494,12 @@ export class InteractionController {
     const buttons: discordJs.ButtonBuilder[] = [
       new discordJs.ButtonBuilder({
         customId: "sandDeck",
-        label: "🟨 ?",
+        label: `${icons.SAND_DECK}?`,
         style: discordJs.ButtonStyle.Primary,
       }),
       new discordJs.ButtonBuilder({
         customId: "bloodDeck",
-        label: "🟥 ?",
+        label: `${icons.BLOOD_DECK}?`,
         style: discordJs.ButtonStyle.Primary,
       }),
     ];
@@ -1027,9 +1026,9 @@ export class InteractionController {
   private static __formatCardSuitIcon(cardSuit: CardSuit): string {
     switch (cardSuit) {
       case CardSuit.BLOOD:
-        return "🟥";
+        return icons.BLOOD_DECK;
       case CardSuit.SAND:
-        return "🟨";
+        return icons.SAND_DECK;
       default:
         Log.throw("Cannot format card suit icon. Unknown card suit.", {
           cardSuit,
@@ -1065,11 +1064,13 @@ export class InteractionController {
     }
     const discardLines: string[] = [discardCardStrings.join(" ")];
     if (topBloodDiscardCard === null && topSandDiscardCard === null) {
-      discardLines.push("-# `🟨` and `🟥` discard are both empty.");
+      discardLines.push(
+        `-# \`${icons.SAND_DECK}\` and \`${icons.BLOOD_DECK}\` discard are both empty.`,
+      );
     } else if (topBloodDiscardCard === null) {
-      discardLines.push("-# `🟥` discard is empty.");
+      discardLines.push(`-# \`${icons.BLOOD_DECK}\` discard is empty.`);
     } else if (topSandDiscardCard === null) {
-      discardLines.push("-# `🟨` discard is empty.");
+      discardLines.push(`-# \`${icons.SAND_DECK}\` discard is empty.`);
     }
     return Utils.linesToString(discardLines);
   }

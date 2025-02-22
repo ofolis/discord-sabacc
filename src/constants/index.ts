@@ -1,2 +1,3 @@
-export * from "./embed-colors";
+export * from "./colors";
 export * from "./game";
+export * from "./icons";
