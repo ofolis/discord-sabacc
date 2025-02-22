@@ -25,24 +25,26 @@ import {
 } from "../saveables";
 import { Card } from "../types";
 
+// TODO: Ask AI to optimize
 export class InteractionController {
   public static async announceGameEnd(
     channelState: ChannelState,
   ): Promise<void> {
-    const embedData: discordJs.EmbedData = {
-      description: Utils.linesToString([
-        "# The Game Is Over!",
-        `After ${(channelState.session.handIndex + 1).toString()} hand${channelState.session.handIndex === 0 ? "" : "s"}, the winner is...`,
-        `## ${channelState.session.winningPlayer.tagString} 🎉`,
-      ]),
-    };
-    if (channelState.session.winningPlayer.avatarUrl !== null) {
-      embedData.image = {
-        url: channelState.session.winningPlayer.avatarUrl,
-      };
-    }
     await this.__createChannelMessageEmbed(channelState.channelId, [
-      new discordJs.EmbedBuilder(embedData),
+      new discordJs.EmbedBuilder({
+        color: colors.WHITE,
+        description: Utils.linesToString([
+          "# The Game Is Over!",
+          `After ${(channelState.session.handIndex + 1).toString()} hand${channelState.session.handIndex === 0 ? "" : "s"}, the winner is...`,
+          `## ${channelState.session.winningPlayer.tagString} 🎉`,
+        ]),
+        image:
+          channelState.session.winningPlayer.avatarUrl !== null
+            ? {
+                url: channelState.session.winningPlayer.avatarUrl,
+              }
+            : undefined,
+      }),
     ]);
   }
 
@@ -51,7 +53,11 @@ export class InteractionController {
   ): Promise<void> {
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-        description: `# Game Started\nA ${channelState.session.allPlayers.length.toString()}-player Sabacc game has begun!`,
+        color: colors.WHITE,
+        description: Utils.linesToString([
+          "# Game Started",
+          `A ${channelState.session.allPlayers.length.toString()}-player Sabacc game has begun!`,
+        ]),
         fields: [
           {
             inline: true,
@@ -130,8 +136,9 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
+        color: colors.GRAY,
         description: Utils.linesToString([
-          `## Ended Hand ${(channelState.session.handIndex + 1).toString()}`,
+          `## ${icons.NEW_HAND} Ended Hand ${(channelState.session.handIndex + 1).toString()}`,
           "Here are the results...",
         ]),
         fields,
@@ -144,8 +151,9 @@ export class InteractionController {
   ): Promise<void> {
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
+        color: colors.GRAY,
         description: Utils.linesToString([
-          `## Starting Hand ${(channelState.session.handIndex + 1).toString()}`,
+          `## ${icons.NEW_ROUND} Starting Hand ${(channelState.session.handIndex + 1).toString()}`,
           `${channelState.session.activePlayersInTurnOrder[0].nameString} is now the first player.`,
         ]),
       }),
@@ -158,11 +166,13 @@ export class InteractionController {
     let embed: discordJs.EmbedBuilder;
     if (channelState.session.roundIndex < 3) {
       embed = new discordJs.EmbedBuilder({
-        description: `## Starting Round ${(channelState.session.roundIndex + 1).toString()}`,
+        color: colors.GRAY,
+        description: `## ${icons.NEW_ROUND} Starting Round ${(channelState.session.roundIndex + 1).toString()}`,
       });
     } else {
       embed = new discordJs.EmbedBuilder({
-        description: "## Starting Reveal Round",
+        color: colors.GRAY,
+        description: `## ${icons.NEW_ROUND} Starting Reveal Round`,
       });
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [embed]);
@@ -207,8 +217,7 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-        color:
-          turn.drawnCard.suit === CardSuit.BLOOD ? colors.RED : colors.YELLOW,
+        color: colors.BLACK,
         description: Utils.linesToString(descriptionLines),
       }),
     ]);
@@ -249,7 +258,7 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-        color: cardPairNameString !== null ? colors.WHITE : undefined,
+        color: cardPairNameString !== null ? colors.BLUE : colors.BLACK,
         description: Utils.linesToString(descriptionLines),
       }),
     ]);
@@ -270,6 +279,7 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
+        color: colors.BLACK,
         description: Utils.linesToString([
           `### ${player.nameString} Stood`,
           "No card was drawn or discarded.",
@@ -283,8 +293,9 @@ export class InteractionController {
   ): Promise<void> {
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
+        color: colors.BLACK,
         description: Utils.linesToString([
-          `### ${channelState.session.currentPlayer.nameString}'s Turn`,
+          `### ${icons.NEW_TURN} ${channelState.session.currentPlayer.nameString}'s Turn`,
           `${channelState.session.currentPlayer.tagString} use the **/play** command to take your turn.`,
         ]),
       }),
@@ -330,6 +341,7 @@ export class InteractionController {
   public static async informNoGame(message: ChannelMessage): Promise<void> {
     await this.__setChannelMessageEmbed(message, [
       new discordJs.EmbedBuilder({
+        color: colors.BLACK,
         description: Utils.linesToString([
           "### No Game",
           "There is no game currently active in this channel.",
@@ -342,6 +354,7 @@ export class InteractionController {
   public static async informNotPlaying(message: ChannelMessage): Promise<void> {
     await this.__setChannelMessageEmbed(message, [
       new discordJs.EmbedBuilder({
+        color: colors.BLACK,
         description: Utils.linesToString([
           "### Not Playing",
           "You are not playing in the current game.",
@@ -356,6 +369,7 @@ export class InteractionController {
   ): Promise<void> {
     await this.__setChannelMessageEmbed(message, [
       new discordJs.EmbedBuilder({
+        color: colors.BLACK,
         description: Utils.linesToString([
           `### Not Your Turn`,
           `${channelState.session.currentPlayer.nameString} is currently taking their turn.`,
@@ -401,6 +415,7 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
+          color: colors.BLACK,
           description: Utils.linesToString([
             "### Die Roll Selection",
             `Choose a die roll value to use for your ${this.__formatCardString(imposterCard)}.`,
@@ -461,7 +476,7 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
-          color: drawnCard.suit === CardSuit.BLOOD ? colors.RED : colors.YELLOW,
+          color: colors.BLACK,
           description: Utils.linesToString([
             "### Card Selection",
             `You drew ${this.__formatCardString(drawnCard)}. Choose the card you would like to keep.`,
@@ -560,6 +575,7 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
+          color: colors.BLACK,
           description: Utils.linesToString([
             "### Draw Selection",
             "Choose what you would like to draw.",
@@ -621,6 +637,7 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
+          color: colors.BLACK,
           description: Utils.linesToString(descriptionLines),
         }),
       ],
@@ -683,6 +700,7 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
+          color: colors.BLACK,
           description: Utils.linesToString([
             "### Confirm Stand",
             "Are you sure that you want to stand?",
@@ -731,6 +749,7 @@ export class InteractionController {
       message,
       [
         new discordJs.EmbedBuilder({
+          color: colors.BLACK,
           description: Utils.linesToString([
             "### Game In Progress",
             "Do you want to end the current game and start a new one?",
@@ -779,7 +798,11 @@ export class InteractionController {
     const userAccumulator: discordJs.User[] = [];
     while (userAccumulator.length + 1 < PLAYER_MAXIMUM) {
       const embed: discordJs.EmbedBuilder = new discordJs.EmbedBuilder({
-        description: `# New Game\nHey ${Discord.formatChannelMentionString()}! A new Sabacc game was started by ${Discord.formatUserNameString(message.user)}.`,
+        color: colors.WHITE,
+        description: Utils.linesToString([
+          "# New Game",
+          `Hey ${Discord.formatChannelMentionString()}! A new Sabacc game was started by ${Discord.formatUserNameString(message.user)}.`,
+        ]),
         fields: [
           {
             name: "Players",
@@ -874,6 +897,7 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
+          color: colors.BLACK,
           description: Utils.linesToString([
             "### Reveal Cards",
             "Reveal your cards and end your hand.",
@@ -929,6 +953,7 @@ export class InteractionController {
       [
         stateEmbed,
         new discordJs.EmbedBuilder({
+          color: colors.BLACK,
           description: Utils.linesToString([
             "### Roll Dice",
             `Roll the dice for your ${this.__formatCardString(playerCard)}.`,
@@ -1180,8 +1205,9 @@ export class InteractionController {
       });
     }
     return new discordJs.EmbedBuilder({
-      fields,
+      color: colors.BLACK,
       description: `### ${this.__formatTableHandRoundString(channelState)}`,
+      fields,
     });
   }
 
