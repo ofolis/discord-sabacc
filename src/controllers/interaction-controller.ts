@@ -25,7 +25,6 @@ import {
 } from "../saveables";
 import { Card } from "../types";
 
-// TODO: Ask AI to optimize
 export class InteractionController {
   public static async announceGameEnd(
     channelState: ChannelState,
@@ -435,9 +434,9 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | null =
+    const buttonInteraction: discordJs.ButtonInteraction | undefined =
       await message.awaitButtonInteraction();
-    if (buttonInteraction === null) {
+    if (buttonInteraction === undefined) {
       await this.__setChannelMessageFollowup(
         message,
         "Die roll selection timed out.",
@@ -496,9 +495,9 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | null =
+    const buttonInteraction: discordJs.ButtonInteraction | undefined =
       await message.awaitButtonInteraction();
-    if (buttonInteraction === null) {
+    if (buttonInteraction === undefined) {
       await this.__setChannelMessageFollowup(
         message,
         "Discard card selection timed out.",
@@ -584,9 +583,9 @@ export class InteractionController {
       ],
       buttons,
     );
-    const buttonInteraction: discordJs.ButtonInteraction | null =
+    const buttonInteraction: discordJs.ButtonInteraction | undefined =
       await message.awaitButtonInteraction();
-    if (buttonInteraction === null) {
+    if (buttonInteraction === undefined) {
       await this.__setChannelMessageFollowup(
         message,
         "Turn action selection timed out.",
@@ -660,9 +659,9 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | null =
+    const buttonInteraction: discordJs.ButtonInteraction | undefined =
       await message.awaitButtonInteraction();
-    if (buttonInteraction === null) {
+    if (buttonInteraction === undefined) {
       await this.__setChannelMessageFollowup(
         message,
         "Turn action selection timed out.",
@@ -720,9 +719,9 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | null =
+    const buttonInteraction: discordJs.ButtonInteraction | undefined =
       await message.awaitButtonInteraction();
-    if (buttonInteraction === null) {
+    if (buttonInteraction === undefined) {
       await this.__setChannelMessageFollowup(
         message,
         "Stand confirmation timed out.",
@@ -769,9 +768,9 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | null =
+    const buttonInteraction: discordJs.ButtonInteraction | undefined =
       await message.awaitButtonInteraction();
-    if (buttonInteraction === null) {
+    if (buttonInteraction === undefined) {
       await this.__setChannelMessageFollowup(
         message,
         "New game creation timed out.",
@@ -836,9 +835,9 @@ export class InteractionController {
       } else {
         await this.__setChannelMessageEmbed(channelMessage, [embed], buttons);
       }
-      const buttonInteraction: discordJs.ButtonInteraction | null =
+      const buttonInteraction: discordJs.ButtonInteraction | undefined =
         await channelMessage.awaitButtonInteraction(600000);
-      if (buttonInteraction === null) {
+      if (buttonInteraction === undefined) {
         await this.__setChannelMessageFollowup(
           channelMessage,
           "Game setup timed out.",
@@ -917,9 +916,9 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | null =
+    const buttonInteraction: discordJs.ButtonInteraction | undefined =
       await message.awaitButtonInteraction();
-    if (buttonInteraction === null) {
+    if (buttonInteraction === undefined) {
       await this.__setChannelMessageFollowup(message, "Card reveal timed out.");
       return undefined;
     }
@@ -973,9 +972,9 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | null =
+    const buttonInteraction: discordJs.ButtonInteraction | undefined =
       await message.awaitButtonInteraction();
-    if (buttonInteraction === null) {
+    if (buttonInteraction === undefined) {
       await this.__setChannelMessageFollowup(message, "Dice roll timed out.");
       return undefined;
     }
