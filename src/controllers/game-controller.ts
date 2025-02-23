@@ -205,11 +205,15 @@ export class GameController {
         }
         return false;
       }
-      // TODO: Sort die rolls
-      channelState.session.setPlayerCardDieRollsForCurrentPlayer(playerCard, [
+      const dieRolls: number[] = [
         Environment.random.die(6),
         Environment.random.die(6),
-      ]);
+      ];
+      dieRolls.sort((a, b) => a - b);
+      channelState.session.setPlayerCardDieRollsForCurrentPlayer(
+        playerCard,
+        dieRolls,
+      );
     }
 
     if (playerCard.dieRolls.length > 1) {
