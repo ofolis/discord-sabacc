@@ -57,24 +57,12 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
-    // Get current turn
-    let turn: Turn | null = channelState.session.currentPlayer.roundTurn;
-    if (turn === null) {
-      if (channelState.session.roundIndex < 3) {
-        const turnAction: TurnAction | undefined = await this.__handlePrompt(
-          message,
-          () =>
-            InteractionController.promptChooseTurnAction(message, channelState),
-          () => InteractionController.followupTurnIncomplete(message),
-        );
-        if (turnAction === undefined) return;
-        turn = channelState.session.createRoundTurnForCurrentPlayer(turnAction);
-      } else {
-        turn = channelState.session.createRoundTurnForCurrentPlayer(
-          TurnAction.REVEAL,
-        );
-      }
-    }
+    // Initialize  turn
+    const turn: Turn | null = await this.__initializeTurn(
+      message,
+      channelState,
+    );
+    if (turn === null) return;
 
     // Resolve turn action if not already resolved
     let turnResolved: boolean = turn.isResolved;
@@ -186,8 +174,9 @@ export class GameController {
     channelState: ChannelState,
     playerCard: PlayerCard,
   ): Promise<boolean> {
+    // Roll dice if not already rolled
     if (playerCard.dieRolls.length === 0) {
-      const rollDice: true | undefined = await this.__handlePrompt(
+      const rollConfirmed: true | undefined = await this.__handlePrompt(
         message,
         () =>
           InteractionController.promptRollDice(
@@ -197,7 +186,7 @@ export class GameController {
           ),
         () => InteractionController.followupTurnIncomplete(message),
       );
-      if (rollDice === undefined) return false;
+      if (rollConfirmed === undefined) return false;
       const dieRolls: number[] = [
         Environment.random.die(6),
         Environment.random.die(6),
@@ -209,6 +198,7 @@ export class GameController {
       );
     }
 
+    // Choose die roll if necessary
     if (playerCard.dieRolls.length > 1) {
       const selectedDieRoll: number | undefined =
         await InteractionController.promptChooseDieRoll(
@@ -232,6 +222,7 @@ export class GameController {
   ): Promise<T | undefined> {
     const result: T | null | undefined = await promptFunc();
     if (result === null || result === undefined) {
+      // Follow up if the prompt was cancelled (not timed out)
       if (result === null) await followUpFunc(message);
       return undefined;
     }
@@ -241,16 +232,16 @@ export class GameController {
   private static async __handleRoundEnd(
     channelState: ChannelState,
   ): Promise<void> {
-    // If the last round has ended, handle hand conclusion
-    if (channelState.session.roundIndex === 3) {
-      await this.__handleHandEnd(channelState);
-    }
+    // If the last round has ended, end the hnad
+    if (channelState.session.roundIndex !== 3) return;
+    await this.__handleHandEnd(channelState);
   }
 
   private static async __handleRoundStart(
     channelState: ChannelState,
   ): Promise<void> {
     channelState.session.clearPlayerRoundTurns();
+    // If this is the first round, start the hand
     if (channelState.session.roundIndex === 0) {
       await this.__handleHandStart(channelState);
     } else {
@@ -264,6 +255,27 @@ export class GameController {
     await InteractionController.announceTurnStart(channelState);
   }
 
+  private static async __initializeTurn(
+    message: ChannelCommandMessage,
+    channelState: ChannelState,
+  ): Promise<Turn | null> {
+    // Handle normal turns separately from reveal turns
+    if (channelState.session.roundIndex < 3) {
+      const turnAction: TurnAction | undefined = await this.__handlePrompt(
+        message,
+        () =>
+          InteractionController.promptChooseTurnAction(message, channelState),
+        () => InteractionController.followupTurnIncomplete(message),
+      );
+      if (turnAction === undefined) return null;
+      return channelState.session.createRoundTurnForCurrentPlayer(turnAction);
+    } else {
+      return channelState.session.createRoundTurnForCurrentPlayer(
+        TurnAction.REVEAL,
+      );
+    }
+  }
+
   private static async __resolveTurnDraw(
     message: ChannelCommandMessage,
     channelState: ChannelState,
@@ -275,7 +287,13 @@ export class GameController {
         { currentPlayer: channelState.session.currentPlayer },
       );
     }
+    if (roundTurn.action !== TurnAction.DRAW) {
+      Log.throw("Cannot resolve turn draw. Round turn action is not draw.", {
+        roundTurn,
+      });
+    }
 
+    // Draw card if not already drawn
     let drawnCard: Card | null = roundTurn.drawnCard;
     if (drawnCard === null) {
       const drawDeck: [CardSuit, DrawSource] | null | undefined =
@@ -293,6 +311,7 @@ export class GameController {
       );
     }
 
+    // Discard card if necessary
     if (roundTurn.discardedCard === null) {
       const discardedCard: PlayerCard | undefined =
         await InteractionController.promptChooseDiscardedCard(
@@ -312,13 +331,29 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
-    const revealCards: true | undefined = await this.__handlePrompt(
+    const roundTurn: Turn | null = channelState.session.currentPlayer.roundTurn;
+    if (roundTurn === null) {
+      Log.throw(
+        "Cannot resolve turn reveal. No round turn exists on the current player.",
+        { currentPlayer: channelState.session.currentPlayer },
+      );
+    }
+    if (roundTurn.action !== TurnAction.REVEAL) {
+      Log.throw(
+        "Cannot resolve turn reveal. Round turn action is not reveal.",
+        { roundTurn },
+      );
+    }
+
+    // Confirm reveal
+    const revealConfirmed: true | undefined = await this.__handlePrompt(
       message,
       () => InteractionController.promptRevealCards(message, channelState),
       () => InteractionController.followupTurnIncomplete(message),
     );
-    if (revealCards === undefined) return false;
+    if (revealConfirmed === undefined) return false;
 
+    // Handle imposter cards
     const playerCards: readonly PlayerCard[] =
       channelState.session.currentPlayer.getCards();
     for (const playerCard of playerCards) {
@@ -340,6 +375,19 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
+    const roundTurn: Turn | null = channelState.session.currentPlayer.roundTurn;
+    if (roundTurn === null) {
+      Log.throw(
+        "Cannot resolve turn stand. No round turn exists on the current player.",
+        { currentPlayer: channelState.session.currentPlayer },
+      );
+    }
+    if (roundTurn.action !== TurnAction.STAND) {
+      Log.throw("Cannot resolve turn stand. Round turn action is not stand.", {
+        roundTurn,
+      });
+    }
+
     const standConfirmed: boolean | undefined =
       await InteractionController.promptConfirmStand(message, channelState);
     if (standConfirmed === false || standConfirmed === undefined) {
