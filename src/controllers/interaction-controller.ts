@@ -23,12 +23,13 @@ import {
   PlayerCard,
   Turn,
 } from "../saveables";
-import { Card } from "../types";
+import { Card, RankedPlayerScorable } from "../types";
 
 export class InteractionController {
   public static async announceGameEnd(
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Announcing game end.");
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
         color: colors.WHITE,
@@ -50,6 +51,7 @@ export class InteractionController {
   public static async announceGameStart(
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Announcing game start.");
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
         color: colors.WHITE,
@@ -61,11 +63,7 @@ export class InteractionController {
           {
             inline: true,
             name: "Players",
-            value: Utils.linesToString(
-              channelState.session.activePlayersInTurnOrder.map(
-                player => `- ${player.nameString}`,
-              ),
-            ),
+            value: this.__formatTablePlayersString(channelState),
           },
           {
             inline: true,
@@ -80,59 +78,7 @@ export class InteractionController {
   public static async announceHandEnd(
     channelState: ChannelState,
   ): Promise<void> {
-    const currentHandResult: HandResult =
-      channelState.session.getCurrentHandResult();
-    const resultsLines: string[] = [];
-    const usedPlayerIds: string[] = [];
-    currentHandResult.rankings.forEach(ranking => {
-      const player: Player = channelState.session.getPlayerById(
-        ranking.playerId,
-      );
-      const tokenDetailStrings: string[] = [];
-      if (ranking.tokenTotal > 0) {
-        if (ranking.tokenLossTotal === 0) {
-          tokenDetailStrings.push("Full Refund!");
-        } else {
-          if (ranking.spentTokenTotal > 0) {
-            tokenDetailStrings.push(
-              `\`${ranking.spentTokenTotal.toString()}\` Spent`,
-            );
-          }
-          if (ranking.tokenPenaltyTotal > 0) {
-            tokenDetailStrings.push(
-              `\`${ranking.tokenPenaltyTotal.toString()}\` Penalty`,
-            );
-          }
-        }
-      }
-      resultsLines.push(
-        `- \`#${(ranking.rankIndex + 1).toString()}\` ${player.status !== PlayerStatus.ACTIVE ? `~~**${player.nameString}**~~ ${icons.ELIMINATED}` : `**${player.nameString}**`}`,
-        `  - Cards: ${this.__formatCardString(ranking.sandCard)} ${this.__formatCardString(ranking.bloodCard)}`,
-        `  - Tokens: \`${this.__formatTokenResultString(player.tokenTotal, ranking.tokenLossTotal)}\` `,
-        `    -# ${tokenDetailStrings.join(" + ")}`,
-      );
-      usedPlayerIds.push(ranking.playerId);
-    });
-    const previouslyEliminatedLines: string[] = [];
-    channelState.session.allPlayers.forEach(player => {
-      if (!usedPlayerIds.includes(player.id)) {
-        previouslyEliminatedLines.push(
-          `~~${player.nameString}~~ ${icons.ELIMINATED}`,
-        );
-      }
-    });
-    const fields: discordJs.APIEmbedField[] = [
-      {
-        name: "Results",
-        value: Utils.linesToString(resultsLines),
-      },
-    ];
-    if (previouslyEliminatedLines.length > 0) {
-      fields.push({
-        name: "Previously Eliminated",
-        value: Utils.linesToString(previouslyEliminatedLines),
-      });
-    }
+    Log.debug("Announcing hand end.");
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
         color: colors.GRAY,
@@ -140,7 +86,12 @@ export class InteractionController {
           `## ${icons.NEW_HAND} Ended Hand ${(channelState.session.handIndex + 1).toString()}`,
           "Here are the results...",
         ]),
-        fields,
+        fields: [
+          {
+            name: "Results",
+            value: this.__formatHandResultsString(channelState),
+          },
+        ],
       }),
     ]);
   }
@@ -148,6 +99,7 @@ export class InteractionController {
   public static async announceHandStart(
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Announcing hand start.");
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
         color: colors.GRAY,
@@ -162,42 +114,42 @@ export class InteractionController {
   public static async announceRoundStart(
     channelState: ChannelState,
   ): Promise<void> {
-    let embed: discordJs.EmbedBuilder;
+    Log.debug("Announcing round start.");
     if (channelState.session.roundIndex < 3) {
-      embed = new discordJs.EmbedBuilder({
-        color: colors.GRAY,
-        description: `## ${icons.NEW_ROUND} Starting Round ${(channelState.session.roundIndex + 1).toString()}`,
-      });
+      await this.__createChannelMessageEmbed(channelState.channelId, [
+        new discordJs.EmbedBuilder({
+          color: colors.GRAY,
+          description: `## ${icons.NEW_ROUND} Starting Round ${(channelState.session.roundIndex + 1).toString()}`,
+        }),
+      ]);
     } else {
-      embed = new discordJs.EmbedBuilder({
-        color: colors.GRAY,
-        description: `## ${icons.NEW_ROUND} Starting Reveal Round`,
-      });
+      await this.__createChannelMessageEmbed(channelState.channelId, [
+        new discordJs.EmbedBuilder({
+          color: colors.GRAY,
+          description: `## ${icons.NEW_ROUND} Starting Reveal Round`,
+        }),
+      ]);
     }
-    await this.__createChannelMessageEmbed(channelState.channelId, [embed]);
   }
 
   public static async announceTurnDraw(
     channelState: ChannelState,
   ): Promise<void> {
-    const player: Player = channelState.session.currentPlayer;
+    Log.debug("Announcing turn draw.");
+    const turn: Turn | null = channelState.session.currentPlayer.roundTurn;
     if (
-      player.roundTurn === null ||
-      player.roundTurn.action !== TurnAction.DRAW ||
-      !player.roundTurn.isResolved
+      turn === null ||
+      turn.action !== TurnAction.DRAW ||
+      turn.drawnCard === null ||
+      turn.discardedCard === null
     ) {
       Log.throw(
         "Cannot announce turn draw. Player does not contain a completed draw turn.",
       );
     }
-    const turn: Turn = player.roundTurn;
-    if (turn.drawnCard === null || turn.discardedCard === null) {
-      Log.throw(
-        "Cannot announce turn draw. Player turn record did not contain both a drawn and discarded card.",
-        { turn },
-      );
-    }
-    const descriptionLines: string[] = [`### ${player.nameString} Drew A Card`];
+    const descriptionLines: string[] = [
+      `### ${channelState.session.currentPlayer.nameString} Drew A Card`,
+    ];
     switch (turn.drawnCardSource) {
       case DrawSource.DECK:
         descriptionLines.push(
@@ -225,18 +177,11 @@ export class InteractionController {
   public static async announceTurnReveal(
     channelState: ChannelState,
   ): Promise<void> {
-    const player: Player = channelState.session.currentPlayer;
-    if (
-      player.roundTurn === null ||
-      player.roundTurn.action !== TurnAction.REVEAL ||
-      !player.roundTurn.isResolved
-    ) {
-      Log.throw(
-        "Cannot announce turn reveal. Player does not contain a completed reveal turn.",
-      );
-    }
-    const bloodCards: readonly PlayerCard[] = player.getCards(CardSuit.BLOOD);
-    const sandCards: readonly PlayerCard[] = player.getCards(CardSuit.SAND);
+    Log.debug("Announcing turn reveal.");
+    const bloodCards: readonly PlayerCard[] =
+      channelState.session.currentPlayer.getCards(CardSuit.BLOOD);
+    const sandCards: readonly PlayerCard[] =
+      channelState.session.currentPlayer.getCards(CardSuit.SAND);
     if (bloodCards.length !== 1 || sandCards.length !== 1) {
       Log.throw(
         "Cannot announce turn reveal. Player does not contain exactly one card of each suit.",
@@ -244,7 +189,7 @@ export class InteractionController {
       );
     }
     const descriptionLines: string[] = [
-      `### ${player.nameString} Completed Their Hand`,
+      `### ${channelState.session.currentPlayer.nameString} Completed Their Hand`,
       "Here are their final cards...",
       `# ${this.__formatCardString(sandCards[0])} ${this.__formatCardString(bloodCards[0])}`,
     ];
@@ -257,7 +202,7 @@ export class InteractionController {
     }
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
-        color: cardPairNameString !== null ? colors.BLUE : colors.BLACK,
+        color: cardPairNameString !== null ? colors.WHITE : colors.BLACK,
         description: Utils.linesToString(descriptionLines),
       }),
     ]);
@@ -266,21 +211,12 @@ export class InteractionController {
   public static async announceTurnStand(
     channelState: ChannelState,
   ): Promise<void> {
-    const player: Player = channelState.session.currentPlayer;
-    if (
-      player.roundTurn === null ||
-      player.roundTurn.action !== TurnAction.STAND ||
-      !player.roundTurn.isResolved
-    ) {
-      Log.throw(
-        "Cannot announce turn stand. Player does not contain a completed stand turn.",
-      );
-    }
+    Log.debug("Announcing turn stand.");
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
         color: colors.BLACK,
         description: Utils.linesToString([
-          `### ${player.nameString} Stood`,
+          `### ${channelState.session.currentPlayer.nameString} Stood`,
           "No card was drawn or discarded.",
         ]),
       }),
@@ -290,6 +226,7 @@ export class InteractionController {
   public static async announceTurnStart(
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Announcing turn start.");
     await this.__createChannelMessageEmbed(channelState.channelId, [
       new discordJs.EmbedBuilder({
         color: colors.BLACK,
@@ -304,12 +241,14 @@ export class InteractionController {
   public static async followupGameCreated(
     message: ChannelMessage,
   ): Promise<void> {
+    Log.debug("Following up game created.");
     await this.__setChannelMessageFollowup(message, "You created a new game.");
   }
 
   public static async followupGameEnded(
     message: ChannelMessage,
   ): Promise<void> {
+    Log.debug("Following up game ended.");
     await this.__setChannelMessageFollowup(
       message,
       "The previous game was ended.",
@@ -319,6 +258,7 @@ export class InteractionController {
   public static async followupGameNotEnded(
     message: ChannelMessage,
   ): Promise<void> {
+    Log.debug("Following up game not ended.");
     await this.__setChannelMessageFollowup(
       message,
       "The current game was not ended.",
@@ -328,16 +268,19 @@ export class InteractionController {
   public static async followupTurnComplete(
     message: ChannelMessage,
   ): Promise<void> {
+    Log.debug("Following up turn complete.");
     await this.__setChannelMessageFollowup(message, "Your turn is complete.");
   }
 
   public static async followupTurnIncomplete(
     message: ChannelMessage,
   ): Promise<void> {
+    Log.debug("Following up turn incomplete.");
     await this.__setChannelMessageFollowup(message, "Your turn is incomplete.");
   }
 
   public static async informNoGame(message: ChannelMessage): Promise<void> {
+    Log.debug("Informing no game.");
     await this.__setChannelMessageEmbed(message, [
       new discordJs.EmbedBuilder({
         color: colors.BLACK,
@@ -351,6 +294,7 @@ export class InteractionController {
   }
 
   public static async informNotPlaying(message: ChannelMessage): Promise<void> {
+    Log.debug("Informing not playing.");
     await this.__setChannelMessageEmbed(message, [
       new discordJs.EmbedBuilder({
         color: colors.BLACK,
@@ -366,6 +310,7 @@ export class InteractionController {
     message: ChannelMessage,
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Informing not turn.");
     await this.__setChannelMessageEmbed(message, [
       new discordJs.EmbedBuilder({
         color: colors.BLACK,
@@ -381,6 +326,7 @@ export class InteractionController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Informing player info.");
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
       channelState,
@@ -396,6 +342,7 @@ export class InteractionController {
     channelState: ChannelState,
     imposterCard: PlayerCard,
   ): Promise<number | undefined> {
+    Log.debug("Prompting choose die roll.");
     const player: Player = channelState.session.getPlayerById(message.user.id);
     if (imposterCard.dieRolls.length !== 2) {
       Log.throw(
@@ -434,13 +381,12 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | undefined =
-      await message.awaitButtonInteraction();
-    if (buttonInteraction === undefined) {
-      await this.__setChannelMessageFollowup(
+    const buttonInteraction: discordJs.ButtonInteraction | null =
+      await this.__awaitButtonInteractionWithTimeout(
         message,
         "Die roll selection timed out.",
       );
+    if (buttonInteraction === null) {
       return undefined;
     }
     switch (buttonInteraction.customId) {
@@ -461,6 +407,7 @@ export class InteractionController {
     channelState: ChannelState,
     drawnCard: Card,
   ): Promise<PlayerCard | undefined> {
+    Log.debug("Prompting choose discarded card.");
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const discardOptions: [PlayerCard, PlayerCard] =
       channelState.session.getDiscardOptionsForCurrentPlayer();
@@ -495,13 +442,12 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | undefined =
-      await message.awaitButtonInteraction();
-    if (buttonInteraction === undefined) {
-      await this.__setChannelMessageFollowup(
+    const buttonInteraction: discordJs.ButtonInteraction | null =
+      await this.__awaitButtonInteractionWithTimeout(
         message,
         "Discard card selection timed out.",
       );
+    if (buttonInteraction === null) {
       return undefined;
     }
     switch (buttonInteraction.customId) {
@@ -521,6 +467,7 @@ export class InteractionController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<[CardSuit, DrawSource] | null | undefined> {
+    Log.debug("Prompting choose draw deck.");
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const buttons: discordJs.ButtonBuilder[] = [
       new discordJs.ButtonBuilder({
@@ -583,13 +530,12 @@ export class InteractionController {
       ],
       buttons,
     );
-    const buttonInteraction: discordJs.ButtonInteraction | undefined =
-      await message.awaitButtonInteraction();
-    if (buttonInteraction === undefined) {
-      await this.__setChannelMessageFollowup(
+    const buttonInteraction: discordJs.ButtonInteraction | null =
+      await this.__awaitButtonInteractionWithTimeout(
         message,
         "Turn action selection timed out.",
       );
+    if (buttonInteraction === null) {
       return undefined;
     }
     switch (buttonInteraction.customId) {
@@ -615,6 +561,7 @@ export class InteractionController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<TurnAction | null | undefined> {
+    Log.debug("Prompting choose turn action.");
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
       channelState,
@@ -659,13 +606,12 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | undefined =
-      await message.awaitButtonInteraction();
-    if (buttonInteraction === undefined) {
-      await this.__setChannelMessageFollowup(
+    const buttonInteraction: discordJs.ButtonInteraction | null =
+      await this.__awaitButtonInteractionWithTimeout(
         message,
         "Turn action selection timed out.",
       );
+    if (buttonInteraction === null) {
       return undefined;
     }
     switch (buttonInteraction.customId) {
@@ -687,6 +633,7 @@ export class InteractionController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean | undefined> {
+    Log.debug("Prompting confirm stand.");
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
       channelState,
@@ -719,13 +666,12 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | undefined =
-      await message.awaitButtonInteraction();
-    if (buttonInteraction === undefined) {
-      await this.__setChannelMessageFollowup(
+    const buttonInteraction: discordJs.ButtonInteraction | null =
+      await this.__awaitButtonInteractionWithTimeout(
         message,
         "Stand confirmation timed out.",
       );
+    if (buttonInteraction === null) {
       return undefined;
     }
     switch (buttonInteraction.customId) {
@@ -744,6 +690,7 @@ export class InteractionController {
   public static async promptEndCurrentGame(
     message: ChannelMessage,
   ): Promise<true | null | undefined> {
+    Log.debug("Prompting end current game.");
     await this.__setChannelMessageEmbed(
       message,
       [
@@ -768,13 +715,12 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | undefined =
-      await message.awaitButtonInteraction();
-    if (buttonInteraction === undefined) {
-      await this.__setChannelMessageFollowup(
+    const buttonInteraction: discordJs.ButtonInteraction | null =
+      await this.__awaitButtonInteractionWithTimeout(
         message,
         "New game creation timed out.",
       );
+    if (buttonInteraction === null) {
       return undefined;
     }
     switch (buttonInteraction.customId) {
@@ -793,7 +739,8 @@ export class InteractionController {
   public static async promptJoinGame(
     message: ChannelCommandMessage,
   ): Promise<discordJs.User[] | undefined> {
-    let channelMessage: ChannelMessage | null = null;
+    Log.debug("Prompting join game.");
+    let promptMessage: ChannelMessage | null = null;
     const userAccumulator: discordJs.User[] = [];
     while (userAccumulator.length + 1 < PLAYER_MAXIMUM) {
       const embed: discordJs.EmbedBuilder = new discordJs.EmbedBuilder({
@@ -826,22 +773,22 @@ export class InteractionController {
           style: discordJs.ButtonStyle.Success,
         }),
       ];
-      if (channelMessage === null) {
-        channelMessage = await this.__createChannelMessageEmbed(
+      if (promptMessage === null) {
+        promptMessage = await this.__createChannelMessageEmbed(
           message.channelId,
           [embed],
           buttons,
         );
       } else {
-        await this.__setChannelMessageEmbed(channelMessage, [embed], buttons);
+        await this.__setChannelMessageEmbed(promptMessage, [embed], buttons);
       }
-      const buttonInteraction: discordJs.ButtonInteraction | undefined =
-        await channelMessage.awaitButtonInteraction(600000);
-      if (buttonInteraction === undefined) {
-        await this.__setChannelMessageFollowup(
-          channelMessage,
+      const buttonInteraction: discordJs.ButtonInteraction | null =
+        await this.__awaitButtonInteractionWithTimeout(
+          promptMessage,
           "Game setup timed out.",
+          600000,
         );
+      if (buttonInteraction === null) {
         return undefined;
       }
       switch (buttonInteraction.customId) {
@@ -855,7 +802,7 @@ export class InteractionController {
           continue;
         case "start":
           await this.__setChannelMessageFollowup(
-            channelMessage,
+            promptMessage,
             `The game was started by ${Discord.formatUserNameString(buttonInteraction.user)}!`,
           );
           return userAccumulator;
@@ -868,13 +815,13 @@ export class InteractionController {
           );
       }
     }
-    if (channelMessage === null) {
+    if (promptMessage === null) {
       Log.throw(
         "Cannot conclude game setup prompt. Channel interaction was never set.",
       );
     }
     await this.__setChannelMessageFollowup(
-      channelMessage,
+      promptMessage,
       `${PLAYER_MAXIMUM.toString()} players have joined. The game has started!`,
     );
     return userAccumulator;
@@ -884,6 +831,7 @@ export class InteractionController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<true | null | undefined> {
+    Log.debug("Prompting reveal cards.");
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
       channelState,
@@ -916,10 +864,12 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | undefined =
-      await message.awaitButtonInteraction();
-    if (buttonInteraction === undefined) {
-      await this.__setChannelMessageFollowup(message, "Card reveal timed out.");
+    const buttonInteraction: discordJs.ButtonInteraction | null =
+      await this.__awaitButtonInteractionWithTimeout(
+        message,
+        "Card reveal timed out.",
+      );
+    if (buttonInteraction === null) {
       return undefined;
     }
     switch (buttonInteraction.customId) {
@@ -940,6 +890,7 @@ export class InteractionController {
     channelState: ChannelState,
     playerCard: PlayerCard,
   ): Promise<true | null | undefined> {
+    Log.debug("Prompting roll dice.");
     const player: Player = channelState.session.getPlayerById(message.user.id);
     const stateEmbed: discordJs.EmbedBuilder = this.__getStateEmbed(
       channelState,
@@ -972,10 +923,12 @@ export class InteractionController {
         }),
       ],
     );
-    const buttonInteraction: discordJs.ButtonInteraction | undefined =
-      await message.awaitButtonInteraction();
-    if (buttonInteraction === undefined) {
-      await this.__setChannelMessageFollowup(message, "Dice roll timed out.");
+    const buttonInteraction: discordJs.ButtonInteraction | null =
+      await this.__awaitButtonInteractionWithTimeout(
+        message,
+        "Dice roll timed out.",
+      );
+    if (buttonInteraction === null) {
       return undefined;
     }
     switch (buttonInteraction.customId) {
@@ -991,11 +944,26 @@ export class InteractionController {
     }
   }
 
+  private static async __awaitButtonInteractionWithTimeout(
+    message: ChannelMessage,
+    timeoutMessageContent: string,
+    timeout: number = 60000,
+  ): Promise<discordJs.ButtonInteraction | null> {
+    Log.debug("Awaiting button interaction with timeout.");
+    const interaction: discordJs.ButtonInteraction | null =
+      await message.awaitButtonInteraction(timeout);
+    if (interaction === null) {
+      await this.__setChannelMessageFollowup(message, timeoutMessageContent);
+    }
+    return interaction;
+  }
+
   private static async __createChannelMessageEmbed(
     channelId: string,
     embeds: discordJs.EmbedBuilder[],
     buttons?: discordJs.ButtonBuilder[],
   ): Promise<ChannelMessage> {
+    Log.debug("Creating channel message embed.");
     return await Discord.sendChannelMessage(
       channelId,
       this.__createEmbedBaseMessageOptions(embeds, buttons),
@@ -1006,6 +974,7 @@ export class InteractionController {
     embeds: discordJs.EmbedBuilder[],
     buttons?: discordJs.ButtonBuilder[],
   ): discordJs.BaseMessageOptions {
+    Log.debug("Creating embed base message options.");
     const components: discordJs.ActionRowBuilder<discordJs.ButtonBuilder>[] =
       buttons !== undefined && buttons.length > 0
         ? [
@@ -1026,13 +995,16 @@ export class InteractionController {
   ): string | null {
     const cardOneValue: number = cardOne.getValue(cardTwo);
     const cardTwoValue: number = cardTwo.getValue(cardOne);
+    const sylopSabaccValue: number = 0;
+    const primeSabaccValue: number = 1;
+    const cheapSabaccValue: number = 6;
     if (cardOneValue === cardTwoValue) {
       switch (cardOneValue) {
-        case 0:
+        case sylopSabaccValue:
           return "*Sylop Sabacc!* ✨";
-        case 1:
+        case primeSabaccValue:
           return "*Prime Sabacc!*";
-        case 6:
+        case cheapSabaccValue:
           return "*Cheap Sabacc!*";
         default:
           return "*Sabacc!*";
@@ -1045,8 +1017,9 @@ export class InteractionController {
     card: Card | PlayerCard,
     includeCodeQuotes: boolean = true,
   ): string {
-    const playerCard: PlayerCard | null = "card" in card ? card : null;
-    const actualCard: Card = "card" in card ? card.card : card;
+    const playerCard: PlayerCard | null =
+      card instanceof PlayerCard ? card : null;
+    const actualCard: Card = card instanceof PlayerCard ? card.card : card;
     const suitIcon: string = this.__formatCardSuitIcon(actualCard.suit);
     let typeLabel: string;
     switch (actualCard.type) {
@@ -1087,6 +1060,29 @@ export class InteractionController {
     }
   }
 
+  private static __formatHandResultsString(channelState: ChannelState): string {
+    const currentHandResult: HandResult =
+      channelState.session.getCurrentHandResult();
+    const resultsLines: string[] = [];
+    const usedPlayerIds: string[] = [];
+    currentHandResult.rankings.forEach(ranking => {
+      const player: Player = channelState.session.getPlayerById(
+        ranking.playerId,
+      );
+      resultsLines.push(this.__formatPlayerRankingString(player, ranking));
+      usedPlayerIds.push(ranking.playerId);
+    });
+    const previouslyEliminatedLines: string[] = [];
+    channelState.session.allPlayers.forEach(player => {
+      if (!usedPlayerIds.includes(player.id)) {
+        previouslyEliminatedLines.push(
+          `~~${player.nameString}~~ ${icons.ELIMINATED}`,
+        );
+      }
+    });
+    return Utils.linesToString(resultsLines);
+  }
+
   private static __formatPlayerCardsString(player: Player): string {
     const bloodCards: readonly PlayerCard[] = player.getCards(CardSuit.BLOOD);
     const sandCards: readonly PlayerCard[] = player.getCards(CardSuit.SAND);
@@ -1097,6 +1093,41 @@ export class InteractionController {
       this.__formatCardString(card),
     );
     return [...sandCardStrings, ...bloodCardStrings].join(" ");
+  }
+
+  private static __formatPlayerRankingString(
+    player: Player,
+    ranking: RankedPlayerScorable,
+  ): string {
+    return Utils.linesToString([
+      `- \`#${(ranking.rankIndex + 1).toString()}\` ${player.status !== PlayerStatus.ACTIVE ? `~~**${player.nameString}**~~ ${icons.ELIMINATED}` : `**${player.nameString}**`}`,
+      `  - Cards: ${this.__formatCardString(ranking.sandCard)} ${this.__formatCardString(ranking.bloodCard)}`,
+      `  - Tokens: \`${this.__formatTokenResultString(player.tokenTotal, ranking.tokenLossTotal)}\` `,
+      `    -# ${this.__formatRankingTokenDetailString(ranking)}`,
+    ]);
+  }
+
+  private static __formatRankingTokenDetailString(
+    ranking: RankedPlayerScorable,
+  ): string {
+    const tokenDetailStrings: string[] = [];
+    if (ranking.tokenTotal > 0) {
+      if (ranking.tokenLossTotal === 0) {
+        tokenDetailStrings.push("Full Refund!");
+      } else {
+        if (ranking.spentTokenTotal > 0) {
+          tokenDetailStrings.push(
+            `\`${ranking.spentTokenTotal.toString()}\` Spent`,
+          );
+        }
+        if (ranking.tokenPenaltyTotal > 0) {
+          tokenDetailStrings.push(
+            `\`${ranking.tokenPenaltyTotal.toString()}\` Penalty`,
+          );
+        }
+      }
+    }
+    return tokenDetailStrings.join(" + ");
   }
 
   private static __formatTableDiscardString(

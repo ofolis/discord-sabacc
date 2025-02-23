@@ -16,6 +16,7 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState | null,
   ): Promise<void> {
+    Log.debug("Handling new game.");
     // Ensure channel state exists with a new session
     if (
       channelState === null ||
@@ -57,6 +58,7 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Handling play turn.");
     // Initialize  turn
     const turn: Turn | null = await this.__initializeTurn(
       message,
@@ -97,6 +99,7 @@ export class GameController {
   }
 
   private static async __endTurn(channelState: ChannelState): Promise<void> {
+    Log.debug("Ending turn.");
     // Get current turn
     const turn: Turn | null = channelState.session.currentPlayer.roundTurn;
     if (turn === null) {
@@ -152,12 +155,14 @@ export class GameController {
   private static async __handleGameEnd(
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Handling game end.");
     await InteractionController.announceGameEnd(channelState);
   }
 
   private static async __handleHandEnd(
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Handling hand end.");
     channelState.session.finalizeHand();
     await InteractionController.announceHandEnd(channelState);
   }
@@ -165,6 +170,7 @@ export class GameController {
   private static async __handleHandStart(
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Handling hand start.");
     channelState.session.initializeHand();
     await InteractionController.announceHandStart(channelState);
   }
@@ -174,6 +180,7 @@ export class GameController {
     channelState: ChannelState,
     playerCard: PlayerCard,
   ): Promise<boolean> {
+    Log.debug("Handling imposter card.");
     // Roll dice if not already rolled
     if (playerCard.dieRolls.length === 0) {
       const rollConfirmed: true | undefined = await this.__handlePrompt(
@@ -220,18 +227,23 @@ export class GameController {
     promptFunc: () => Promise<T | null | undefined>,
     followUpFunc: (message: ChannelCommandMessage) => Promise<void>,
   ): Promise<T | undefined> {
+    Log.debug("Handling prompt.");
     const result: T | null | undefined = await promptFunc();
-    if (result === null || result === undefined) {
-      // Follow up if the prompt was cancelled (not timed out)
-      if (result === null) await followUpFunc(message);
-      return undefined;
+    switch (result) {
+      case null:
+        await followUpFunc(message);
+        return undefined;
+      case undefined:
+        return undefined;
+      default:
+        return result;
     }
-    return result;
   }
 
   private static async __handleRoundEnd(
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Handling round end.");
     // If the last round has ended, end the hnad
     if (channelState.session.roundIndex !== 3) return;
     await this.__handleHandEnd(channelState);
@@ -240,6 +252,7 @@ export class GameController {
   private static async __handleRoundStart(
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Handling round start.");
     channelState.session.clearPlayerRoundTurns();
     // If this is the first round, start the hand
     if (channelState.session.roundIndex === 0) {
@@ -252,6 +265,7 @@ export class GameController {
   private static async __handleTurnStart(
     channelState: ChannelState,
   ): Promise<void> {
+    Log.debug("Handling turn start.");
     await InteractionController.announceTurnStart(channelState);
   }
 
@@ -259,6 +273,7 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<Turn | null> {
+    Log.debug("Initializing turn.");
     // Handle normal turns separately from reveal turns
     if (channelState.session.roundIndex < 3) {
       const turnAction: TurnAction | undefined = await this.__handlePrompt(
@@ -280,6 +295,7 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
+    Log.debug("Resolving turn draw.");
     const roundTurn: Turn | null = channelState.session.currentPlayer.roundTurn;
     if (roundTurn === null) {
       Log.throw(
@@ -331,6 +347,7 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
+    Log.debug("Resolving turn reveal.");
     const roundTurn: Turn | null = channelState.session.currentPlayer.roundTurn;
     if (roundTurn === null) {
       Log.throw(
@@ -375,6 +392,7 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
+    Log.debug("Resolving turn stand.");
     const roundTurn: Turn | null = channelState.session.currentPlayer.roundTurn;
     if (roundTurn === null) {
       Log.throw(
@@ -401,6 +419,7 @@ export class GameController {
   }
 
   private static async __startGame(channelState: ChannelState): Promise<void> {
+    Log.debug("Starting game.");
     channelState.session.startGame();
     channelState.session.initializeHand();
     await InteractionController.announceGameStart(channelState);

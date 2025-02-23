@@ -26,7 +26,7 @@ export abstract class Message {
 
   public async awaitButtonInteraction(
     timeout: number = 60000,
-  ): Promise<discordJs.ButtonInteraction | undefined> {
+  ): Promise<discordJs.ButtonInteraction | null> {
     if (
       !(this._currentEntity instanceof discordJs.InteractionResponse) &&
       !(this._currentEntity instanceof discordJs.Message)
@@ -54,7 +54,7 @@ export abstract class Message {
     } catch (result: unknown) {
       // This method is the best way I found to determine when we time out versus an actual error
       if (result instanceof Error && result.message.endsWith("reason: time")) {
-        return undefined;
+        return null;
       }
       throw result;
     }
