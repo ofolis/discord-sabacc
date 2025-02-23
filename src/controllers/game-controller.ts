@@ -28,14 +28,12 @@ export class GameController {
       }
       await InteractionController.followupGameCreated(message);
     } else {
-      const endCurrentGame: true | null | undefined =
-        await InteractionController.promptEndCurrentGame(message);
-      if (endCurrentGame === null || endCurrentGame === undefined) {
-        if (endCurrentGame === null) {
-          await InteractionController.followupGameNotEnded(message);
-        }
-        return;
-      }
+      const endCurrentGame: true | undefined = await this.__handlePrompt(
+        message,
+        () => InteractionController.promptEndCurrentGame(message),
+        () => InteractionController.followupGameNotEnded(message),
+      );
+      if (endCurrentGame === undefined) return;
       channelState.createSession(message);
       await InteractionController.followupGameEnded(message);
     }
@@ -63,17 +61,13 @@ export class GameController {
     let turn: Turn | null = channelState.session.currentPlayer.roundTurn;
     if (turn === null) {
       if (channelState.session.roundIndex < 3) {
-        const turnAction: TurnAction | null | undefined =
-          await InteractionController.promptChooseTurnAction(
-            message,
-            channelState,
-          );
-        if (turnAction === null || turnAction === undefined) {
-          if (turnAction === null) {
-            await InteractionController.followupTurnIncomplete(message);
-          }
-          return;
-        }
+        const turnAction: TurnAction | undefined = await this.__handlePrompt(
+          message,
+          () =>
+            InteractionController.promptChooseTurnAction(message, channelState),
+          () => InteractionController.followupTurnIncomplete(message),
+        );
+        if (turnAction === undefined) return;
         turn = channelState.session.createRoundTurnForCurrentPlayer(turnAction);
       } else {
         turn = channelState.session.createRoundTurnForCurrentPlayer(
@@ -193,18 +187,17 @@ export class GameController {
     playerCard: PlayerCard,
   ): Promise<boolean> {
     if (playerCard.dieRolls.length === 0) {
-      const rollDice: true | null | undefined =
-        await InteractionController.promptRollDice(
-          message,
-          channelState,
-          playerCard,
-        );
-      if (rollDice === null || rollDice === undefined) {
-        if (rollDice === null) {
-          await InteractionController.followupTurnIncomplete(message);
-        }
-        return false;
-      }
+      const rollDice: true | undefined = await this.__handlePrompt(
+        message,
+        () =>
+          InteractionController.promptRollDice(
+            message,
+            channelState,
+            playerCard,
+          ),
+        () => InteractionController.followupTurnIncomplete(message),
+      );
+      if (rollDice === undefined) return false;
       const dieRolls: number[] = [
         Environment.random.die(6),
         Environment.random.die(6),
@@ -230,6 +223,19 @@ export class GameController {
     }
 
     return true;
+  }
+
+  private static async __handlePrompt<T>(
+    message: ChannelCommandMessage,
+    promptFunc: () => Promise<T | null | undefined>,
+    followUpFunc: (message: ChannelCommandMessage) => Promise<void>,
+  ): Promise<T | undefined> {
+    const result: T | null | undefined = await promptFunc();
+    if (result === null || result === undefined) {
+      if (result === null) await followUpFunc(message);
+      return undefined;
+    }
+    return result;
   }
 
   private static async __handleRoundEnd(
@@ -306,14 +312,12 @@ export class GameController {
     message: ChannelCommandMessage,
     channelState: ChannelState,
   ): Promise<boolean> {
-    const revealCards: true | null | undefined =
-      await InteractionController.promptRevealCards(message, channelState);
-    if (revealCards === null || revealCards === undefined) {
-      if (revealCards === null) {
-        await InteractionController.followupTurnIncomplete(message);
-      }
-      return false;
-    }
+    const revealCards: true | undefined = await this.__handlePrompt(
+      message,
+      () => InteractionController.promptRevealCards(message, channelState),
+      () => InteractionController.followupTurnIncomplete(message),
+    );
+    if (revealCards === undefined) return false;
 
     const playerCards: readonly PlayerCard[] =
       channelState.session.currentPlayer.getCards();
