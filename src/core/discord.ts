@@ -130,8 +130,7 @@ export class Discord {
   public static formatUserNameString(
     user: Pick<discordJs.User, "globalName" | "username">,
   ): string {
-    // TODO: Enhance to use server nickname if available
-    return (user.globalName ?? user.username).toUpperCase();
+    return user.globalName ?? user.username;
   }
 
   public static async sendChannelMessage(

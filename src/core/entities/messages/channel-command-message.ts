@@ -5,20 +5,28 @@ import { CommandOptionType, CommandOptionTypeMap, Log } from "../..";
 export class ChannelCommandMessage extends ChannelMessage {
   private __commandOptions: discordJs.CommandInteractionOption[] | undefined;
 
+  private __guildMember: discordJs.GuildMember;
+
   private __user: discordJs.User;
 
   private constructor(
     interactionResponse: discordJs.InteractionResponse,
     channelId: string,
     user: discordJs.User,
+    guildMember: discordJs.GuildMember,
     commandOptions?: discordJs.CommandInteractionOption[],
   ) {
     super(interactionResponse, channelId);
     this.__commandOptions = commandOptions;
+    this.__guildMember = guildMember;
     this.__user = user;
     this._buttonInteractionFilter = (i): boolean =>
       i.user.id === this.__user.id;
     Log.debug("Channel command message context added.");
+  }
+
+  public get member(): discordJs.GuildMember {
+    return this.__guildMember;
   }
 
   public get user(): discordJs.User {
@@ -29,6 +37,11 @@ export class ChannelCommandMessage extends ChannelMessage {
     commandInteraction: discordJs.CommandInteraction,
     isPrivate: boolean,
   ): Promise<ChannelCommandMessage> {
+    if (!(commandInteraction.member instanceof discordJs.GuildMember)) {
+      Log.throw(
+        "Cannot create channel command message. Member is not a Discord guild member instance.",
+      );
+    }
     Log.debug("Deferring command interaction...");
     const interactionResponse: discordJs.InteractionResponse =
       await commandInteraction.deferReply({ ephemeral: isPrivate });
@@ -37,6 +50,7 @@ export class ChannelCommandMessage extends ChannelMessage {
       interactionResponse,
       commandInteraction.channelId,
       commandInteraction.user,
+      commandInteraction.member,
       [...commandInteraction.options.data],
     );
   }

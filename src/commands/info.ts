@@ -21,6 +21,11 @@ export class Info implements Command {
       message.channelId,
     );
 
+    // Update this user's nickname
+    if (channelState !== null) {
+      channelState.setUserNickname(message.user.id, message.member.nickname);
+    }
+
     // Check for active game
     if (
       channelState === null ||
@@ -37,10 +42,6 @@ export class Info implements Command {
     }
 
     // Send info to player
-    await InteractionController.informPlayerInfo(
-      message,
-      channelState,
-      message.user.id,
-    );
+    await InteractionController.informPlayerInfo(message, channelState);
   }
 }

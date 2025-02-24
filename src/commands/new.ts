@@ -35,6 +35,11 @@ export class New implements Command {
       message.channelId,
     );
 
+    // Update this user's nickname
+    if (channelState !== null) {
+      channelState.setUserNickname(message.user.id, message.member.nickname);
+    }
+
     // Handle new game creation
     await GameController.handleNewGame(message, channelState);
   }

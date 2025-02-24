@@ -63,7 +63,7 @@ export class InteractionController {
           {
             inline: true,
             name: "Players",
-            value: this.__formatTablePlayersString(channelState),
+            value: this.__formatTablePlayersString(channelState, true),
           },
           {
             inline: true,
@@ -105,7 +105,7 @@ export class InteractionController {
         color: colors.GRAY,
         description: Utils.linesToString([
           `## ${icons.NEW_ROUND} Starting Hand ${(channelState.session.handIndex + 1).toString()}`,
-          `${channelState.session.activePlayersInTurnOrder[0].nameString} is now the first player.`,
+          `${this.__formatPlayerNameString(channelState, channelState.session.activePlayersInTurnOrder[0])} is now the first player.`,
         ]),
       }),
     ]);
@@ -148,7 +148,7 @@ export class InteractionController {
       );
     }
     const descriptionLines: string[] = [
-      `### ${channelState.session.currentPlayer.nameString} Drew A Card`,
+      `### ${this.__formatPlayerNameString(channelState, channelState.session.currentPlayer)} Drew A Card`,
     ];
     switch (turn.drawnCardSource) {
       case DrawSource.DECK:
@@ -189,7 +189,7 @@ export class InteractionController {
       );
     }
     const descriptionLines: string[] = [
-      `### ${channelState.session.currentPlayer.nameString} Completed Their Hand`,
+      `### ${this.__formatPlayerNameString(channelState, channelState.session.currentPlayer)} Completed Their Hand`,
       "Here are their final cards...",
       `# ${this.__formatCardString(sandCards[0])} ${this.__formatCardString(bloodCards[0])}`,
     ];
@@ -216,7 +216,7 @@ export class InteractionController {
       new discordJs.EmbedBuilder({
         color: colors.BLACK,
         description: Utils.linesToString([
-          `### ${channelState.session.currentPlayer.nameString} Stood`,
+          `### ${this.__formatPlayerNameString(channelState, channelState.session.currentPlayer)} Stood`,
           "No card was drawn or discarded.",
         ]),
       }),
@@ -231,7 +231,7 @@ export class InteractionController {
       new discordJs.EmbedBuilder({
         color: colors.BLACK,
         description: Utils.linesToString([
-          `### ${icons.NEW_TURN} ${channelState.session.currentPlayer.nameString}'s Turn`,
+          `### ${icons.NEW_TURN} ${this.__formatPlayerNameString(channelState, channelState.session.currentPlayer)}'s Turn`,
           `${channelState.session.currentPlayer.tagString} use the **/play** command to take your turn.`,
         ]),
       }),
@@ -316,7 +316,7 @@ export class InteractionController {
         color: colors.BLACK,
         description: Utils.linesToString([
           `### Not Your Turn`,
-          `${channelState.session.currentPlayer.nameString} is currently taking their turn.`,
+          `${this.__formatPlayerNameString(channelState, channelState.session.currentPlayer)} is currently taking their turn.`,
         ]),
       }),
     ]);
@@ -738,6 +738,7 @@ export class InteractionController {
 
   public static async promptJoinGame(
     message: ChannelCommandMessage,
+    channelState: ChannelState,
   ): Promise<discordJs.User[] | undefined> {
     Log.debug("Prompting join game.");
     let promptMessage: ChannelMessage | null = null;
@@ -747,14 +748,15 @@ export class InteractionController {
         color: colors.WHITE,
         description: Utils.linesToString([
           "# New Game",
-          `Hey ${Discord.formatChannelMentionString()}! A new Sabacc game was started by ${Discord.formatUserNameString(message.user)}.`,
+          `Hey ${Discord.formatChannelMentionString()}! A new Sabacc game was started by ${channelState.getUserNickname(message.user.id) ?? Discord.formatUserNameString(message.user)}.`,
         ]),
         fields: [
           {
             name: "Players",
             value: Utils.linesToString(
               [message.user, ...userAccumulator].map(
-                user => `- ${Discord.formatUserNameString(user)}`,
+                user =>
+                  `- ${channelState.getUserNickname(user.id) ?? Discord.formatUserNameString(user)}`,
               ),
             ),
           },
@@ -803,7 +805,7 @@ export class InteractionController {
         case "start":
           await this.__setChannelMessageFollowup(
             promptMessage,
-            `The game was started by ${Discord.formatUserNameString(buttonInteraction.user)}!`,
+            `The game was started by ${channelState.getUserNickname(buttonInteraction.user.id) ?? Discord.formatUserNameString(buttonInteraction.user)}!`,
           );
           return userAccumulator;
         default:
@@ -1069,14 +1071,16 @@ export class InteractionController {
       const player: Player = channelState.session.getPlayerById(
         ranking.playerId,
       );
-      resultsLines.push(this.__formatPlayerRankingString(player, ranking));
+      resultsLines.push(
+        this.__formatPlayerRankingString(channelState, player, ranking),
+      );
       usedPlayerIds.push(ranking.playerId);
     });
     const previouslyEliminatedLines: string[] = [];
     channelState.session.allPlayers.forEach(player => {
       if (!usedPlayerIds.includes(player.id)) {
         previouslyEliminatedLines.push(
-          `~~${player.nameString}~~ ${icons.ELIMINATED}`,
+          `~~${this.__formatPlayerNameString(channelState, player)}~~ ${icons.ELIMINATED}`,
         );
       }
     });
@@ -1095,12 +1099,21 @@ export class InteractionController {
     return [...sandCardStrings, ...bloodCardStrings].join(" ");
   }
 
+  private static __formatPlayerNameString(
+    channelState: ChannelState,
+    player: Player,
+  ): string {
+    const nickname: string | null = channelState.getUserNickname(player.id);
+    return nickname !== null ? nickname : player.nameString;
+  }
+
   private static __formatPlayerRankingString(
+    channelState: ChannelState,
     player: Player,
     ranking: RankedPlayerScorable,
   ): string {
     return Utils.linesToString([
-      `- \`#${(ranking.rankIndex + 1).toString()}\` ${player.status !== PlayerStatus.ACTIVE ? `~~**${player.nameString}**~~ ${icons.ELIMINATED}` : `**${player.nameString}**`}`,
+      `- \`#${(ranking.rankIndex + 1).toString()}\` ${player.status !== PlayerStatus.ACTIVE ? `~~**${this.__formatPlayerNameString(channelState, player)}**~~ ${icons.ELIMINATED}` : `**${this.__formatPlayerNameString(channelState, player)}**`}`,
       `  - Cards: ${this.__formatCardString(ranking.sandCard)} ${this.__formatCardString(ranking.bloodCard)}`,
       `  - Tokens: \`${this.__formatTokenResultString(player.tokenTotal, ranking.tokenLossTotal)}\` `,
       `    -# ${this.__formatRankingTokenDetailString(ranking)}`,
@@ -1165,14 +1178,19 @@ export class InteractionController {
 
   private static __formatTablePlayersString(
     channelState: ChannelState,
+    hideDetails: boolean = false,
   ): string {
     const playersLines: string[] = [];
-    channelState.session.activePlayersInTurnOrder.forEach((player, index) =>
+    channelState.session.activePlayersInTurnOrder.forEach((player, index) => {
       playersLines.push(
-        `- ${player.nameString}${index === channelState.session.activePlayerIndex ? " 👤" : ""}`,
-        `  - Tokens: ${this.__formatTokenStateString(player.availableTokenTotal, player.spentTokenTotal)}`,
-      ),
-    );
+        `- ${this.__formatPlayerNameString(channelState, player)}${!hideDetails && index === channelState.session.activePlayerIndex ? " 👤" : ""}`,
+      );
+      if (!hideDetails) {
+        playersLines.push(
+          `  - Tokens: ${this.__formatTokenStateString(player.availableTokenTotal, player.spentTokenTotal)}`,
+        );
+      }
+    });
     return Utils.linesToString(playersLines);
   }
 

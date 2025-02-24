@@ -25,6 +25,11 @@ export class Play implements Command {
       message.channelId,
     );
 
+    // Update this user's nickname
+    if (channelState !== null) {
+      channelState.setUserNickname(message.user.id, message.member.nickname);
+    }
+
     // Check for active game
     if (
       channelState === null ||

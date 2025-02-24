@@ -5,6 +5,7 @@ import {
   ChannelCommandMessage,
   CommandOptionType,
   Json,
+  Log,
   Saveable,
   Utils,
 } from "../core";
@@ -103,6 +104,21 @@ export class ChannelState implements Saveable {
       privateChannelMessage.user,
       startingTokenTotal,
     );
+  }
+
+  public getUserNickname(userId: string): string | null {
+    Log.debug("Getting user nickname.", { userId });
+    if (!(userId in this.__userStates)) {
+      return null;
+    }
+    return this.__userStates[userId].nickname;
+  }
+
+  public setUserNickname(userId: string, nickname: string | null): void {
+    Log.debug("Setting user nickname.", { userId, nickname });
+    if (userId in this.__userStates) {
+      this.__userStates[userId].nickname = nickname;
+    }
   }
 
   public toJson(): ChannelStateJson {

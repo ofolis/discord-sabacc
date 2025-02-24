@@ -41,7 +41,7 @@ export class GameController {
 
     // Prompt for players to join
     const joinedUsers: discordJs.User[] | undefined =
-      await InteractionController.promptJoinGame(message);
+      await InteractionController.promptJoinGame(message, channelState);
     if (joinedUsers === undefined) {
       return;
     }

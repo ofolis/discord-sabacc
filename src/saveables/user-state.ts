@@ -6,6 +6,8 @@ import { UserStateJson } from "../types";
 export class UserState implements Saveable {
   public readonly id: string;
 
+  public nickname: string | null = null;
+
   private __latestGameCompletedAt: number | null = null;
 
   private __latestGameStartedAt: number | null = null;
@@ -52,6 +54,7 @@ export class UserState implements Saveable {
         "totalGamesWon",
       ) as number;
       this.id = Utils.getJsonEntry(json, "id") as string;
+      this.nickname = Utils.getJsonEntry(json, "nickname") as string;
     }
   }
 
@@ -75,6 +78,7 @@ export class UserState implements Saveable {
       id: this.id,
       latestGameCompletedAt: this.__latestGameCompletedAt,
       latestGameStartedAt: this.__latestGameStartedAt,
+      nickname: this.nickname,
       totalGamesCompleted: this.__totalGamesCompleted,
       totalGamesLost: this.__totalGamesLost,
       totalGamesStarted: this.__totalGamesStarted,
