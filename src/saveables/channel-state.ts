@@ -34,26 +34,20 @@ export class ChannelState implements Saveable {
 
   private __userStates: Record<string, UserState> = {};
 
-  public constructor(
-    privateChannelMessageOrJson: ChannelCommandMessage | Json,
-  ) {
-    if (privateChannelMessageOrJson instanceof ChannelCommandMessage) {
-      const privateChannelMessage: ChannelCommandMessage =
-        privateChannelMessageOrJson;
+  public constructor(messageOrJson: ChannelCommandMessage | Json) {
+    if (messageOrJson instanceof ChannelCommandMessage) {
+      const message: ChannelCommandMessage = messageOrJson;
       const startingTokenTotal: number | undefined =
-        privateChannelMessage.getCommandOption<CommandOptionType.INTEGER>(
+        message.getCommandOption<CommandOptionType.INTEGER>(
           "tokens",
           CommandOptionType.INTEGER,
         ) ?? TOKEN_DEFAULT;
-      this.__session = new Session(
-        privateChannelMessage.user,
-        startingTokenTotal,
-      );
-      this.channelId = privateChannelMessage.channelId;
+      this.__session = new Session(message.user, startingTokenTotal);
+      this.channelId = message.channelId;
       // Create initial user state
-      this.__createUserState(privateChannelMessage.user);
+      this.__createUserState(message.user);
     } else {
-      const json: Json = privateChannelMessageOrJson;
+      const json: Json = messageOrJson;
       this.__latestGameCompletedAt = Utils.getJsonEntry(
         json,
         "latestGameCompletedAt",
