@@ -95,12 +95,11 @@ This is simply to give you an idea of what is implemented and what is on my mind
 | Status | Feature                                                       |
 | ------ | ------------------------------------------------------------- |
 | ✅     | Play the core game against human players. (MVP)               |
-| 🔳     | Specify game player token total.                              |
+| ✅     | Specify game player token total.                              |
 | 🔳     | Use shift tokens.                                             |
 | 🔳     | Play against AI players.                                      |
 | 🔳     | See win/loss history & rankings.                              |
 | 🔳     | Use a money mechanic (per-user credits, buyin, payout, etc.). |
-| 🔳     | No longer see old/unnecessary bot output in the channel feed. |
 
 ---
 
