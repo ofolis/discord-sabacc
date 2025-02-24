@@ -60,13 +60,15 @@ Discord server members can create a Sabacc game in any channel where the bot is 
    2. Replace the `?` after `DISCORD_BOT_TOKEN=` with the value noted earlier.
 6. Set up VSCode (if applicable).
    1. Install required plugins:
+      - **commitlint**
       - **ESLint**
       - **Prettier**
    2. Install optional plugins:
-      - **commitlint**
+      - **Git Graph**
       - **Markdown All in One**
       - **npm Intellisense**
       - **Sort JSON objects**
+      - **Todo Tree**
 7. Run `npm run build`.
 
 ## Usage

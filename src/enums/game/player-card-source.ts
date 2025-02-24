@@ -1,7 +1,5 @@
 export enum PlayerCardSource {
-  "BLOOD_DECK",
-  "BLOOD_DISCARD",
-  "DEALT",
-  "SAND_DECK",
-  "SAND_DISCARD",
+  DEALT = "DEALT",
+  DECK_DRAW = "DECK_DRAW",
+  DISCARD_DRAW = "DISCARD_DRAW",
 }
