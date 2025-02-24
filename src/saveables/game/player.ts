@@ -84,7 +84,6 @@ export class Player implements Saveable {
   }
 
   public get nameString(): string {
-    // TODO: Enhance to use server nickname if available
     return Discord.formatUserNameString({
       globalName: this.__globalName,
       username: this.__username,
