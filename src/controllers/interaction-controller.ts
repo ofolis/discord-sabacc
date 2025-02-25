@@ -315,7 +315,7 @@ export class InteractionController {
       new discordJs.EmbedBuilder({
         color: colors.BLACK,
         description: Utils.linesToString([
-          `### Not Your Turn`,
+          "### Not Your Turn",
           `${this.__formatPlayerNameString(channelState, channelState.session.currentPlayer)} is currently taking their turn.`,
         ]),
       }),
