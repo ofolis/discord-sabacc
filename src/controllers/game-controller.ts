@@ -274,6 +274,13 @@ export class GameController {
     channelState: ChannelState,
   ): Promise<Turn | null> {
     Log.debug("Initializing turn.");
+    // If the current player already has a round turn (from a previous
+    // timed-out interaction), resume that turn instead of creating a new one.
+    // This forces the player to finish the previous choice (prevents cheat).
+    const existingTurn: Turn | null = channelState.session.currentPlayer.roundTurn;
+    if (existingTurn !== null) {
+      return existingTurn;
+    }
     // Handle normal turns separately from reveal turns
     if (channelState.session.roundIndex < 3) {
       const turnAction: TurnAction | undefined = await this.__handlePrompt(
