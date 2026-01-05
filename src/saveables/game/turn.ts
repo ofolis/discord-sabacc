@@ -23,7 +23,13 @@ export class Turn implements Saveable {
       const json: Json = turnActionOrjson;
       this.__discardedCard = Utils.getJsonEntry(json, "discardedCard") as Card;
       this.__drawnCard = Utils.getJsonEntry(json, "drawnCard") as Card;
+      this.__drawnCardSource = ("drawnCardSource" in json
+        ? Utils.getJsonEntry(json, "drawnCardSource")
+        : null) as DrawSource | null;
       this.__isResolved = Utils.getJsonEntry(json, "isResolved") as boolean;
+      this.__spentTokens = ("spentTokens" in json
+        ? Utils.getJsonEntry(json, "spentTokens")
+        : 0) as number;
       this.action = Utils.getJsonEntry(json, "action") as TurnAction;
     }
   }
@@ -53,7 +59,9 @@ export class Turn implements Saveable {
       action: this.action,
       discardedCard: this.__discardedCard,
       drawnCard: this.__drawnCard,
+      drawnCardSource: this.__drawnCardSource,
       isResolved: this.__isResolved,
+      spentTokens: this.__spentTokens,
     };
   }
 
