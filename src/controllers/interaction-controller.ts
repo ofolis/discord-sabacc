@@ -161,6 +161,15 @@ export class InteractionController {
           `${this.__formatCardString(turn.drawnCard)} was drawn from the \`${this.__formatCardSuitIcon(turn.drawnCard.suit)}\` discard and ${this.__formatCardString(turn.discardedCard)} was discarded.`,
         );
         break;
+      case null:
+        Log.error(
+          "Unknown drawn card source. Announcing generic draw result.",
+          { turn },
+        );
+        descriptionLines.push(
+          `A card was drawn and ${this.__formatCardString(turn.discardedCard)} was discarded.`,
+        );
+        break;
       default:
         Log.throw("Cannot announce turn draw. Unknown drawn card source.", {
           turn,

@@ -134,3 +134,7 @@ data/
 
 # Binary builds
 build/
+
+# System Files
+.DS_Store
+Thumbs.db
