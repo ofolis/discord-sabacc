@@ -59,7 +59,7 @@
   "eslint.workingDirectories": [{ "mode": "auto" }],
   "github.copilot.chat.commitMessageGeneration.instructions": [
     {
-      "text": "Use conventional commit message format."
+      "text": "Use conventional commit message format. Provide a concise description of the changes made in the summary, and a detailed explanation in the body if necessary."
     }
   ]
 }
